@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 
-public class CausalConsistencyExamples {
+public final class CausalConsistencyExamples {
 
     /**
      * Run this main method to see the output of this quick example.
@@ -91,4 +91,6 @@ public class CausalConsistencyExamples {
         items.insertOne(document);
         client.close();
     }
+
+    private CausalConsistencyExamples() {}
 }
