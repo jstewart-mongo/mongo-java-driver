@@ -17,7 +17,11 @@
 package documentation;
 
 import com.mongodb.*;
-import com.mongodb.client.*;
+import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import org.bson.BsonNull;
 import org.bson.Document;
 
