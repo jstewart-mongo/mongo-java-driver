@@ -54,7 +54,6 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
     private static final int OBJECT_ID_LENGTH = 12;
     private static final int LOW_ORDER_THREE_BYTES = 0x00ffffff;
-    private static final int RANDOM_VALUE_LENGTH = 5;
 
     // Use primitives to represent the 5-byte random value.
     private static final int RANDOM_VALUE1;
