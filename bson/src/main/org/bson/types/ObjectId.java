@@ -22,9 +22,7 @@ import org.bson.diagnostics.Loggers;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.bson.assertions.Assertions.isTrueArgument;
@@ -58,6 +56,10 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     private static final int LOW_ORDER_THREE_BYTES = 0x00ffffff;
     private static final int RANDOM_VALUE_LENGTH = 5;
 
+    // Use primitives to represent the 5-byte random value.
+    private static final int RANDOM_VALUE1;
+    private static final int RANDOM_VALUE2;
+
     private static final AtomicInteger NEXT_COUNTER = new AtomicInteger(new SecureRandom().nextInt());
 
     private static final char[] HEX_CHARS = new char[] {
@@ -66,7 +68,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
     private final int timestamp;
     private final int counter;
-    private final byte[] randomValue = new byte[RANDOM_VALUE_LENGTH];
+    private final int randomValue1;
+    private final int randomValue2;
 
     /**
      * Gets a new object id.
@@ -125,7 +128,17 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @param date the date
      */
     public ObjectId(final Date date) {
-        this(dateToTimestampSeconds(date), NEXT_COUNTER.getAndIncrement(), false);
+        int counter = NEXT_COUNTER.getAndIncrement();
+        if (counter > LOW_ORDER_THREE_BYTES) {
+            NEXT_COUNTER.set(0);
+            counter = 0;
+        }
+
+        this.timestamp = dateToTimestampSeconds(date);
+
+        this.randomValue1 = RANDOM_VALUE1;
+        this.randomValue2 = RANDOM_VALUE2;
+        this.counter = counter;
     }
 
     /**
@@ -186,8 +199,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         }
         this.timestamp = timestamp;
 
-        Random random = new Random();
-        random.nextBytes(this.randomValue);
+        this.randomValue1 = RANDOM_VALUE1;
+        this.randomValue2 = RANDOM_VALUE2;
         this.counter = counter & LOW_ORDER_THREE_BYTES;
     }
 
@@ -201,11 +214,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         }
         this.timestamp = timestamp;
         this.counter = counter & LOW_ORDER_THREE_BYTES;
-        this.randomValue[0] = int2(machineIdentifier);
-        this.randomValue[1] = int1(machineIdentifier);
-        this.randomValue[2] = int0(machineIdentifier);
-        this.randomValue[3] = int1(processIdentifier);
-        this.randomValue[4] = int0(processIdentifier);
+        this.randomValue1 = machineIdentifier;
+        this.randomValue2 = (int) processIdentifier;
     }
 
     /**
@@ -234,9 +244,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @param timestamp                   time in seconds
      * @param machineAndProcessIdentifier machine and process identifier
      * @param counter                     incremental value
-     * @deprecated Use {@link #ObjectId(int, int)} instead
      */
-    @Deprecated
     ObjectId(final int timestamp, final int machineAndProcessIdentifier, final int counter) {
         this(legacyToBytes(timestamp, machineAndProcessIdentifier, counter));
     }
@@ -255,9 +263,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         // Note: Cannot use ByteBuffer.getInt because it depends on tbe buffer's byte order
         // and ObjectId's are always in big-endian order.
         timestamp = makeInt(buffer.get(), buffer.get(), buffer.get(), buffer.get());
-        for (int i = 0; i < RANDOM_VALUE_LENGTH; i++) {
-            randomValue[i] = buffer.get();
-        }
+        randomValue1 = makeInt((byte) 0, buffer.get(), buffer.get(), buffer.get());
+        randomValue2 = makeInt((byte) 0, (byte) 0, buffer.get(), buffer.get());
         counter = makeInt((byte) 0, buffer.get(), buffer.get(), buffer.get());
     }
 
@@ -305,9 +312,11 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         buffer.put(int2(timestamp));
         buffer.put(int1(timestamp));
         buffer.put(int0(timestamp));
-        for (int i = 0; i < RANDOM_VALUE_LENGTH; i++) {
-            buffer.put(randomValue[i]);
-        }
+        buffer.put(int2(randomValue1));
+        buffer.put(int1(randomValue1));
+        buffer.put(int0(randomValue1));
+        buffer.put(int1(randomValue2));
+        buffer.put(int0(randomValue2));
         buffer.put(int2(counter));
         buffer.put(int1(counter));
         buffer.put(int0(counter));
@@ -363,7 +372,12 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         if (timestamp != objectId.timestamp) {
             return false;
         }
-        if (!Arrays.equals(randomValue, objectId.randomValue)) {
+
+        if (randomValue1 != objectId.randomValue1) {
+            return false;
+        }
+
+        if (randomValue2 != objectId.randomValue2) {
             return false;
         }
 
@@ -374,8 +388,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     public int hashCode() {
         int result = timestamp;
         result = 31 * result + counter;
-        result = 31 * result + makeInt(randomValue[0], randomValue[1], randomValue[2], randomValue[3]);
-        result = 31 * result + (int) randomValue[4];
+        result = 31 * result + randomValue1;
+        result = 31 * result + randomValue2;
         return result;
     }
 
@@ -445,7 +459,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     @Deprecated
     public static int getGeneratedMachineIdentifier() {
         // For legacy purposes, return the first 3 bytes of randomValue as an integer.
-        return 0;
+        return RANDOM_VALUE1;
     }
 
     /**
@@ -457,7 +471,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     @Deprecated
     public static int getGeneratedProcessIdentifier() {
         // For legacy purposes, return the last 2 bytes of randomValue as a short.
-        return 0;
+        return RANDOM_VALUE2;
     }
 
     /**
@@ -469,7 +483,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     @Deprecated
     public int getMachineIdentifier() {
         // For legacy purposes, return the first 3 bytes of randomValue as an integer.
-        return makeInt((byte) 0, randomValue[0], randomValue[1], randomValue[2]);
+        return randomValue1;
     }
 
     /**
@@ -481,7 +495,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     @Deprecated
     public short getProcessIdentifier() {
         // For legacy purposes, return the last 2 bytes of randomValue as a short.
-        return (short) makeInt((byte) 0, (byte) 0, randomValue[3], randomValue[4]);
+        return (short) randomValue2;
     }
 
     /**
@@ -525,6 +539,16 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     @Deprecated
     public String toStringMongod() {
         return toHexString();
+    }
+
+    static {
+        try {
+            SecureRandom secureRandom = new SecureRandom();
+            RANDOM_VALUE1 = secureRandom.nextInt(0x01000000);
+            RANDOM_VALUE2 = secureRandom.nextInt(0x00008000);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static byte[] parseHexString(final String s) {

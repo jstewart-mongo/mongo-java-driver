@@ -89,12 +89,12 @@ public class ObjectIdTest {
 
     @Test
     public void testMachineIdentifier() {
-        assertTrue(ObjectId.getGeneratedMachineIdentifier() == 0);
+        assertTrue(ObjectId.getGeneratedMachineIdentifier() > 0);
         assertEquals(0, ObjectId.getGeneratedMachineIdentifier() & 0xff000000);
 
         assertEquals(5, new ObjectId(0, 5, (short) 0, 0).getMachineIdentifier());
         assertEquals(0x00ffffff, new ObjectId(0, 0x00ffffff, (short) 0, 0).getMachineIdentifier());
-        // assertEquals(ObjectId.getGeneratedMachineIdentifier(), new ObjectId().getMachineIdentifier());
+        assertEquals(ObjectId.getGeneratedMachineIdentifier(), new ObjectId().getMachineIdentifier());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -105,7 +105,7 @@ public class ObjectIdTest {
     @Test
     public void testProcessIdentifier() {
         assertEquals(5, new ObjectId(0, 0, (short) 5, 0).getProcessIdentifier());
-        // assertEquals(ObjectId.getGeneratedProcessIdentifier(), new ObjectId().getProcessIdentifier());
+        assertEquals(ObjectId.getGeneratedProcessIdentifier(), new ObjectId().getProcessIdentifier());
     }
 
     @Test
