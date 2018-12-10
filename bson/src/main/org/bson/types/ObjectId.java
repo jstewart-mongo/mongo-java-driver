@@ -127,17 +127,10 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @param date the date
      */
     public ObjectId(final Date date) {
-        int counter = NEXT_COUNTER.getAndIncrement();
-        if (counter > LOW_ORDER_THREE_BYTES) {
-            NEXT_COUNTER.set(0);
-            counter = 0;
-        }
-
         this.timestamp = dateToTimestampSeconds(date);
-
         this.randomValue1 = RANDOM_VALUE1;
         this.randomValue2 = RANDOM_VALUE2;
-        this.counter = counter;
+        this.counter = (NEXT_COUNTER.getAndIncrement() & LOW_ORDER_THREE_BYTES);
     }
 
     /**
