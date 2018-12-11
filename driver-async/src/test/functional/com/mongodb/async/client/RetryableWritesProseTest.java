@@ -16,67 +16,42 @@
 
 package com.mongodb.async.client;
 
-import com.mongodb.ClusterFixture;
+import com.mongodb.Block;
 import com.mongodb.MongoException;
-import com.mongodb.MongoNamespace;
-import com.mongodb.async.FutureResultCallback;
-import com.mongodb.client.test.CollectionHelper;
-import com.mongodb.connection.ServerVersion;
-import org.bson.BsonArray;
-import org.bson.BsonBoolean;
-import org.bson.BsonDocument;
-import org.bson.BsonString;
-import org.bson.BsonValue;
+import com.mongodb.MongoServerException;
+
+import com.mongodb.async.SingleResultCallback;
+import com.mongodb.connection.ServerSettings;
 import org.bson.Document;
-import org.bson.codecs.DocumentCodec;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import util.JsonPoweredTestHelper;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
-import static com.mongodb.ClusterFixture.isSharded;
-import static com.mongodb.ClusterFixture.isStandalone;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
-import static com.mongodb.ClusterFixture.serverVersionLessThan;
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
+import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
+import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
+
 // See https://github.com/mongodb/specifications/tree/master/source/retryable-writes/tests/README.rst#replica-set-failover-test
-@RunWith(Parameterized.class)
 public class RetryableWritesProseTest extends DatabaseTestCase {
-    private final String filename;
-    private final String description;
+    private MongoClient clientUnderTest;
+    private MongoClient failPointClient;
+    private MongoClient stepDownClient;
     private final String databaseName;
     private final String collectionName;
-    private final BsonArray data;
-    private final BsonDocument definition;
-    private MongoClient mongoClient;
-    private CollectionHelper<Document> collectionHelper;
-    private MongoCollection<BsonDocument> collection;
-    private JsonPoweredCrudTestHelper helper;
+    private final String description;
 
-    public RetryableWritesProseTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
-        this.filename = filename;
-        this.description = description;
+    public RetryableWritesProseTest() {
+        this.description = "Replica set failover test for retryable writes";
         this.databaseName = getDefaultDatabaseName();
-        this.collectionName = filename.substring(0, filename.lastIndexOf("."));
-        this.data = data;
-        this.definition = definition;
+        this.collectionName = "test";
     }
 
     @BeforeClass
@@ -92,122 +67,128 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     public void setUp() {
         assumeTrue(canRunTests());
 
-        ServerVersion serverVersion = ClusterFixture.getServerVersion();
-        if (definition.containsKey("ignore_if_server_version_less_than")) {
-            assumeFalse(serverVersion.compareTo(getServerVersion("ignore_if_server_version_less_than")) < 0);
-        }
-        if (definition.containsKey("ignore_if_server_version_greater_than")) {
-            assumeFalse(serverVersion.compareTo(getServerVersion("ignore_if_server_version_greater_than")) > 0);
-        }
-        if (definition.containsKey("ignore_if_topology_type")) {
-            BsonArray topologyTypes = definition.getArray("ignore_if_topology_type");
-            for (BsonValue type : topologyTypes) {
-                String typeString = type.asString().getValue();
-                if (typeString.equals("sharded")) {
-                    assumeFalse(isSharded());
-                } else if (typeString.equals("replica_set")) {
-                    assumeFalse(isDiscoverableReplicaSet());
-                } else if (typeString.equals("standalone")) {
-                    assumeFalse(isStandalone());
-                }
-            }
-        }
-        collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
-        BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
-        mongoClient = MongoClients.create(getMongoClientBuilderFromConnectionString()
-                .retryWrites(clientOptions.getBoolean("retryWrites", BsonBoolean.FALSE).getValue())
-                .build());
-
-        List<BsonDocument> documents = new ArrayList<BsonDocument>();
-        for (BsonValue document : data) {
-            documents.add(document.asDocument());
-        }
-
-        collectionHelper.drop();
-        collectionHelper.insertDocuments(documents);
-
-        MongoDatabase database = mongoClient.getDatabase(databaseName);
-        collection = database.getCollection(collectionName, BsonDocument.class);
-        helper = new JsonPoweredCrudTestHelper(description, database, collection);
-        if (definition.containsKey("failPoint")) {
-            collectionHelper.runAdminCommand(definition.getDocument("failPoint"));
-        }
-        if (definition.containsKey("stepDownOptions")) {
-            collectionHelper.runAdminCommand(definition.getDocument("stepDownOptions"));
-        }
+        setUpClientUnderTest();
+        setUpFailPointClient();
+        setUpStepDownClient();
     }
 
     @After
     public void cleanUp() {
-        if (mongoClient != null) {
-            mongoClient.close();
+        if (failPointClient != null) {
+            MongoDatabase failPointAdminDB = failPointClient.getDatabase("admin");
+            Document command =
+                    new Document("onPrimaryTransactionWrite", "off")
+                            .append("mode", "off");
+            failPointAdminDB.runCommand(command, new SingleResultCallback<Document>() {
+                @Override
+                public void onResult(final Document result, final Throwable t) {
+                    System.out.println(result.toJson());
+                }
+            });
         }
-        if (collectionHelper != null && definition.containsKey("failPoint")) {
-            collectionHelper.runAdminCommand(new BsonDocument("configureFailPoint",
-                    definition.getDocument("failPoint").getString("configureFailPoint"))
-                    .append("mode", new BsonString("off")));
+
+        if (clientUnderTest != null) {
+            clientUnderTest.close();
+        }
+        if (stepDownClient != null) {
+            stepDownClient.close();
         }
     }
 
     @Test
     public void shouldPassAllOutcomes() {
-        BsonDocument operation = definition.getDocument("operation");
-        BsonDocument outcome = definition.getDocument("outcome");
-
-        BsonDocument result = new BsonDocument();
-        boolean wasException = false;
+        // Start by successfully inserting a document.
+        MongoDatabase database = clientUnderTest.getDatabase(databaseName);
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+        Document doc = new Document("_id", 1).append("x", 11);
         try {
-            result = helper.getOperationResults(operation);
-        } catch (Exception e) {
-            wasException = true;
+            collection.insertOne(doc, new SingleResultCallback<Void>() {
+                @Override
+                public void onResult(final Void result, final Throwable t) {
+                    System.out.println("Inserted!");
+                }
+            });
+        } catch (MongoServerException ex) {
+            fail("Initial insert failed");
         }
 
-        if (outcome.containsKey("collection")) {
-            FutureResultCallback<List<BsonDocument>> futureResultCallback = new FutureResultCallback<List<BsonDocument>>();
-            collection.withDocumentClass(BsonDocument.class).find().into(new ArrayList<BsonDocument>(), futureResultCallback);
-            assertEquals(outcome.getDocument("collection").getArray("data").getValues(), futureResult(futureResultCallback));
+        activateFailPoint();
+        stepDownPrimary();
+
+        // Insert a document and observe a successful write. The insert must fail once
+        // against the step down node, then succeed on retry.
+        try {
+            collection.insertOne(new Document("_id", 2).append("x", 22), new SingleResultCallback<Void>() {
+                @Override
+                public void onResult(final Void result, final Throwable t) {
+                    System.out.println("This insert should fail.");
+                    if (t != null) {
+                        System.out.println("Exception: " + t.getMessage());
+                        throw new MongoException(t.getMessage());
+                    }
+                }
+            });
+            fail("Exception should have been raised on insert");
+        } catch (MongoException ex) {
+            System.out.println("Expected exception raised: " + ex.getMessage());
         }
 
-        if (outcome.getBoolean("error", BsonBoolean.FALSE).getValue()) {
-            assertEquals(outcome.containsKey("error"), wasException);
-        } else {
-            BsonDocument fixedExpectedResult = outcome.getDocument("result", new BsonDocument());
-            assertEquals(fixedExpectedResult, result.getDocument("result", new BsonDocument()));
+        try {
+            collection.insertOne(new Document("_id", 2).append("x", 22), new SingleResultCallback<Void>() {
+                @Override
+                public void onResult(final Void result, final Throwable t) {
+                    System.out.println("This insert should succeed.");
+                }
+            });
+        } catch (MongoException ex) {
+            fail("Exception should not have been raised on insert: " + ex.getMessage());
         }
-    }
-
-    @Parameterized.Parameters(name = "{1}")
-    public static Collection<Object[]> data() throws URISyntaxException, IOException {
-        List<Object[]> data = new ArrayList<Object[]>();
-        for (File file : JsonPoweredTestHelper.getTestFiles("/retryable-writes-prose")) {
-            System.out.println("JSON file: " + file);
-            BsonDocument testDocument = JsonPoweredTestHelper.getTestDocument(file);
-            if (testDocument.containsKey("minServerVersion")
-                    && serverVersionLessThan(testDocument.getString("minServerVersion").getValue())) {
-                continue;
-            }
-            for (BsonValue test : testDocument.getArray("tests")) {
-                data.add(new Object[]{file.getName(), test.asDocument().getString("description").getValue(),
-                        testDocument.getArray("data"), test.asDocument()});
-            }
-        }
-        return data;
     }
 
     private boolean canRunTests() {
         return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
     }
 
-    <T> T futureResult(final FutureResultCallback<T> callback) {
-        try {
-            return callback.get();
-        } catch (Throwable t) {
-            throw new MongoException("FutureResultCallback failed", t);
-        }
+    private void setUpClientUnderTest() {
+        clientUnderTest = MongoClients.create(getMongoClientBuilderFromConnectionString()
+                .retryWrites(true)
+                .applyToServerSettings(new Block<ServerSettings.Builder>() {
+                    @Override
+                    public void apply(final ServerSettings.Builder builder) {
+                        builder.heartbeatFrequency(60, TimeUnit.SECONDS);
+                    }
+                })
+                .build());
     }
 
-    private ServerVersion getServerVersion(final String fieldName) {
-        String[] versionStringArray = definition.getString(fieldName).getValue().split("\\.");
-        return new ServerVersion(Integer.parseInt(versionStringArray[0]), Integer.parseInt(versionStringArray[1]));
+    private void setUpFailPointClient() {
+        failPointClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
+    }
+
+    private void setUpStepDownClient() {
+        stepDownClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
+    }
+
+    private void activateFailPoint() {
+        MongoDatabase adminDB = failPointClient.getDatabase("admin");
+        Document command =
+                new Document("configureFailPoint", "stepdownHangBeforePerformingPostMemberStateUpdateActions")
+                        .append("mode", "alwaysOn");
+        adminDB.runCommand(command, new SingleResultCallback<Document>() {
+            @Override
+            public void onResult(final Document result, final Throwable t) {
+                System.out.println("Executed command to activate fail point");
+            }
+        });
+    }
+
+    private void stepDownPrimary() {
+        MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
+        stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true), new SingleResultCallback<Document>() {
+            @Override
+            public void onResult(final Document result, final Throwable t) {
+                System.out.println("Executed command to step down primary");
+            }
+        });
     }
 }
