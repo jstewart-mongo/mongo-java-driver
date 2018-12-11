@@ -57,7 +57,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
     // Use primitives to represent the 5-byte random value.
     private static final int RANDOM_VALUE1;
-    private static final int RANDOM_VALUE2;
+    private static final short RANDOM_VALUE2;
 
     private static final AtomicInteger NEXT_COUNTER = new AtomicInteger(new SecureRandom().nextInt());
 
@@ -68,7 +68,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     private final int timestamp;
     private final int counter;
     private final int randomValue1;
-    private final int randomValue2;
+    private final short randomValue2;
 
     /**
      * Gets a new object id.
@@ -127,10 +127,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @param date the date
      */
     public ObjectId(final Date date) {
-        this.timestamp = dateToTimestampSeconds(date);
-        this.randomValue1 = RANDOM_VALUE1;
-        this.randomValue2 = RANDOM_VALUE2;
-        this.counter = (NEXT_COUNTER.getAndIncrement() & LOW_ORDER_THREE_BYTES);
+        this(dateToTimestampSeconds(date), NEXT_COUNTER.getAndIncrement() & LOW_ORDER_THREE_BYTES, false);
     }
 
     /**
@@ -186,19 +183,12 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     }
 
     private ObjectId(final int timestamp, final int counter, final boolean checkCounter) {
-        if (checkCounter && ((counter & 0xff000000) != 0)) {
-            throw new IllegalArgumentException("The counter must be between 0 and 16777215 (it must fit in three bytes).");
-        }
-        this.timestamp = timestamp;
-
-        this.randomValue1 = RANDOM_VALUE1;
-        this.randomValue2 = RANDOM_VALUE2;
-        this.counter = counter & LOW_ORDER_THREE_BYTES;
+        this(timestamp, RANDOM_VALUE1, RANDOM_VALUE2, counter, checkCounter);
     }
 
-    private ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier, final int counter,
+    private ObjectId(final int timestamp, final int randomValue1, final short randomValue2, final int counter,
                      final boolean checkCounter) {
-        if ((machineIdentifier & 0xff000000) != 0) {
+        if ((randomValue1 & 0xff000000) != 0) {
             throw new IllegalArgumentException("The machine identifier must be between 0 and 16777215 (it must fit in three bytes).");
         }
         if (checkCounter && ((counter & 0xff000000) != 0)) {
@@ -206,8 +196,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         }
         this.timestamp = timestamp;
         this.counter = counter & LOW_ORDER_THREE_BYTES;
-        this.randomValue1 = machineIdentifier;
-        this.randomValue2 = (int) processIdentifier;
+        this.randomValue1 = randomValue1;
+        this.randomValue2 = randomValue2;
     }
 
     /**
@@ -256,7 +246,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         // and ObjectId's are always in big-endian order.
         timestamp = makeInt(buffer.get(), buffer.get(), buffer.get(), buffer.get());
         randomValue1 = makeInt((byte) 0, buffer.get(), buffer.get(), buffer.get());
-        randomValue2 = makeInt((byte) 0, (byte) 0, buffer.get(), buffer.get());
+        randomValue2 = makeShort(buffer.get(), buffer.get());
         counter = makeInt((byte) 0, buffer.get(), buffer.get(), buffer.get());
     }
 
@@ -307,8 +297,8 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         buffer.put(int2(randomValue1));
         buffer.put(int1(randomValue1));
         buffer.put(int0(randomValue1));
-        buffer.put(int1(randomValue2));
-        buffer.put(int0(randomValue2));
+        buffer.put(short1(randomValue2));
+        buffer.put(short0(randomValue2));
         buffer.put(int2(counter));
         buffer.put(int1(counter));
         buffer.put(int0(counter));
@@ -439,7 +429,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public static int getCurrentCounter() {
-        return NEXT_COUNTER.get();
+        return NEXT_COUNTER.get() & LOW_ORDER_THREE_BYTES;
     }
 
     /**
@@ -450,7 +440,6 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public static int getGeneratedMachineIdentifier() {
-        // For legacy purposes, return the first 3 bytes of randomValue as an integer.
         return RANDOM_VALUE1;
     }
 
@@ -462,7 +451,6 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public static int getGeneratedProcessIdentifier() {
-        // For legacy purposes, return the last 2 bytes of randomValue as a short.
         return RANDOM_VALUE2;
     }
 
@@ -474,7 +462,6 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public int getMachineIdentifier() {
-        // For legacy purposes, return the first 3 bytes of randomValue as an integer.
         return randomValue1;
     }
 
@@ -486,8 +473,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public short getProcessIdentifier() {
-        // For legacy purposes, return the last 2 bytes of randomValue as a short.
-        return (short) randomValue2;
+        return randomValue2;
     }
 
     /**
@@ -537,7 +523,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         try {
             SecureRandom secureRandom = new SecureRandom();
             RANDOM_VALUE1 = secureRandom.nextInt(0x01000000);
-            RANDOM_VALUE2 = secureRandom.nextInt(0x00008000);
+            RANDOM_VALUE2 = (short) secureRandom.nextInt(0x00008000);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -570,6 +556,12 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         // CHECKSTYLE:ON
     }
 
+    private static short makeShort(final byte b1, final byte b0) {
+        // CHECKSTYLE:OFF
+        return (short) (((b1 & 0xff) << 8) | ((b0 & 0xff)));
+        // CHECKSTYLE:ON
+    }
+
     private static byte int3(final int x) {
         return (byte) (x >> 24);
     }
@@ -585,4 +577,13 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     private static byte int0(final int x) {
         return (byte) (x);
     }
+
+    private static byte short1(final short x) {
+        return (byte) (x >> 8);
+    }
+
+    private static byte short0(final short x) {
+        return (byte) (x);
+    }
+
 }
