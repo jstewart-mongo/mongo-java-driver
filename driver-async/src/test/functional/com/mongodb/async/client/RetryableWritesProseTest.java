@@ -97,7 +97,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
     @Test
     public void shouldPassAllOutcomes() {
-        // Start by successfully inserting a document.
+        // Using the client under test, insert a document and observe a successful write result.
+        // This will ensure that initial discovery takes place.
         MongoDatabase database = clientUnderTest.getDatabase(databaseName);
         MongoCollection<Document> collection = database.getCollection(collectionName);
         Document doc = new Document("_id", 1).append("x", 11);
@@ -112,11 +113,19 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             fail("Initial insert failed");
         }
 
+        // Using the fail point client, activate the fail point by setting mode to "alwaysOn".
         activateFailPoint();
+
+        // Using the step down client, step down the primary by executing the command { replSetStepDown: 60, force: true}.
+        // This operation will hang so long as the fail point is activated. When the fail point is later deactivated,
+        // the step down will complete and the primary's client connections will be dropped. At that point, any ensuing
+        // network error should be ignored.
         stepDownPrimary();
 
-        // Insert a document and observe a successful write. The insert must fail once
-        // against the step down node, then succeed on retry.
+        // Using the client under test, insert a document and observe a successful write result. The test MUST assert
+        // that the insert command fails once against the stepped down node and is successfully retried on the newly
+        // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
+        // both attempts.
         try {
             collection.insertOne(new Document("_id", 2).append("x", 22), new SingleResultCallback<Void>() {
                 @Override
