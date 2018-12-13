@@ -16,9 +16,6 @@
 
 package org.bson.types;
 
-import org.bson.diagnostics.Logger;
-import org.bson.diagnostics.Loggers;
-
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
@@ -49,8 +46,6 @@ import static org.bson.assertions.Assertions.notNull;
 public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
     private static final long serialVersionUID = 3670079982654483072L;
-
-    static final Logger LOGGER = Loggers.getLogger("ObjectId");
 
     private static final int OBJECT_ID_LENGTH = 12;
     private static final int LOW_ORDER_THREE_BYTES = 0x00ffffff;
