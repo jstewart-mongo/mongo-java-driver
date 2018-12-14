@@ -161,6 +161,10 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     private void activateFailPoint() {
+        this.collectionHelper.runAdminCommand(
+                new BsonDocument("configureFailPoint", "stepdownHangBeforePerformingPostMemberStateUpdateActions")
+                .append("mode", "alwaysOn"));
+
         MongoDatabase adminDB = failPointClient.getDatabase("admin");
         FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
         Document command =

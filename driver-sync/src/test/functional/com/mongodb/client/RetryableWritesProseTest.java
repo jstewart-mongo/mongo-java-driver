@@ -17,10 +17,13 @@
 package com.mongodb.client;
 
 import com.mongodb.Block;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoServerException;
 
 import com.mongodb.connection.ServerSettings;
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
 import org.bson.Document;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -75,10 +78,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     public void cleanUp() {
         if (failPointClient != null) {
             MongoDatabase failPointAdminDB = failPointClient.getDatabase("admin");
-            Document command =
-                    new Document("onPrimaryTransactionWrite", "off")
-                            .append("mode", "off");
-            failPointAdminDB.runCommand(command);
+            failPointAdminDB.runCommand(new Document("mode", "off"));
         }
 
         if (clientUnderTest != null) {
@@ -97,7 +97,9 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         MongoCollection<Document> collection = database.getCollection(collectionName);
         Document doc = new Document("_id", 1).append("x", 11);
         try {
+            System.out.println("--- inserting initial document...");
             collection.insertOne(doc);
+            System.out.println("--- DONE inserting initial document");
         } catch (MongoServerException ex) {
             fail("Initial insert failed");
         }
@@ -109,13 +111,24 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         // This operation will hang so long as the fail point is activated. When the fail point is later deactivated,
         // the step down will complete and the primary's client connections will be dropped. At that point, any ensuing
         // network error should be ignored.
-        stepDownPrimary();
+        MongoDatabase stepDownDB = stepDownPrimary();
+
+
+        System.out.println("Waiting for secondary...");
+        try {
+            while (!stepDownDB.runCommand(new BsonDocument("isMaster", new BsonInt32(1))).getBoolean("secondary")) {
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException ex) {
+        }
+        System.out.println("--- DONE stepping down primary");
 
         // Using the client under test, insert a document and observe a successful write result. The test MUST assert
         // that the insert command fails once against the stepped down node and is successfully retried on the newly
         // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
         // both attempts.
         try {
+            System.out.println("--- insert one doc, should fail...");
             collection.insertOne(new Document("_id", 2).append("x", 22));
             fail("Exception should have been raised on insert");
         } catch (MongoException ex) {
@@ -123,7 +136,9 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         }
 
         try {
+            System.out.println("--- insert one doc, should pass...");
             collection.insertOne(new Document("_id", 2).append("x", 22));
+            System.out.println("--- DONE inserting one doc");
         } catch (MongoException ex) {
             fail("Exception should not have been raised on insert: " + ex.getMessage());
         }
@@ -134,23 +149,28 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     private void setUpClientUnderTest() {
-        clientUnderTest = MongoClients.create(getMongoClientSettingsBuilder()
+        MongoClientSettings settings = getMongoClientSettingsBuilder()
                 .retryWrites(true)
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
                     public void apply(final ServerSettings.Builder builder) {
-                        builder.heartbeatFrequency(60, TimeUnit.SECONDS);
+                        builder.heartbeatFrequency(60000, TimeUnit.MILLISECONDS);
                     }
                 })
-                .build());
+                .build();
+
+        clientUnderTest = MongoClients.create(settings);
+        System.out.println("setUpClientUnderTest: success");
     }
 
     private void setUpFailPointClient() {
         failPointClient = MongoClients.create(getMongoClientSettingsBuilder().build());
+        System.out.println("setUpFailPointClient: success");
     }
 
     private void setUpStepDownClient() {
         stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
+        System.out.println("setUpStepDownClient: success");
     }
 
     private void activateFailPoint() {
@@ -158,11 +178,28 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         Document command =
                 new Document("configureFailPoint", "stepdownHangBeforePerformingPostMemberStateUpdateActions")
                         .append("mode", "alwaysOn");
+        System.out.println("--- activating fail point...");
         adminDB.runCommand(command);
+        System.out.println("--- DONE activating fail point");
     }
 
-    private void stepDownPrimary() {
-        MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
-        stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+    private MongoDatabase stepDownPrimary() {
+        final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
+        System.out.println("--- stepping down primary...");
+        Thread t = new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+            }
+        });
+        t.start();
+
+        return stepDownDB;
+    }
+
+    private MongoCollection<Document> getClientCollection() {
+        MongoDatabase database = clientUnderTest.getDatabase(databaseName);
+        return database.getCollection(collectionName);
     }
 }
