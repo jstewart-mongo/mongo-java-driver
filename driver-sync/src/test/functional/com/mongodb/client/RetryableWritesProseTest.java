@@ -201,6 +201,10 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
         // both attempts.
         System.out.println("--- insert one doc after stepdown...");
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException ex) {
+        }
         collection.insertOne(new Document("_id", 2).append("x", 22));
     }
 }
