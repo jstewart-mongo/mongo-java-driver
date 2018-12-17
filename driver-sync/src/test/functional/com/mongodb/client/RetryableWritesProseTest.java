@@ -24,6 +24,8 @@ import com.mongodb.MongoServerException;
 import com.mongodb.MongoSocketReadException;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.event.CommandEvent;
+import com.mongodb.event.CommandFailedEvent;
+import com.mongodb.event.CommandSucceededEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -40,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -205,6 +208,32 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             Thread.sleep(3000);
         } catch (InterruptedException ex) {
         }
+        commandListener.reset();
         collection.insertOne(new Document("_id", 2).append("x", 22));
+
+        boolean notMasterErrorFound = false;
+        boolean successfulInsert = false;
+
+        List<CommandEvent> events = commandListener.getEvents();
+
+        for (int i = 0; i < events.size(); i++) {
+            CommandEvent event = events.get(i);
+
+            if (event instanceof CommandFailedEvent) {
+                MongoException ex = MongoException.fromThrowable(((CommandFailedEvent)event).getThrowable());
+                if (ex.getCode() == 10107) {  // notMaster error
+                    notMasterErrorFound = true;
+                }
+            }
+            if (event instanceof CommandSucceededEvent) {
+                CommandSucceededEvent ev = ((CommandSucceededEvent)event);
+                if (ev.getCommandName().equals("insert") &&
+                        ev.getResponse().getNumber("ok").intValue() == 1 &&
+                        notMasterErrorFound) {
+                    successfulInsert = true;
+                }
+            }
+        }
+        assertEquals(true, notMasterErrorFound && successfulInsert);
     }
 }

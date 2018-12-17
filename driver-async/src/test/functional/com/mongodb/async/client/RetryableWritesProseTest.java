@@ -21,9 +21,13 @@ import com.mongodb.MongoException;
 import com.mongodb.MongoNotPrimaryException;
 import com.mongodb.MongoServerException;
 
+import com.mongodb.MongoSocketReadException;
 import com.mongodb.async.FutureResultCallback;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.connection.ServerSettings;
+import com.mongodb.event.CommandEvent;
+import com.mongodb.event.CommandFailedEvent;
+import com.mongodb.event.CommandSucceededEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -39,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -152,13 +157,10 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         MongoCollection<Document> collection = database.getCollection(collectionName);
         FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
         Document doc = new Document("_id", 1).append("x", 11);
-        try {
-            System.out.println("--- inserting initial document...");
-            collection.insertOne(doc, futureResultCallback);
-            System.out.println("--- DONE inserting initial document");
-        } catch (MongoServerException ex) {
-            fail("Initial insert failed");
-        }
+
+        System.out.println("--- inserting initial document...");
+        collection.insertOne(doc, futureResultCallback);
+        System.out.println("--- DONE inserting initial document");
 
         return collection;
     }
@@ -182,7 +184,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
             @Override
             public void run() {
-                stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true), futureResultCallback);
+                try {
+                    stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true), futureResultCallback);
+                } catch (MongoSocketReadException e) {
+                } catch (IllegalStateException ex) {
+                }
             }
         });
         t.start();
@@ -201,21 +207,40 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             Thread.sleep(3000);
         } catch (InterruptedException ex) {
         }
-        try {
-            collection.insertOne(new Document("_id", 2).append("x", 22), futureResultCallback);
-        } catch (MongoNotPrimaryException ex) {
-            System.out.println("--- Caught exception: " + ex.getErrorCode());
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException iex) {
+
+        collection.insertOne(new Document("_id", 2).append("x", 22), futureResultCallback);
+        boolean notMasterErrorFound = false;
+        boolean successfulInsert = false;
+
+        List<CommandEvent> events = commandListener.getEvents();
+
+        System.out.println("--- Number of events: " + events.size());
+        for (int i = 0; i < events.size(); i++) {
+            CommandEvent event = events.get(i);
+
+            if (event instanceof CommandFailedEvent) {
+                MongoException ex = MongoException.fromThrowable(((CommandFailedEvent)event).getThrowable());
+                System.out.println("--- Exception code: " + ex.getCode());
+                if (ex.getCode() == 10107) {  // notMaster error
+                    notMasterErrorFound = true;
+                }
             }
-            collection.insertOne(new Document("_id", 2).append("x", 22), futureResultCallback);
+            if (event instanceof CommandSucceededEvent) {
+                CommandSucceededEvent ev = ((CommandSucceededEvent)event);
+                System.out.println("--- Successful event: " + ev.getCommandName());
+                if (ev.getCommandName().equals("insert") &&
+                        ev.getResponse().getNumber("ok").intValue() == 1 &&
+                        notMasterErrorFound) {
+                    successfulInsert = true;
+                }
+            }
         }
+        assertEquals(true, notMasterErrorFound && successfulInsert);
     }
 
     <T> T futureResult(final FutureResultCallback<T> callback) {
         try {
-            return callback.get();
+            return callback.get(5, TimeUnit.SECONDS);
         } catch (Throwable t) {
             throw new MongoException("FutureResultCallback failed", t);
         }
