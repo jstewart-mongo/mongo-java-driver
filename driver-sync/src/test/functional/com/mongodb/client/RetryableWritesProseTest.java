@@ -204,18 +204,23 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
         // both attempts.
         System.out.println("--- insert one doc after stepdown...");
+
+        // Sleep for 3 seconds to ensure the step down of the primary is in effect.
         try {
             Thread.sleep(3000);
         } catch (InterruptedException ex) {
         }
+
+        // Reset the list of events in the command listener to track just the upcoming insert events.
         commandListener.reset();
+
         collection.insertOne(new Document("_id", 2).append("x", 22));
 
         boolean notMasterErrorFound = false;
         boolean successfulInsert = false;
-
         List<CommandEvent> events = commandListener.getEvents();
 
+        // Check the command events for a notMaster error followed by a successful insert.
         for (int i = 0; i < events.size(); i++) {
             CommandEvent event = events.get(i);
 

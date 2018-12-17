@@ -93,6 +93,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             failPointAdminDB.runCommand(
                     new Document("configureFailPoint", "stepdownHangBeforePerformingPostMemberStateUpdateActions")
                             .append("mode", "off"), futureResultCallback);
+            futureResult(futureResultCallback);
         }
 
         if (clientUnderTest != null) {
@@ -160,6 +161,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
         System.out.println("--- inserting initial document...");
         collection.insertOne(doc, futureResultCallback);
+        futureResult(futureResultCallback);
         System.out.println("--- DONE inserting initial document");
 
         return collection;
@@ -173,6 +175,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                         .append("mode", "alwaysOn");
         System.out.println("--- activating fail point...");
         adminDB.runCommand(command, futureResultCallback);
+        futureResult(futureResultCallback);
         System.out.println("--- DONE activating fail point");
     }
 
@@ -186,6 +189,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             public void run() {
                 try {
                     stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true), futureResultCallback);
+                    try {
+                        futureResultCallback.get(60, TimeUnit.SECONDS);
+                    } catch (Throwable t) {
+                        throw new MongoException("FutureResultCallback failed", t);
+                    }
                 } catch (MongoSocketReadException e) {
                 } catch (IllegalStateException ex) {
                 }
@@ -203,31 +211,35 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         // both attempts.
         FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
         System.out.println("--- insert one doc after step down...");
+
+        // Reset the list of events in the command listener to track just the upcoming insert events.
+        commandListener.reset();
+
+        // Sleep for 3 seconds to ensure the step down of the primary is in effect.
         try {
             Thread.sleep(3000);
         } catch (InterruptedException ex) {
         }
 
         collection.insertOne(new Document("_id", 2).append("x", 22), futureResultCallback);
+        futureResult(futureResultCallback);
+
         boolean notMasterErrorFound = false;
         boolean successfulInsert = false;
-
         List<CommandEvent> events = commandListener.getEvents();
 
-        System.out.println("--- Number of events: " + events.size());
+        // Check the command events for a notMaster error followed by a successful insert.
         for (int i = 0; i < events.size(); i++) {
             CommandEvent event = events.get(i);
 
             if (event instanceof CommandFailedEvent) {
                 MongoException ex = MongoException.fromThrowable(((CommandFailedEvent)event).getThrowable());
-                System.out.println("--- Exception code: " + ex.getCode());
                 if (ex.getCode() == 10107) {  // notMaster error
                     notMasterErrorFound = true;
                 }
             }
             if (event instanceof CommandSucceededEvent) {
                 CommandSucceededEvent ev = ((CommandSucceededEvent)event);
-                System.out.println("--- Successful event: " + ev.getCommandName());
                 if (ev.getCommandName().equals("insert") &&
                         ev.getResponse().getNumber("ok").intValue() == 1 &&
                         notMasterErrorFound) {
@@ -240,10 +252,9 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
     <T> T futureResult(final FutureResultCallback<T> callback) {
         try {
-            return callback.get(5, TimeUnit.SECONDS);
+            return callback.get(20, TimeUnit.SECONDS);
         } catch (Throwable t) {
             throw new MongoException("FutureResultCallback failed", t);
         }
     }
 }
-
