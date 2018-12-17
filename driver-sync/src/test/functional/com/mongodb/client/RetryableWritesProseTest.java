@@ -21,7 +21,10 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoServerException;
 
+import com.mongodb.MongoSocketReadException;
 import com.mongodb.connection.ServerSettings;
+import com.mongodb.event.CommandEvent;
+import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.Document;
@@ -31,6 +34,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
@@ -46,6 +50,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private MongoClient clientUnderTest;
     private MongoClient failPointClient;
     private MongoClient stepDownClient;
+    private final TestCommandListener commandListener;
     private final String databaseName;
     private final String collectionName;
     private final String description;
@@ -54,6 +59,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         this.description = "Replica set failover test for retryable writes";
         this.databaseName = getDefaultDatabaseName();
         this.collectionName = "test";
+        this.commandListener = new TestCommandListener();
     }
 
     @BeforeClass
@@ -110,11 +116,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         // that the insert command fails once against the stepped down node and is successfully retried on the newly
         // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
         // both attempts.
-        insertDocumentShouldFail(collection);
-
-        waitForSecondary(stepDownDB);
-
-        insertDocumentShouldSucceed(collection);
+        insertDocument(collection);
     }
 
     private boolean canRunTests() {
@@ -123,6 +125,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
     private void setUpClientUnderTest() {
         MongoClientSettings settings = getMongoClientSettingsBuilder()
+                .addCommandListener(commandListener)
                 .retryWrites(true)
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
@@ -180,7 +183,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
             @Override
             public void run() {
-                stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+                try {
+                    stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+                } catch (MongoSocketReadException e) {
+                } catch (IllegalStateException ex) {
+                }
             }
         });
         t.start();
@@ -188,44 +195,12 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         return stepDownDB;
     }
 
-    private void insertDocumentShouldFail(MongoCollection<Document> collection) {
+    private void insertDocument(MongoCollection<Document> collection) {
         // Using the client under test, insert a document and observe a successful write result. The test MUST assert
         // that the insert command fails once against the stepped down node and is successfully retried on the newly
         // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
         // both attempts.
-        try {
-            System.out.println("--- insert one doc, should fail...");
-            collection.insertOne(new Document("_id", 2).append("x", 22));
-            fail("Exception should have been raised on insert");
-        } catch (MongoException ex) {
-            System.out.println("Expected exception raised: " + ex.getMessage());
-        }
-
-    }
-
-    private void waitForSecondary(MongoDatabase stepDownDB) {
-        System.out.println("Waiting for secondary...");
-        try {
-            while (!stepDownDB.runCommand(new BsonDocument("isMaster", new BsonInt32(1))).getBoolean("secondary")) {
-                Thread.sleep(1000);
-            }
-        } catch (InterruptedException ex) {
-        }
-        System.out.println("--- DONE stepping down primary");
-    }
-
-    private void insertDocumentShouldSucceed(MongoCollection<Document> collection) {
-        try {
-            System.out.println("--- insert one doc, should pass...");
-            collection.insertOne(new Document("_id", 2).append("x", 22));
-            System.out.println("--- DONE inserting one doc");
-        } catch (MongoException ex) {
-            fail("Exception should not have been raised on insert: " + ex.getMessage());
-        }
-    }
-
-    private MongoCollection<Document> getClientCollection() {
-        MongoDatabase database = clientUnderTest.getDatabase(databaseName);
-        return database.getCollection(collectionName);
+        System.out.println("--- insert one doc after stepdown...");
+        collection.insertOne(new Document("_id", 2).append("x", 22));
     }
 }
