@@ -19,21 +19,14 @@ package com.mongodb.client;
 import com.mongodb.Block;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
-import com.mongodb.MongoServerException;
 
-import com.mongodb.MongoSocketReadException;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandFailedEvent;
-import com.mongodb.event.CommandSucceededEvent;
 import com.mongodb.internal.connection.TestCommandListener;
-import org.bson.BsonDocument;
-import org.bson.BsonInt32;
 import org.bson.Document;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
@@ -53,82 +46,21 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private MongoClient clientUnderTest;
     private MongoClient failPointClient;
     private MongoClient stepDownClient;
-    private final TestCommandListener commandListener;
-    private final String databaseName;
-    private final String collectionName;
-    private final String description;
+    private MongoDatabase clientDatabase;
+    private MongoCollection<Document> clientCollection;
+    private boolean notMasterErrorFound = false;
 
-    public RetryableWritesProseTest() {
-        this.description = "Replica set failover test for retryable writes";
-        this.databaseName = getDefaultDatabaseName();
-        this.collectionName = "test";
-        this.commandListener = new TestCommandListener();
-    }
-
-    @BeforeClass
-    public static void beforeClass() {
-    }
-
-    @AfterClass
-    public static void afterClass() {
-    }
+    private static final TestCommandListener COMMAND_LISTENER = new TestCommandListener();
+    private static final String DATABASE_NAME = getDefaultDatabaseName();
+    private static final String COLLECTION_NAME = "RetryableWritesProseTest";
 
     @Before
     @Override
     public void setUp() {
         assumeTrue(canRunTests());
 
-        setUpClientUnderTest();
-        setUpFailPointClient();
-        setUpStepDownClient();
-    }
-
-    @After
-    public void cleanUp() {
-        if (failPointClient != null) {
-            MongoDatabase failPointAdminDB = failPointClient.getDatabase("admin");
-            failPointAdminDB.runCommand(
-                    new Document("configureFailPoint", "stepdownHangBeforePerformingPostMemberStateUpdateActions")
-                    .append("mode", "off"));
-        }
-
-        if (clientUnderTest != null) {
-            clientUnderTest.close();
-        }
-        if (stepDownClient != null) {
-            stepDownClient.close();
-        }
-    }
-
-    @Test
-    public void shouldPassAllOutcomes() {
-        // Using the client under test, insert a document and observe a successful write result.
-        // This will ensure that initial discovery takes place.
-        MongoCollection<Document> collection = insertInitialDocument();
-
-        // Using the fail point client, activate the fail point by setting mode to "alwaysOn".
-        activateFailPoint();
-
-        // Using the step down client, step down the primary by executing the command { replSetStepDown: 60, force: true}.
-        // This operation will hang so long as the fail point is activated. When the fail point is later deactivated,
-        // the step down will complete and the primary's client connections will be dropped. At that point, any ensuing
-        // network error should be ignored.
-        MongoDatabase stepDownDB = stepDownPrimary();
-
-        // Using the client under test, insert a document and observe a successful write result. The test MUST assert
-        // that the insert command fails once against the stepped down node and is successfully retried on the newly
-        // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
-        // both attempts.
-        insertDocument(collection);
-    }
-
-    private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
-    }
-
-    private void setUpClientUnderTest() {
         MongoClientSettings settings = getMongoClientSettingsBuilder()
-                .addCommandListener(commandListener)
+                .addCommandListener(COMMAND_LISTENER)
                 .retryWrites(true)
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
@@ -139,106 +71,110 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 .build();
 
         clientUnderTest = MongoClients.create(settings);
-        System.out.println("setUpClientUnderTest: success");
-    }
 
-    private void setUpFailPointClient() {
         failPointClient = MongoClients.create(getMongoClientSettingsBuilder().build());
-        System.out.println("setUpFailPointClient: success");
-    }
-
-    private void setUpStepDownClient() {
         stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
-        System.out.println("setUpStepDownClient: success");
+
+        clientDatabase = clientUnderTest.getDatabase(DATABASE_NAME);
+        clientCollection = clientDatabase.getCollection(COLLECTION_NAME);
     }
 
-    private MongoCollection<Document> insertInitialDocument() {
-        // Using the client under test, insert a document and observe a successful write result.
-        // This will ensure that initial discovery takes place.
-        MongoDatabase database = clientUnderTest.getDatabase(databaseName);
-        MongoCollection<Document> collection = database.getCollection(collectionName);
-        Document doc = new Document("_id", 1).append("x", 11);
-        try {
-            System.out.println("--- inserting initial document...");
-            collection.insertOne(doc);
-            System.out.println("--- DONE inserting initial document");
-        } catch (MongoServerException ex) {
-            fail("Initial insert failed");
+    @After
+    public void cleanUp() {
+        if (failPointClient != null) {
+            MongoDatabase failPointAdminDB = failPointClient.getDatabase("admin");
+            failPointAdminDB.runCommand(
+                    Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"));
+            failPointClient.close();
         }
 
-        return collection;
+        if (clientUnderTest != null) {
+            clientUnderTest.close();
+        }
+        if (stepDownClient != null) {
+            stepDownClient.close();
+        }
+    }
+
+    /**
+     * Test whether writes are retried in the event of a primary failover. This test proceeds as follows:
+     *
+     * Using the client under test, insert a document and observe a successful write result. This will ensure that
+     * initial discovery takes place.
+     *
+     * Using the fail point client, activate the fail point by setting mode to "alwaysOn".
+     *
+     * Using the step down client, step down the primary by executing the command { replSetStepDown: 60, force: true}.
+     * This operation will hang so long as the fail point is activated. When the fail point is later deactivated, the
+     * step down will complete and the primary's client connections will be dropped. At that point, any ensuing network
+     * error should be ignored.
+     *
+     * Using the client under test, insert a document and observe a successful write result. The test MUST assert that
+     * the insert command fails once against the stepped down node and is successfully retried on the newly elected
+     * primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe both attempts.
+     *
+     * Using the fail point client, deactivate the fail point by setting mode to "off".
+     */
+    @Test
+    public void testRetryableWriteOnFailover() {
+        insertDocument();
+        assertEquals(false, notMasterErrorFound);
+
+        activateFailPoint();
+        stepDownPrimary();
+        insertDocument();
+        assertEquals(true, notMasterErrorFound);
+    }
+
+    private boolean canRunTests() {
+        return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
     }
 
     private void activateFailPoint() {
         MongoDatabase adminDB = failPointClient.getDatabase("admin");
-        Document command =
-                new Document("configureFailPoint", "stepdownHangBeforePerformingPostMemberStateUpdateActions")
-                        .append("mode", "alwaysOn");
-        System.out.println("--- activating fail point...");
-        adminDB.runCommand(command);
-        System.out.println("--- DONE activating fail point");
+        String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions'," +
+                " mode : 'alwaysOn' }";
+        adminDB.runCommand(Document.parse(document));
     }
 
-    private MongoDatabase stepDownPrimary() {
+    private void stepDownPrimary() {
         final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
-        System.out.println("--- stepping down primary...");
-        Thread t = new Thread(new Runnable() {
 
+        Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
-                } catch (MongoSocketReadException e) {
-                } catch (IllegalStateException ex) {
-                }
+                stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
             }
         });
         t.start();
-
-        return stepDownDB;
-    }
-
-    private void insertDocument(MongoCollection<Document> collection) {
-        // Using the client under test, insert a document and observe a successful write result. The test MUST assert
-        // that the insert command fails once against the stepped down node and is successfully retried on the newly
-        // elected primary (after SDAM discovers the topology change). The test MAY use APM or another means to observe
-        // both attempts.
-        System.out.println("--- insert one doc after stepdown...");
 
         // Sleep for 3 seconds to ensure the step down of the primary is in effect.
         try {
             Thread.sleep(3000);
         } catch (InterruptedException ex) {
         }
+    }
 
-        // Reset the list of events in the command listener to track just the upcoming insert events.
-        commandListener.reset();
+    private void insertDocument() {
+        COMMAND_LISTENER.reset();
 
-        collection.insertOne(new Document("_id", 2).append("x", 22));
+        try {
+            clientCollection.insertOne(new Document("x", 22));
+        } catch (MongoException ex) {
+            fail("Inserting a document failed: " + ex.getMessage());
+        }
 
-        boolean notMasterErrorFound = false;
-        boolean successfulInsert = false;
-        List<CommandEvent> events = commandListener.getEvents();
+        List<CommandEvent> events = COMMAND_LISTENER.getEvents();
 
-        // Check the command events for a notMaster error followed by a successful insert.
         for (int i = 0; i < events.size(); i++) {
             CommandEvent event = events.get(i);
 
             if (event instanceof CommandFailedEvent) {
                 MongoException ex = MongoException.fromThrowable(((CommandFailedEvent)event).getThrowable());
-                if (ex.getCode() == 10107) {  // notMaster error
+                if (ex.getCode() == 10107) {
                     notMasterErrorFound = true;
                 }
             }
-            if (event instanceof CommandSucceededEvent) {
-                CommandSucceededEvent ev = ((CommandSucceededEvent)event);
-                if (ev.getCommandName().equals("insert") &&
-                        ev.getResponse().getNumber("ok").intValue() == 1 &&
-                        notMasterErrorFound) {
-                    successfulInsert = true;
-                }
-            }
         }
-        assertEquals(true, notMasterErrorFound && successfulInsert);
     }
 }
