@@ -133,8 +133,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private void activateFailPoint() {
         MongoDatabase adminDB = failPointClient.getDatabase("admin");
         FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
-        String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions'," +
-                " mode : 'alwaysOn' }";
+        String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions',"
+                + " mode : 'alwaysOn' }";
         adminDB.runCommand(Document.parse(document), futureResultCallback);
         futureResult(futureResultCallback);
     }
