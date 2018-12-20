@@ -45,7 +45,10 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private MongoClient clientUnderTest;
     private MongoClient failPointClient;
     private MongoClient stepDownClient;
+    private MongoDatabase clientDatabase;
+    private MongoCollection<Document> clientCollection;
     private boolean notMasterErrorFound = false;
+
     private static final TestCommandListener COMMAND_LISTENER = new TestCommandListener();
     private static final String DATABASE_NAME = getDefaultDatabaseName();
     private static final String COLLECTION_NAME = "RetryableWritesProseTest";
@@ -68,6 +71,9 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
         failPointClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
         stepDownClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
+
+        clientDatabase = clientUnderTest.getDatabase(DATABASE_NAME);
+        clientCollection = clientDatabase.getCollection(COLLECTION_NAME);
     }
 
     @After
@@ -129,8 +135,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
         String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions'," +
                 " mode : 'alwaysOn' }";
-        Document command = Document.parse(document);
-        adminDB.runCommand(command, futureResultCallback);
+        adminDB.runCommand(Document.parse(document), futureResultCallback);
         futureResult(futureResultCallback);
     }
 
@@ -148,14 +153,12 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     private void insertDocument() {
-        MongoDatabase database = clientUnderTest.getDatabase(DATABASE_NAME);
-        MongoCollection<Document> collection = database.getCollection(COLLECTION_NAME);
         FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
 
         // Reset the list of events in the command listener to track just the upcoming insert events.
         COMMAND_LISTENER.reset();
 
-        collection.insertOne(new Document("x", 22), futureResultCallback);
+        clientCollection.insertOne(new Document("x", 22), futureResultCallback);
         futureResult(futureResultCallback);
 
         List<CommandEvent> events = COMMAND_LISTENER.getEvents();
@@ -165,7 +168,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
             if (event instanceof CommandFailedEvent) {
                 MongoException ex = MongoException.fromThrowable(((CommandFailedEvent) event).getThrowable());
-                if (ex.getCode() == 10107) {  // notMaster error
+                if (ex.getCode() == 10107) {
                     notMasterErrorFound = true;
                 }
             }

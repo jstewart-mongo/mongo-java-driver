@@ -143,7 +143,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
-                stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+                try {
+                    stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+                } catch (Exception ex) {
+                    fail("Stepping down the primary failed: " + ex.getMessage());
+                }
             }
         });
         t.start();
