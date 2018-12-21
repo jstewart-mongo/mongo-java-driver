@@ -34,7 +34,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
-import static org.junit.Assert.assertEquals;
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
 
 import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
@@ -118,12 +119,12 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     @Test
     public void testRetryableWriteOnFailover() {
         insertDocument();
-        assertEquals(false, notMasterErrorFound);
+        assertFalse(notMasterErrorFound);
 
         activateFailPoint();
         stepDownPrimary();
         insertDocument();
-        assertEquals(true, notMasterErrorFound);
+        assertTrue(notMasterErrorFound);
     }
 
     private boolean canRunTests() {
