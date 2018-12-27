@@ -147,32 +147,33 @@ public class ObjectIdTest {
                 new ObjectId(Integer.MAX_VALUE, Short.MAX_VALUE, Short.MAX_VALUE, Short.MAX_VALUE).toHexString());
     }
 
+    private Date getDate(String s) throws ParseException {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z");
+        return dateFormat.parse(s);
+    }
+
     @Test
     public void testTimeZero() throws ParseException {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z");
-        Date d = dateFormat.parse("01-Jan-1970 00:00:00 -0000");
-        assertEquals(new ObjectId(0, 0).getDate(), d);
+        Date d = getDate("01-Jan-1970 00:00:00 -0000");
+        assertEquals(d, new ObjectId(0, 0).getDate());
     }
 
     @Test
     public void testTimeMaxSignedInt() throws ParseException {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z");
-        Date d = dateFormat.parse("19-Jan-2038 03:14:07 -0000");
-        assertEquals(new ObjectId(0x7FFFFFFF, 0).getDate(), d);
+        Date d = getDate("19-Jan-2038 03:14:07 -0000");
+        assertEquals(d, new ObjectId(0x7FFFFFFF, 0).getDate());
     }
 
     @Test
     public void testTimeMaxSignedIntPlusOne() throws ParseException {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z");
-        Date d = dateFormat.parse("19-Jan-2038 03:14:08 -0000");
-        assertEquals(new ObjectId(0x80000000, 0).getDate(), d);
+        Date d = getDate("19-Jan-2038 03:14:08 -0000");
+        assertEquals(d, new ObjectId(0x80000000, 0).getDate());
     }
 
     @Test
     public void testTimeMaxInt() throws ParseException {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z");
-        Date d = dateFormat.parse("07-Feb-2106 06:28:15 -0000");
-        assertEquals(new ObjectId(0xFFFFFFFF, 0).getDate(), d);
+        Date d = getDate("07-Feb-2106 06:28:15 -0000");
+        assertEquals(d, new ObjectId(0xFFFFFFFF, 0).getDate());
     }
 
     @SuppressWarnings("deprecation")
