@@ -16,6 +16,8 @@
 
 package org.bson.types;
 
+import org.bson.internal.UnsignedInts;
+
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
@@ -60,7 +62,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
             '0', '1', '2', '3', '4', '5', '6', '7',
             '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
-    private final long timestamp;
+    private final int timestamp;
     private final int counter;
     private final int randomValue1;
     private final short randomValue2;
@@ -189,7 +191,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         if (checkCounter && ((counter & 0xff000000) != 0)) {
             throw new IllegalArgumentException("The counter must be between 0 and 16777215 (it must fit in three bytes).");
         }
-        this.timestamp = timestamp & 0x00000000FFFFFFFFL;
+        this.timestamp = timestamp;
         this.counter = counter & LOW_ORDER_THREE_BYTES;
         this.randomValue1 = randomValue1;
         this.randomValue2 = randomValue2;
@@ -239,7 +241,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
         // Note: Cannot use ByteBuffer.getInt because it depends on tbe buffer's byte order
         // and ObjectId's are always in big-endian order.
-        timestamp = makeInt(buffer.get(), buffer.get(), buffer.get(), buffer.get()) & 0x00000000FFFFFFFFL;
+        timestamp = makeInt(buffer.get(), buffer.get(), buffer.get(), buffer.get());
         randomValue1 = makeInt((byte) 0, buffer.get(), buffer.get(), buffer.get());
         randomValue2 = makeShort(buffer.get(), buffer.get());
         counter = makeInt((byte) 0, buffer.get(), buffer.get(), buffer.get());
@@ -247,10 +249,10 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
     private static byte[] legacyToBytes(final int timestamp, final int machineAndProcessIdentifier, final int counter) {
         byte[] bytes = new byte[OBJECT_ID_LENGTH];
-        bytes[0] = int3((int)timestamp);
-        bytes[1] = int2((int)timestamp);
-        bytes[2] = int1((int)timestamp);
-        bytes[3] = int0((int)timestamp);
+        bytes[0] = int3(timestamp);
+        bytes[1] = int2(timestamp);
+        bytes[2] = int1(timestamp);
+        bytes[3] = int0(timestamp);
         bytes[4] = int3(machineAndProcessIdentifier);
         bytes[5] = int2(machineAndProcessIdentifier);
         bytes[6] = int1(machineAndProcessIdentifier);
@@ -285,10 +287,10 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         notNull("buffer", buffer);
         isTrueArgument("buffer.remaining() >=12", buffer.remaining() >= OBJECT_ID_LENGTH);
 
-        buffer.put(int3((int)timestamp));
-        buffer.put(int2((int)timestamp));
-        buffer.put(int1((int)timestamp));
-        buffer.put(int0((int)timestamp));
+        buffer.put(int3(timestamp));
+        buffer.put(int2(timestamp));
+        buffer.put(int1(timestamp));
+        buffer.put(int0(timestamp));
         buffer.put(int2(randomValue1));
         buffer.put(int1(randomValue1));
         buffer.put(int0(randomValue1));
@@ -305,7 +307,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @return the timestamp
      */
     public int getTimestamp() {
-        return (int)timestamp;
+        return timestamp;
     }
 
     /**
@@ -314,7 +316,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @return the Date
      */
     public Date getDate() {
-        return new Date(timestamp * 1000L);
+        return new Date(((long)timestamp & 0xFFFFFFFFL) * 1000L);
     }
 
     /**
@@ -346,7 +348,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         if (counter != objectId.counter) {
             return false;
         }
-        if (timestamp != objectId.timestamp) {
+        if (UnsignedInts.compare(timestamp, objectId.timestamp) != 0) {
             return false;
         }
 
@@ -363,7 +365,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
     @Override
     public int hashCode() {
-        int result = (int)timestamp;
+        int result = timestamp;
         result = 31 * result + counter;
         result = 31 * result + randomValue1;
         result = 31 * result + randomValue2;
@@ -490,7 +492,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public int getTimeSecond() {
-        return (int)timestamp;
+        return timestamp;
     }
 
     /**
@@ -501,7 +503,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public long getTime() {
-        return timestamp * 1000L;
+        return ((long)timestamp & 0xFFFFFFFFL) * 1000L;
     }
 
     /**
