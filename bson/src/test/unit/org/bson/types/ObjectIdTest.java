@@ -18,7 +18,6 @@ package org.bson.types;
 
 import org.junit.Test;
 
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -77,22 +76,22 @@ public class ObjectIdTest {
 
     @Test
     public void testGetTimeZero() {
-        assertEquals(new Timestamp(0L).getTime(), new ObjectId(0, 0).getTime());
+        assertEquals(0L, new ObjectId(0, 0).getTime());
     }
 
     @Test
     public void testGetTimeMaxSignedInt() {
-        assertEquals(new Timestamp(0x7FFFFFFFL * 1000).getTime(), new ObjectId(0x7FFFFFFF, 0).getTime());
+        assertEquals(0x7FFFFFFFL * 1000, new ObjectId(0x7FFFFFFF, 0).getTime());
     }
 
     @Test
     public void testGetTimeMaxSignedIntPlusOne() {
-        assertEquals(new Timestamp(0x80000000L * 1000).getTime(), new ObjectId(0x80000000, 0).getTime());
+        assertEquals(0x80000000L * 1000, new ObjectId(0x80000000, 0).getTime());
     }
 
     @Test
     public void testGetTimeMaxInt() {
-        assertEquals(new Timestamp(0xFFFFFFFFL * 1000).getTime(), new ObjectId(0xFFFFFFFF, 0).getTime());
+        assertEquals(0xFFFFFFFFL * 1000, new ObjectId(0xFFFFFFFF, 0).getTime());
     }
 
     @Test
