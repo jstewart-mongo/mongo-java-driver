@@ -16,8 +16,6 @@
 
 package org.bson.types;
 
-import org.bson.internal.UnsignedInts;
-
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
@@ -316,7 +314,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      * @return the Date
      */
     public Date getDate() {
-        return new Date(((long)timestamp & 0xFFFFFFFFL) * 1000L);
+        return new Date((timestamp & 0xFFFFFFFFL) * 1000L);
     }
 
     /**
@@ -348,7 +346,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         if (counter != objectId.counter) {
             return false;
         }
-        if (UnsignedInts.compare(timestamp, objectId.timestamp) != 0) {
+        if (timestamp != objectId.timestamp) {
             return false;
         }
 
@@ -503,7 +501,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
      */
     @Deprecated
     public long getTime() {
-        return ((long)timestamp & 0xFFFFFFFFL) * 1000L;
+        return (timestamp & 0xFFFFFFFFL) * 1000L;
     }
 
     /**

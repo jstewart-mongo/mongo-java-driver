@@ -18,6 +18,7 @@ package org.bson.types;
 
 import org.junit.Test;
 
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -75,6 +76,26 @@ public class ObjectIdTest {
     }
 
     @Test
+    public void testGetTimeZero() {
+        assertEquals(new Timestamp(0L).getTime(), new ObjectId(0, 0).getTime());
+    }
+
+    @Test
+    public void testGetTimeMaxSignedInt() {
+        assertEquals(new Timestamp(0x7FFFFFFFL * 1000).getTime(), new ObjectId(0x7FFFFFFF, 0).getTime());
+    }
+
+    @Test
+    public void testGetTimeMaxSignedIntPlusOne() {
+        assertEquals(new Timestamp(0x80000000L * 1000).getTime(), new ObjectId(0x80000000, 0).getTime());
+    }
+
+    @Test
+    public void testGetTimeMaxInt() {
+        assertEquals(new Timestamp(0xFFFFFFFFL * 1000).getTime(), new ObjectId(0xFFFFFFFF, 0).getTime());
+    }
+
+    @Test
     public void testTime() {
         long a = System.currentTimeMillis();
         long b = (new ObjectId()).getDate().getTime();
@@ -83,9 +104,7 @@ public class ObjectIdTest {
 
     @Test
     public void testDateCons() {
-        Date d = new Date();
-        ObjectId a = new ObjectId(d);
-        assertEquals(d.getTime() / 1000, a.getDate().getTime() / 1000);
+        assertEquals(new Date().getTime() / 1000, new ObjectId(new Date()).getDate().getTime() / 1000);
     }
 
     @Test
@@ -148,32 +167,27 @@ public class ObjectIdTest {
     }
 
     private Date getDate(String s) throws ParseException {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z");
-        return dateFormat.parse(s);
+        return new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss Z").parse(s);
     }
 
     @Test
     public void testTimeZero() throws ParseException {
-        Date d = getDate("01-Jan-1970 00:00:00 -0000");
-        assertEquals(d, new ObjectId(0, 0).getDate());
+        assertEquals(getDate("01-Jan-1970 00:00:00 -0000"), new ObjectId(0, 0).getDate());
     }
 
     @Test
     public void testTimeMaxSignedInt() throws ParseException {
-        Date d = getDate("19-Jan-2038 03:14:07 -0000");
-        assertEquals(d, new ObjectId(0x7FFFFFFF, 0).getDate());
+        assertEquals(getDate("19-Jan-2038 03:14:07 -0000"), new ObjectId(0x7FFFFFFF, 0).getDate());
     }
 
     @Test
     public void testTimeMaxSignedIntPlusOne() throws ParseException {
-        Date d = getDate("19-Jan-2038 03:14:08 -0000");
-        assertEquals(d, new ObjectId(0x80000000, 0).getDate());
+        assertEquals(getDate("19-Jan-2038 03:14:08 -0000"), new ObjectId(0x80000000, 0).getDate());
     }
 
     @Test
     public void testTimeMaxInt() throws ParseException {
-        Date d = getDate("07-Feb-2106 06:28:15 -0000");
-        assertEquals(d, new ObjectId(0xFFFFFFFF, 0).getDate());
+        assertEquals(getDate("07-Feb-2106 06:28:15 -0000"), new ObjectId(0xFFFFFFFF, 0).getDate());
     }
 
     @SuppressWarnings("deprecation")
