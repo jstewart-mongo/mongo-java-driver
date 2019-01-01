@@ -19,6 +19,9 @@ package com.mongodb.async.client;
 import com.mongodb.Block;
 import com.mongodb.MongoException;
 
+import com.mongodb.ClusterFixture;
+import com.mongodb.ConnectionString;
+import com.mongodb.ServerAddress;
 import com.mongodb.async.FutureResultCallback;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.event.CommandEvent;
@@ -50,6 +53,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private MongoDatabase clientDatabase;
     private MongoCollection<Document> clientCollection;
     private boolean notMasterErrorFound = false;
+    private ServerAddress originalPrimary = null;
+    private FutureResultCallback<Document> stepDownCallback = new FutureResultCallback<Document>();
 
     private static final TestCommandListener COMMAND_LISTENER = new TestCommandListener();
     private static final String DATABASE_NAME = getDefaultDatabaseName();
@@ -74,6 +79,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         failPointClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
         stepDownClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
 
+        originalPrimary = ClusterFixture.getPrimary();
+
         clientDatabase = clientUnderTest.getDatabase(DATABASE_NAME);
         clientCollection = clientDatabase.getCollection(COLLECTION_NAME);
     }
@@ -81,12 +88,24 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     @After
     public void cleanUp() {
         if (failPointClient != null) {
-            MongoDatabase failPointAdminDB = failPointClient.getDatabase("admin");
+            failPointClient.close();
+
+            failPointClient = MongoClients.create(getMongoClientBuilderFromConnectionString()
+                    .applyConnectionString(new ConnectionString("mongodb://" + originalPrimary.toString()))
+                    .build());
+            MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
             FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
-            failPointAdminDB.runCommand(
+            failPointAdminDb.runCommand(
                     Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"),
                     futureResultCallback);
             futureResult(futureResultCallback);
+
+            if (!stepDownCallback.isDone()) {
+                try {
+                    futureResult(stepDownCallback);
+                } catch (MongoException e) {
+                }
+            }
             failPointClient.close();
         }
 
@@ -144,9 +163,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
     private void stepDownPrimary() {
         final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
-        final FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
 
-        stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), futureResultCallback);
+        stepDownDB.runCommand(Document.parse("{ replSetStepDown: 5, force: true}"), stepDownCallback);
 
         // Sleep for 3 seconds to ensure the step down of the primary is in effect.
         try {
@@ -180,7 +198,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
     <T> T futureResult(final FutureResultCallback<T> callback) {
         try {
-            return callback.get(20, TimeUnit.SECONDS);
+            return callback.get(60, TimeUnit.SECONDS);
         } catch (Throwable t) {
             throw new MongoException("FutureResultCallback failed", t);
         }

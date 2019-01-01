@@ -17,9 +17,11 @@
 package com.mongodb.client;
 
 import com.mongodb.Block;
+import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 
+import com.mongodb.ServerAddress;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandFailedEvent;
@@ -51,6 +53,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private MongoDatabase clientDatabase;
     private MongoCollection<Document> clientCollection;
     private boolean notMasterErrorFound = false;
+    private Thread stepDownThread = null;
+    private ServerAddress originalPrimary = null;
 
     private static final TestCommandListener COMMAND_LISTENER = new TestCommandListener();
     private static final String DATABASE_NAME = getDefaultDatabaseName();
@@ -73,10 +77,13 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 .build();
 
         clientUnderTest = MongoClients.create(settings);
-
         failPointClient = MongoClients.create(getMongoClientSettingsBuilder().build());
         stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
 
+        try {
+            originalPrimary = Fixture.getPrimary();
+        } catch (InterruptedException e) {
+        }
         clientDatabase = clientUnderTest.getDatabase(DATABASE_NAME);
         clientCollection = clientDatabase.getCollection(COLLECTION_NAME);
     }
@@ -84,9 +91,19 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     @After
     public void cleanUp() {
         if (failPointClient != null) {
-            MongoDatabase failPointAdminDB = failPointClient.getDatabase("admin");
-            failPointAdminDB.runCommand(
+            failPointClient.close();
+
+            failPointClient = MongoClients.create(getMongoClientSettingsBuilder()
+                    .applyConnectionString(new ConnectionString("mongodb://" + originalPrimary.toString()))
+                    .build());
+            MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
+            failPointAdminDb.runCommand(
                     Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"));
+
+            try {
+                stepDownThread.join();
+            } catch (InterruptedException e) {
+            }
             failPointClient.close();
         }
 
@@ -134,26 +151,25 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     private void activateFailPoint() {
-        MongoDatabase adminDB = failPointClient.getDatabase("admin");
+        MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
         String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions',"
                 + " mode : 'alwaysOn' }";
-        adminDB.runCommand(Document.parse(document));
+        failPointAdminDb.runCommand(Document.parse(document));
     }
 
     private void stepDownPrimary() {
         final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
 
-        Thread t = new Thread(new Runnable() {
+        stepDownThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
+                    stepDownDB.runCommand(new Document("replSetStepDown", 5).append("force", true));
                 } catch (Exception ex) {
-                    fail("Stepping down the primary failed: " + ex.getMessage());
                 }
             }
         });
-        t.start();
+        stepDownThread.start();
 
         // Sleep for 3 seconds to ensure the step down of the primary is in effect.
         try {
