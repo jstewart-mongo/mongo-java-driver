@@ -20,7 +20,6 @@ import com.mongodb.Block;
 import com.mongodb.MongoException;
 
 import com.mongodb.ClusterFixture;
-import com.mongodb.ConnectionString;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.FutureResultCallback;
 import com.mongodb.connection.ClusterConnectionMode;

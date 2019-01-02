@@ -17,7 +17,6 @@
 package com.mongodb.client;
 
 import com.mongodb.Block;
-import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 
