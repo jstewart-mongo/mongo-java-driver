@@ -168,7 +168,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private void stepDownPrimary() {
         final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
 
-        stepDownDB.runCommand(Document.parse("{ replSetStepDown: 5, force: true}"), stepDownCallback);
+        stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
 
         // Sleep for 3 seconds to ensure the step down of the primary is in effect.
         try {

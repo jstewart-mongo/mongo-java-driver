@@ -170,7 +170,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             @Override
             public void run() {
                 try {
-                    stepDownDB.runCommand(new Document("replSetStepDown", 5).append("force", true));
+                    stepDownDB.runCommand(new Document("replSetStepDown", 60).append("force", true));
                 } catch (Exception ex) {
                 }
             }
