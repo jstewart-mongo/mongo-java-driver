@@ -190,7 +190,15 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         try {
             clientCollection.insertOne(new Document("x", 22));
         } catch (MongoException ex) {
-            fail("Inserting a document failed: " + ex.getMessage());
+            if (ex.getCode() == 10107) {
+                try {
+                    clientCollection.insertOne(new Document("x", 22));
+                } catch (Exception e) {
+                    fail("Inserting a document failed after NotMaster exception: " + ex.getMessage());
+                }
+            } else {
+                fail("Inserting a document failed: " + ex.getMessage());
+            }
         }
 
         List<CommandEvent> events = COMMAND_LISTENER.getEvents();
