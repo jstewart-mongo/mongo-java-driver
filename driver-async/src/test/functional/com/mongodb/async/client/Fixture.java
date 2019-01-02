@@ -45,13 +45,13 @@ public final class Fixture {
 
     public static synchronized MongoClient getMongoClient() {
         if (mongoClient == null) {
-            mongoClient = (MongoClientImpl) MongoClients.create(getMongoClientBuilderFromConnectionString().build());
+            mongoClient = (MongoClientImpl) MongoClients.create(getMongoClientSettingsBuilder().build());
             Runtime.getRuntime().addShutdownHook(new ShutdownHook());
         }
         return mongoClient;
     }
 
-    public static com.mongodb.MongoClientSettings.Builder getMongoClientBuilderFromConnectionString() {
+    public static com.mongodb.MongoClientSettings.Builder getMongoClientSettingsBuilder() {
         com.mongodb.MongoClientSettings.Builder builder = com.mongodb.MongoClientSettings.builder()
                 .applyConnectionString(getConnectionString());
         if (System.getProperty("java.version").startsWith("1.6.")) {

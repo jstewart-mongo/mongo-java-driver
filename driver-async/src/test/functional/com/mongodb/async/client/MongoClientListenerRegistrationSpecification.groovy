@@ -47,7 +47,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
         }
 
         when:
-        def builder = Fixture.mongoClientBuilderFromConnectionString
+        def builder = Fixture.mongoClientSettingsBuilder
         builder.applyToClusterSettings { it.addClusterListener(clusterListener) }
                 .applyToConnectionPoolSettings { it.addConnectionPoolListener(connectionPoolListener) }
                 .applyToServerSettings { it.addServerListener(serverListener).addServerMonitorListener(serverMonitorListener) }
@@ -63,7 +63,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
         given:
         def first = Mock(CommandListener)
         def second = Mock(CommandListener)
-        def client =  MongoClients.create(Fixture.mongoClientBuilderFromConnectionString
+        def client =  MongoClients.create(Fixture.mongoClientSettingsBuilder
                 .addCommandListener(first).addCommandListener(second).build())
 
         when:

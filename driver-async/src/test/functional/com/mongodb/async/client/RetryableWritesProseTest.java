@@ -23,6 +23,8 @@ import com.mongodb.ClusterFixture;
 import com.mongodb.ConnectionString;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.FutureResultCallback;
+import com.mongodb.connection.ClusterConnectionMode;
+import com.mongodb.connection.ClusterSettings;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandFailedEvent;
@@ -32,17 +34,18 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
+import static com.mongodb.async.client.Fixture.getMongoClientSettingsBuilder;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
 
 import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
 
 // See https://github.com/mongodb/specifications/tree/master/source/retryable-writes/tests/README.rst#replica-set-failover-test
 public class RetryableWritesProseTest extends DatabaseTestCase {
@@ -64,7 +67,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     public void setUp() {
         assumeTrue(canRunTests());
 
-        clientUnderTest = MongoClients.create(getMongoClientBuilderFromConnectionString()
+        clientUnderTest = MongoClients.create(getMongoClientSettingsBuilder()
                 .addCommandListener(COMMAND_LISTENER)
                 .retryWrites(true)
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
@@ -75,8 +78,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 })
                 .build());
 
-        failPointClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
-        stepDownClient = MongoClients.create(getMongoClientBuilderFromConnectionString().build());
+        failPointClient = MongoClients.create(getMongoClientSettingsBuilder().build());
+        stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
 
         originalPrimary = ClusterFixture.getPrimary();
 
@@ -89,9 +92,14 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         if (failPointClient != null) {
             failPointClient.close();
 
-            failPointClient = MongoClients.create(getMongoClientBuilderFromConnectionString()
-                    .applyConnectionString(new ConnectionString("mongodb://" + originalPrimary.toString()))
-                    .build());
+            failPointClient = MongoClients.create(getMongoClientSettingsBuilder()
+                    .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
+                        @Override
+                        public void apply(final ClusterSettings.Builder builder) {
+                            builder.mode(ClusterConnectionMode.SINGLE)
+                                    .hosts(Collections.singletonList(originalPrimary));
+                        }
+                    }).build());
             MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
             FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
             failPointAdminDb.runCommand(
@@ -99,12 +107,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                     futureResultCallback);
             futureResult(futureResultCallback);
 
-            if (!stepDownCallback.isDone()) {
-                try {
-                    futureResult(stepDownCallback);
-                } catch (MongoException e) {
-                }
+            try {
+                futureResult(stepDownCallback);
+            } catch (MongoException e) {
             }
+
             failPointClient.close();
         }
 

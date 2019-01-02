@@ -129,7 +129,7 @@ public class TransactionsTest {
 
         BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        mongoClient = MongoClients.create(Fixture.getMongoClientBuilderFromConnectionString()
+        mongoClient = MongoClients.create(Fixture.getMongoClientSettingsBuilder()
                 .addCommandListener(commandListener)
                 .applyToSocketSettings(new Block<SocketSettings.Builder>() {
                     @Override

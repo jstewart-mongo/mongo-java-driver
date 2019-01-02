@@ -22,7 +22,7 @@ import io.netty.channel.oio.OioEventLoopGroup
 import io.netty.channel.socket.oio.OioSocketChannel
 import org.bson.Document
 
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString
+import static com.mongodb.async.client.Fixture.getMongoClientSettingsBuilder
 import static java.util.concurrent.TimeUnit.SECONDS
 
 class NettyStreamFactoryFactorySmokeTestSpecification extends FunctionalSpecification {
@@ -34,7 +34,7 @@ class NettyStreamFactoryFactorySmokeTestSpecification extends FunctionalSpecific
         def eventLoopGroup = new OioEventLoopGroup()
         def streamFactoryFactory = NettyStreamFactoryFactory.builder()
                 .eventLoopGroup(eventLoopGroup).socketChannelClass(OioSocketChannel).build()
-        com.mongodb.MongoClientSettings settings = getMongoClientBuilderFromConnectionString()
+        com.mongodb.MongoClientSettings settings = getMongoClientSettingsBuilder()
                 .streamFactoryFactory(streamFactoryFactory).build()
         def document = new Document('a', 1)
 

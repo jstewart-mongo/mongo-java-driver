@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.isStandalone;
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
+import static com.mongodb.async.client.Fixture.getMongoClientSettingsBuilder;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -127,7 +127,7 @@ public class ChangeStreamsTest extends DatabaseTestCase {
         collectionHelper2.create();
 
         commandListener = new TestCommandListener();
-        mongoClient = MongoClients.create(getMongoClientBuilderFromConnectionString().addCommandListener(commandListener).build());
+        mongoClient = MongoClients.create(getMongoClientSettingsBuilder().addCommandListener(commandListener).build());
     }
 
     @After

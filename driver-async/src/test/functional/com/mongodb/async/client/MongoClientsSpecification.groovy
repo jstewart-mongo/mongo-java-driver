@@ -30,7 +30,7 @@ import static com.mongodb.ClusterFixture.isStandalone
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
 import static com.mongodb.ReadPreference.primary
 import static com.mongodb.ReadPreference.secondaryPreferred
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString
+import static com.mongodb.async.client.Fixture.getMongoClientSettingsBuilder
 import static com.mongodb.async.client.TestHelper.run
 import static java.util.concurrent.TimeUnit.MILLISECONDS
 
@@ -194,7 +194,7 @@ class MongoClientsSpecification extends FunctionalSpecification {
         given:
         def appName = 'appName1'
         def driverInfo = MongoDriverInformation.builder().driverName('myDriver').driverVersion('42').build()
-        def client = MongoClients.create(getMongoClientBuilderFromConnectionString().applicationName(appName).build(), driverInfo)
+        def client = MongoClients.create(getMongoClientSettingsBuilder().applicationName(appName).build(), driverInfo)
         def database = client.getDatabase(getDatabaseName())
         def collection = database.getCollection(getCollectionName())
 

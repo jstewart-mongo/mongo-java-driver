@@ -51,7 +51,7 @@ import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.isStandalone;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
+import static com.mongodb.async.client.Fixture.getMongoClientSettingsBuilder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
@@ -114,7 +114,7 @@ public class RetryableWritesTest extends DatabaseTestCase {
         }
         collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
         BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
-        mongoClient = MongoClients.create(getMongoClientBuilderFromConnectionString()
+        mongoClient = MongoClients.create(getMongoClientSettingsBuilder()
                 .retryWrites(clientOptions.getBoolean("retryWrites", BsonBoolean.FALSE).getValue())
                 .build());
 

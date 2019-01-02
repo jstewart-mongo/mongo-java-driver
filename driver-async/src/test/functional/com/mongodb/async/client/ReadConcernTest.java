@@ -48,7 +48,7 @@ public class ReadConcernTest {
     public void setUp() {
         assumeTrue(canRunTests());
         commandListener = new TestCommandListener();
-        mongoClient = MongoClients.create(Fixture.getMongoClientBuilderFromConnectionString()
+        mongoClient = MongoClients.create(Fixture.getMongoClientSettingsBuilder()
                 .addCommandListener(commandListener)
                 .build());
     }

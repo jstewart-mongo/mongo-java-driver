@@ -22,6 +22,8 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 
 import com.mongodb.ServerAddress;
+import com.mongodb.connection.ClusterConnectionMode;
+import com.mongodb.connection.ClusterSettings;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandFailedEvent;
@@ -31,6 +33,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -93,8 +96,13 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             failPointClient.close();
 
             failPointClient = MongoClients.create(getMongoClientSettingsBuilder()
-                    .applyConnectionString(new ConnectionString("mongodb://" + originalPrimary.toString()))
-                    .build());
+                    .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
+                        @Override
+                        public void apply(final ClusterSettings.Builder builder) {
+                            builder.mode(ClusterConnectionMode.SINGLE)
+                                    .hosts(Collections.singletonList(originalPrimary));
+                        }
+                    }).build());
             MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
             failPointAdminDb.runCommand(
                     Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"));
@@ -103,6 +111,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 stepDownThread.join();
             } catch (InterruptedException e) {
             }
+
             failPointClient.close();
         }
 

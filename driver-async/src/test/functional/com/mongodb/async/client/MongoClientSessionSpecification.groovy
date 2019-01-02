@@ -258,7 +258,7 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
     def 'should use a default session'() {
         given:
         def commandListener = new TestCommandListener()
-        def options = Fixture.getMongoClientBuilderFromConnectionString().addCommandListener(commandListener).build()
+        def options = Fixture.getMongoClientSettingsBuilder().addCommandListener(commandListener).build()
         def client = MongoClients.create(options)
 
         when:
@@ -277,7 +277,7 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
     def 'should not use a default session when sessions are not supported'() {
         given:
         def commandListener = new TestCommandListener()
-        def options = Fixture.getMongoClientBuilderFromConnectionString().addCommandListener(commandListener).build()
+        def options = Fixture.getMongoClientSettingsBuilder().addCommandListener(commandListener).build()
         def client = MongoClients.create(options)
 
         when:
