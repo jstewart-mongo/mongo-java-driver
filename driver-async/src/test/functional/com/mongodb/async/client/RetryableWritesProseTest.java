@@ -184,7 +184,14 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         COMMAND_LISTENER.reset();
 
         clientCollection.insertOne(new Document("x", 22), futureResultCallback);
-        futureResult(futureResultCallback);
+        try {
+            futureResult(futureResultCallback);
+        } catch (MongoException e) {
+            if (((MongoException) e.getCause()).getCode() == 10107) {
+                clientCollection.insertOne(new Document("x", 22), futureResultCallback);
+                futureResult(futureResultCallback);
+            }
+        }
 
         List<CommandEvent> events = COMMAND_LISTENER.getEvents();
 
