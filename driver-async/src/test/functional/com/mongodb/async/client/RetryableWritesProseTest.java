@@ -16,6 +16,7 @@
 
 package com.mongodb.async.client;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
 import com.mongodb.MongoException;
 
@@ -170,11 +171,23 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
         stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
 
-        // Sleep for 3 seconds to ensure the step down of the primary is in effect.
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException ex) {
+        // Wait for the primary to step down.
+        while (containsPrimary()) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+            }
         }
+    }
+
+    private boolean containsPrimary() {
+        FutureResultCallback<Document> waitCallback = new FutureResultCallback<Document>();
+        clientDatabase.runCommand(new BasicDBObject("isMaster", 1), waitCallback);
+        try {
+            return waitCallback.get().containsKey("primary");
+        } catch (InterruptedException e) {
+        }
+        return false;
     }
 
     private void insertDocument() {
@@ -184,14 +197,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         COMMAND_LISTENER.reset();
 
         clientCollection.insertOne(new Document("x", 22), futureResultCallback);
-        try {
-            futureResult(futureResultCallback);
-        } catch (MongoException e) {
-            if (((MongoException) e.getCause()).getCode() == 10107) {
-                clientCollection.insertOne(new Document("x", 22), futureResultCallback);
-                futureResult(futureResultCallback);
-            }
-        }
+        futureResult(futureResultCallback);
 
         List<CommandEvent> events = COMMAND_LISTENER.getEvents();
 

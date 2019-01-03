@@ -16,6 +16,7 @@
 
 package com.mongodb.client;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
@@ -177,10 +178,12 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         });
         stepDownThread.start();
 
-        // Sleep for 3 seconds to ensure the step down of the primary is in effect.
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException ex) {
+        // Wait for the primary to step down.
+        while (clientDatabase.runCommand(new BasicDBObject("isMaster", 1)).containsKey("primary")) {
+           try {
+               Thread.sleep(1000);
+           } catch (InterruptedException ex) {
+           }
         }
     }
 
@@ -193,8 +196,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             if (ex.getCode() == 10107) {
                 try {
                     clientCollection.insertOne(new Document("x", 22));
-                } catch (Exception e) {
-                    fail("Inserting a document failed after NotMaster exception: " + ex.getMessage());
+                } catch (MongoException ex2) {
+                    fail("Inserting second document failed: " + ex.getMessage());
                 }
             } else {
                 fail("Inserting a document failed: " + ex.getMessage());
