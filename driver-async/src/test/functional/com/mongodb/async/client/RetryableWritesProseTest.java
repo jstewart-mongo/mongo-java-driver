@@ -172,19 +172,24 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
 
         // Wait for the primary to step down.
-        while (containsPrimary()) {
+        while (!isSecondary()) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
             }
         }
+
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException ex2) {
+        }
     }
 
-    private boolean containsPrimary() {
+    private boolean isSecondary() {
         FutureResultCallback<Document> waitCallback = new FutureResultCallback<Document>();
         clientDatabase.runCommand(new BasicDBObject("isMaster", 1), waitCallback);
         try {
-            return waitCallback.get().containsKey("primary");
+            return waitCallback.get().getBoolean("secondary");
         } catch (InterruptedException e) {
         }
         return false;
