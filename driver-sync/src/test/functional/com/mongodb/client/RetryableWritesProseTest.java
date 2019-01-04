@@ -179,7 +179,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         stepDownThread.start();
 
         // Wait for the primary to step down.
-        while (clientDatabase.runCommand(new BasicDBObject("isMaster", 1)).containsKey("primary")) {
+        while (!clientDatabase.runCommand(new BasicDBObject("isMaster", 1)).getBoolean("secondary")) {
            try {
                Thread.sleep(1000);
            } catch (InterruptedException ex) {
