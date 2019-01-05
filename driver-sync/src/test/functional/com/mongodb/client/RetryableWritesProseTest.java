@@ -95,14 +95,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         if (failPointClient != null) {
             failPointClient.close();
 
-            failPointClient = MongoClients.create(getMongoClientSettingsBuilder()
-                    .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
-                        @Override
-                        public void apply(final ClusterSettings.Builder builder) {
-                            builder.mode(ClusterConnectionMode.SINGLE)
-                                    .hosts(Collections.singletonList(originalPrimary));
-                        }
-                    }).build());
+            failPointClient = getClientFromStepdownNode();
             MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
             failPointAdminDb.runCommand(
                     Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"));
@@ -178,13 +171,19 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         });
         stepDownThread.start();
 
-        // Wait for the primary to step down.
-        while (!clientDatabase.runCommand(new BasicDBObject("isMaster", 1)).getBoolean("secondary")) {
-           try {
-               Thread.sleep(1000);
-           } catch (InterruptedException ex) {
-           }
+        waitForPrimaryStepdown();
+    }
+
+    private void waitForPrimaryStepdown() {
+        MongoClient primaryClient = getClientFromStepdownNode();
+        MongoDatabase primaryDatabase = primaryClient.getDatabase("admin");
+        while (!primaryDatabase.runCommand(new BasicDBObject("isMaster", 1)).getBoolean("secondary")) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+            }
         }
+        primaryClient.close();
     }
 
     private void insertDocument() {
@@ -208,5 +207,16 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 }
             }
         }
+    }
+
+    private MongoClient getClientFromStepdownNode() {
+        return MongoClients.create(getMongoClientSettingsBuilder()
+                .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
+                    @Override
+                    public void apply(final ClusterSettings.Builder builder) {
+                        builder.mode(ClusterConnectionMode.SINGLE)
+                                .hosts(Collections.singletonList(originalPrimary));
+                    }
+                }).build());
     }
 }

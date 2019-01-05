@@ -93,14 +93,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         if (failPointClient != null) {
             failPointClient.close();
 
-            failPointClient = MongoClients.create(getMongoClientSettingsBuilder()
-                    .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
-                        @Override
-                        public void apply(final ClusterSettings.Builder builder) {
-                            builder.mode(ClusterConnectionMode.SINGLE)
-                                    .hosts(Collections.singletonList(originalPrimary));
-                        }
-                    }).build());
+            failPointClient = getClientFromStepdownNode();
             MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
             FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
             failPointAdminDb.runCommand(
@@ -144,7 +137,6 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
      * Using the fail point client, deactivate the fail point by setting mode to "off".
      */
     @Test
-    @Ignore
     public void testRetryableWriteOnFailover() {
         insertDocument();
         assertFalse(notMasterErrorFound);
@@ -174,17 +166,24 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
 
         // Wait for the primary to step down.
-        while (!isSecondary()) {
+        waitForPrimaryStepdown();
+    }
+
+    private void waitForPrimaryStepdown() {
+        MongoClient primaryClient = getClientFromStepdownNode();
+        MongoDatabase primaryDatabase = primaryClient.getDatabase("admin");
+        while (!isSecondary(primaryDatabase)) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
             }
         }
+        primaryClient.close();
     }
 
-    private boolean isSecondary() {
+    private boolean isSecondary(MongoDatabase database) {
         FutureResultCallback<Document> waitCallback = new FutureResultCallback<Document>();
-        clientDatabase.runCommand(new BasicDBObject("isMaster", 1), waitCallback);
+        database.runCommand(new BasicDBObject("isMaster", 1), waitCallback);
         try {
             return waitCallback.get().getBoolean("secondary");
         } catch (InterruptedException e) {
@@ -213,6 +212,17 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 }
             }
         }
+    }
+
+    private MongoClient getClientFromStepdownNode() {
+        return MongoClients.create(getMongoClientSettingsBuilder()
+                .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
+                    @Override
+                    public void apply(final ClusterSettings.Builder builder) {
+                        builder.mode(ClusterConnectionMode.SINGLE)
+                                .hosts(Collections.singletonList(originalPrimary));
+                    }
+                }).build());
     }
 
     <T> T futureResult(final FutureResultCallback<T> callback) {
