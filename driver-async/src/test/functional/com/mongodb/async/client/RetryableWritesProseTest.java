@@ -197,11 +197,19 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         // Reset the list of events in the command listener to track just the upcoming insert events.
         COMMAND_LISTENER.reset();
 
-        clientCollection.insertOne(new Document("x", 22), futureResultCallback);
-        futureResult(futureResultCallback);
+        try {
+            clientCollection.insertOne(new Document("x", 22), futureResultCallback);
+            futureResult(futureResultCallback);
+        } catch (MongoException ex) {
+            checkNotMasterFound(COMMAND_LISTENER.getEvents());
+            System.out.println("--- notMasterErrorFound: " + notMasterErrorFound);
+            throw ex;
+        }
 
-        List<CommandEvent> events = COMMAND_LISTENER.getEvents();
+        checkNotMasterFound(COMMAND_LISTENER.getEvents());
+    }
 
+    private void checkNotMasterFound(List<CommandEvent> events) {
         for (int i = 0; i < events.size(); i++) {
             CommandEvent event = events.get(i);
 
