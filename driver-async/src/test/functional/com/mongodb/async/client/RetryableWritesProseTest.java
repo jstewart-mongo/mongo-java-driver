@@ -138,12 +138,12 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
      */
     @Test
     public void testRetryableWriteOnFailover() {
-        insertDocument();
+        insertDocument(11);
         assertFalse(notMasterErrorFound);
 
         activateFailPoint();
         stepDownPrimary();
-        insertDocument();
+        insertDocument(22);
         assertTrue(notMasterErrorFound);
     }
 
@@ -164,8 +164,6 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
 
         stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
-
-        // Wait for the primary to step down.
         waitForPrimaryStepdown();
     }
 
@@ -191,20 +189,14 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         return false;
     }
 
-    private void insertDocument() {
+    private void insertDocument(int value) {
         FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
 
         // Reset the list of events in the command listener to track just the upcoming insert events.
         COMMAND_LISTENER.reset();
 
-        try {
-            clientCollection.insertOne(new Document("x", 22), futureResultCallback);
-            futureResult(futureResultCallback);
-        } catch (MongoException ex) {
-            checkNotMasterFound(COMMAND_LISTENER.getEvents());
-            System.out.println("--- notMasterErrorFound: " + notMasterErrorFound);
-            throw ex;
-        }
+        clientCollection.insertOne(new Document("x", value), futureResultCallback);
+        futureResult(futureResultCallback);
 
         checkNotMasterFound(COMMAND_LISTENER.getEvents());
     }

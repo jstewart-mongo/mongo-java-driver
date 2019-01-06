@@ -177,12 +177,22 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private void waitForPrimaryStepdown() {
         MongoClient primaryClient = getClientFromStepdownNode();
         MongoDatabase primaryDatabase = primaryClient.getDatabase("admin");
-        while (!primaryDatabase.runCommand(new BasicDBObject("isMaster", 1)).getBoolean("secondary")) {
+        Document doc = primaryDatabase.runCommand(new BasicDBObject("isMaster", 1));
+        System.out.println("--- isMaster doc: " + doc.toString());
+        while (!doc.getBoolean("secondary")) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
             }
+            doc = primaryDatabase.runCommand(new BasicDBObject("isMaster", 1));
+            System.out.println("--- isMaster doc: " + doc.toString());
         }
+//        while (!primaryDatabase.runCommand(new BasicDBObject("isMaster", 1)).getBoolean("secondary")) {
+//            try {
+//                Thread.sleep(1000);
+//            } catch (InterruptedException ex) {
+//            }
+//        }
         primaryClient.close();
     }
 
