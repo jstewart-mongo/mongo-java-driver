@@ -32,7 +32,6 @@ import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.Document;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -138,12 +137,12 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
      */
     @Test
     public void testRetryableWriteOnFailover() {
-        insertDocument(11);
+        insertDocument();
         assertFalse(notMasterErrorFound);
 
         activateFailPoint();
         stepDownPrimary();
-        insertDocument(22);
+        insertDocument();
         assertTrue(notMasterErrorFound);
     }
 
@@ -152,25 +151,22 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     private void activateFailPoint() {
-        MongoDatabase adminDB = failPointClient.getDatabase("admin");
         FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
         String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions',"
                 + " mode : 'alwaysOn' }";
-        adminDB.runCommand(Document.parse(document), futureResultCallback);
+        failPointClient.getDatabase("admin").runCommand(Document.parse(document), futureResultCallback);
         futureResult(futureResultCallback);
     }
 
     private void stepDownPrimary() {
-        final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
-
-        stepDownDB.runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
+        stepDownClient.getDatabase("admin")
+                .runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
         waitForPrimaryStepdown();
     }
 
     private void waitForPrimaryStepdown() {
         MongoClient primaryClient = getClientFromStepdownNode();
-        MongoDatabase primaryDatabase = primaryClient.getDatabase("admin");
-        while (!isSecondary(primaryDatabase)) {
+        while (!isSecondary(primaryClient.getDatabase("admin"))) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
@@ -189,13 +185,13 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         return false;
     }
 
-    private void insertDocument(int value) {
+    private void insertDocument() {
         FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
 
         // Reset the list of events in the command listener to track just the upcoming insert events.
         COMMAND_LISTENER.reset();
 
-        clientCollection.insertOne(new Document("x", value), futureResultCallback);
+        clientCollection.insertOne(new Document("x", 22), futureResultCallback);
         futureResult(futureResultCallback);
 
         checkNotMasterFound(COMMAND_LISTENER.getEvents());
