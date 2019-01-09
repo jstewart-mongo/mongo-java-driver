@@ -16,11 +16,9 @@
 
 package com.mongodb.async.client;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
-import com.mongodb.MongoException;
-
 import com.mongodb.ClusterFixture;
+import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.FutureResultCallback;
 import com.mongodb.connection.ClusterConnectionMode;
@@ -38,34 +36,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.async.client.Fixture.getMongoClientSettingsBuilder;
+import static java.lang.String.format;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
 
-import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
-
 // See https://github.com/mongodb/specifications/tree/master/source/retryable-writes/tests/README.rst#replica-set-failover-test
 public class RetryableWritesProseTest extends DatabaseTestCase {
-    private MongoClient clientUnderTest;
-    private MongoClient failPointClient;
-    private MongoClient stepDownClient;
-    private MongoDatabase clientDatabase;
-    private MongoCollection<Document> clientCollection;
-    private boolean notMasterErrorFound = false;
-    private ServerAddress originalPrimary = null;
-    private FutureResultCallback<Document> stepDownCallback = new FutureResultCallback<Document>();
-
     private static final TestCommandListener COMMAND_LISTENER = new TestCommandListener();
     private static final String DATABASE_NAME = getDefaultDatabaseName();
     private static final String COLLECTION_NAME = "RetryableWritesProseTest";
 
+    private MongoClient clientUnderTest;
+    private MongoClient failPointClient;
+    private MongoClient stepDownClient;
+    private ServerAddress originalPrimary;
+
     @Before
     @Override
     public void setUp() {
-        assumeTrue(canRunTests());
+        assumeTrue(serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet());
 
         clientUnderTest = MongoClients.create(getMongoClientSettingsBuilder()
                 .addCommandListener(COMMAND_LISTENER)
@@ -73,18 +67,20 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
                     public void apply(final ServerSettings.Builder builder) {
-                        builder.heartbeatFrequency(60000, TimeUnit.MILLISECONDS);
+                        builder.heartbeatFrequency(60, TimeUnit.SECONDS);
+                    }
+                })
+                .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
+                    @Override
+                    public void apply(final ClusterSettings.Builder builder) {
+                        builder.serverSelectionTimeout(60, TimeUnit.SECONDS);
                     }
                 })
                 .build());
 
-        failPointClient = MongoClients.create(getMongoClientSettingsBuilder().build());
-        stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
-
         originalPrimary = ClusterFixture.getPrimary();
-
-        clientDatabase = clientUnderTest.getDatabase(DATABASE_NAME);
-        clientCollection = clientDatabase.getCollection(COLLECTION_NAME);
+        failPointClient = createMongoClientToTheOriginalPrimary();
+        stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
     }
 
     @After
@@ -92,19 +88,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         if (failPointClient != null) {
             failPointClient.close();
 
-            failPointClient = getClientFromStepdownNode();
-            MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
-            FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
-            failPointAdminDb.runCommand(
-                    Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"),
-                    futureResultCallback);
-            futureResult(futureResultCallback);
-
-            try {
-                futureResult(stepDownCallback);
-            } catch (MongoException e) {
-            }
-
+            failPointClient = createMongoClientToTheOriginalPrimary();
+            configureFailPoint("off");
             failPointClient.close();
         }
 
@@ -136,48 +121,45 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
      * Using the fail point client, deactivate the fail point by setting mode to "off".
      */
     @Test
-    public void testRetryableWriteOnFailover() {
-        insertDocument();
-        assertFalse(notMasterErrorFound);
+    public void testRetryableWriteOnFailover() throws InterruptedException {
+        futureResult(insertDocument());
+        assertFalse(checkMasterNotFound());
 
-        activateFailPoint();
+        configureFailPoint("alwaysOn");
+
         stepDownPrimary();
-        insertDocument();
-        assertTrue(notMasterErrorFound);
+
+        FutureResultCallback<Void> insertCallback = insertDocument();
+        Thread.sleep(5000);
+        configureFailPoint("off");
+        futureResult(insertCallback);
+
+        assertTrue(checkMasterNotFound());
     }
 
-    private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
-    }
-
-    private void activateFailPoint() {
+    private void configureFailPoint(final String mode) {
         FutureResultCallback<Document> futureResultCallback = new FutureResultCallback<Document>();
-        String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions',"
-                + " mode : 'alwaysOn' }";
-        failPointClient.getDatabase("admin").runCommand(Document.parse(document), futureResultCallback);
+        failPointClient.getDatabase("admin").runCommand(Document.parse(
+                format("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : '%s' }", mode)),
+                futureResultCallback);
         futureResult(futureResultCallback);
     }
 
     private void stepDownPrimary() {
         stepDownClient.getDatabase("admin")
-                .runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), stepDownCallback);
-        waitForPrimaryStepdown();
-    }
+                .runCommand(Document.parse("{ replSetStepDown: 60, force: true}"), new FutureResultCallback<Document>());
 
-    private void waitForPrimaryStepdown() {
-        MongoClient primaryClient = getClientFromStepdownNode();
-        while (!isSecondary(primaryClient.getDatabase("admin"))) {
+        while (!isSecondary()) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
             }
         }
-        primaryClient.close();
     }
 
-    private boolean isSecondary(MongoDatabase database) {
+    private boolean isSecondary() {
         FutureResultCallback<Document> waitCallback = new FutureResultCallback<Document>();
-        database.runCommand(new BasicDBObject("isMaster", 1), waitCallback);
+        failPointClient.getDatabase("admin").runCommand(new Document("isMaster", 1), waitCallback);
         try {
             return waitCallback.get().getBoolean("secondary");
         } catch (InterruptedException e) {
@@ -185,32 +167,26 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         return false;
     }
 
-    private void insertDocument() {
-        FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
-
-        // Reset the list of events in the command listener to track just the upcoming insert events.
-        COMMAND_LISTENER.reset();
-
-        clientCollection.insertOne(new Document("x", 22), futureResultCallback);
-        futureResult(futureResultCallback);
-
-        checkNotMasterFound(COMMAND_LISTENER.getEvents());
+    private FutureResultCallback<Void> insertDocument() {
+        FutureResultCallback<Void> insertCallback = new FutureResultCallback<Void>();
+        clientUnderTest.getDatabase(DATABASE_NAME).getCollection(COLLECTION_NAME).insertOne(new Document(), insertCallback);
+        return insertCallback;
     }
 
-    private void checkNotMasterFound(List<CommandEvent> events) {
-        for (int i = 0; i < events.size(); i++) {
-            CommandEvent event = events.get(i);
-
+    private boolean checkMasterNotFound() {
+        List<CommandEvent> events = COMMAND_LISTENER.getEvents();
+        for (CommandEvent event : events) {
             if (event instanceof CommandFailedEvent) {
                 MongoException ex = MongoException.fromThrowable(((CommandFailedEvent) event).getThrowable());
                 if (ex.getCode() == 10107) {
-                    notMasterErrorFound = true;
+                    return true;
                 }
             }
         }
+        return false;
     }
 
-    private MongoClient getClientFromStepdownNode() {
+    private MongoClient createMongoClientToTheOriginalPrimary() {
         return MongoClients.create(getMongoClientSettingsBuilder()
                 .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
                     @Override
@@ -223,9 +199,9 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
     <T> T futureResult(final FutureResultCallback<T> callback) {
         try {
-            return callback.get(60, TimeUnit.SECONDS);
+            return callback.get(70, TimeUnit.SECONDS);
         } catch (Throwable t) {
-            throw new MongoException("FutureResultCallback failed", t);
+            throw new MongoException("FutureResultCallback failed: " + t.getMessage(), t);
         }
     }
 }

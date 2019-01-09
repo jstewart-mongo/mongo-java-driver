@@ -16,11 +16,9 @@
 
 package com.mongodb.client;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
-
 import com.mongodb.ServerAddress;
 import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ClusterSettings;
@@ -35,37 +33,47 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
+import static java.lang.String.format;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
-import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
-
 // See https://github.com/mongodb/specifications/tree/master/source/retryable-writes/tests/README.rst#replica-set-failover-test
 public class RetryableWritesProseTest extends DatabaseTestCase {
-    private MongoClient clientUnderTest;
-    private MongoClient failPointClient;
-    private MongoClient stepDownClient;
-    private MongoDatabase clientDatabase;
-    private MongoCollection<Document> clientCollection;
-    private boolean notMasterErrorFound = false;
-    private Thread stepDownThread = null;
-    private ServerAddress originalPrimary = null;
 
     private static final TestCommandListener COMMAND_LISTENER = new TestCommandListener();
     private static final String DATABASE_NAME = getDefaultDatabaseName();
     private static final String COLLECTION_NAME = "RetryableWritesProseTest";
 
+    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    private final AtomicBoolean insertErrored = new AtomicBoolean();
+
+    private MongoClient clientUnderTest;
+    private MongoClient failPointClient;
+    private MongoClient stepDownClient;
+    private ServerAddress originalPrimary;
+
     @Before
     @Override
     public void setUp() {
-        assumeTrue(canRunTests());
+        assumeTrue(serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet());
+
+        try {
+            originalPrimary = Fixture.getPrimary();
+        } catch (InterruptedException e) {
+            assumeTrue("Cannot find the primary", false);
+        }
 
         MongoClientSettings settings = getMongoClientSettingsBuilder()
                 .addCommandListener(COMMAND_LISTENER)
@@ -73,21 +81,21 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
                     public void apply(final ServerSettings.Builder builder) {
-                        builder.heartbeatFrequency(60000, TimeUnit.MILLISECONDS);
+                        builder.heartbeatFrequency(60, TimeUnit.SECONDS);
+                    }
+                })
+                .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
+                    @Override
+                    public void apply(final ClusterSettings.Builder builder) {
+                        builder.serverSelectionTimeout(60, TimeUnit.SECONDS);
                     }
                 })
                 .build();
 
-        clientUnderTest = MongoClients.create(settings);
-        failPointClient = MongoClients.create(getMongoClientSettingsBuilder().build());
-        stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
 
-        try {
-            originalPrimary = Fixture.getPrimary();
-        } catch (InterruptedException e) {
-        }
-        clientDatabase = clientUnderTest.getDatabase(DATABASE_NAME);
-        clientCollection = clientDatabase.getCollection(COLLECTION_NAME);
+        clientUnderTest = MongoClients.create(settings);
+        failPointClient = createMongoClientToTheOriginalPrimary();
+        stepDownClient = MongoClients.create(getMongoClientSettingsBuilder().build());
     }
 
     @After
@@ -95,25 +103,20 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         if (failPointClient != null) {
             failPointClient.close();
 
-            failPointClient = getClientFromStepdownNode();
-            MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
-            failPointAdminDb.runCommand(
-                    Document.parse("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : 'off' }"));
-
-            try {
-                stepDownThread.join();
-            } catch (InterruptedException e) {
-            }
-
+            failPointClient = createMongoClientToTheOriginalPrimary();
+            configureFailPoint("off");
             failPointClient.close();
         }
 
         if (clientUnderTest != null) {
             clientUnderTest.close();
         }
+
         if (stepDownClient != null) {
             stepDownClient.close();
         }
+
+        executorService.shutdownNow();
     }
 
     /**
@@ -136,31 +139,45 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
      * Using the fail point client, deactivate the fail point by setting mode to "off".
      */
     @Test
-   public void testRetryableWriteOnFailover() {
+   public void testRetryableWriteOnFailover() throws InterruptedException {
         insertDocument();
-        assertFalse(notMasterErrorFound);
+        assertFalse(checkMasterNotFound());
 
-        activateFailPoint();
+        configureFailPoint("alwaysOn");
         stepDownPrimary();
-        insertDocument();
-        assertTrue(notMasterErrorFound);
+
+        final CountDownLatch insertStartedLatch = new CountDownLatch(1);
+        final CountDownLatch insertFinishedLatch = new CountDownLatch(1);
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    insertStartedLatch.countDown();
+                    insertDocument();
+                } catch (Throwable t) {
+                    insertErrored.set(true);
+                }
+                insertFinishedLatch.countDown();
+            }
+        });
+        insertStartedLatch.await(10, TimeUnit.SECONDS);
+        Thread.sleep(5000);
+        configureFailPoint("off");
+
+        insertFinishedLatch.await(70, TimeUnit.SECONDS);
+        assertFalse("The insert errored", insertErrored.get());
+        assertTrue("There was no retry for the insert", checkMasterNotFound());
     }
 
-    private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
-    }
-
-    private void activateFailPoint() {
-        MongoDatabase failPointAdminDb = failPointClient.getDatabase("admin");
-        String document = "{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions',"
-                + " mode : 'alwaysOn' }";
-        failPointAdminDb.runCommand(Document.parse(document));
+    private void configureFailPoint(final String mode) {
+        failPointClient.getDatabase("admin").runCommand(Document.parse(
+                format("{ configureFailPoint : 'stepdownHangBeforePerformingPostMemberStateUpdateActions', mode : '%s' }", mode)));
     }
 
     private void stepDownPrimary() {
         final MongoDatabase stepDownDB = stepDownClient.getDatabase("admin");
 
-        stepDownThread = new Thread(new Runnable() {
+        executorService.submit(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -169,57 +186,37 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                 }
             }
         });
-        stepDownThread.start();
 
-        waitForPrimaryStepdown();
-    }
-
-    private void waitForPrimaryStepdown() {
-        MongoClient primaryClient = getClientFromStepdownNode();
-        MongoDatabase primaryDatabase = primaryClient.getDatabase("admin");
-        Document doc = primaryDatabase.runCommand(new BasicDBObject("isMaster", 1));
-        System.out.println("--- isMaster doc: " + doc.toString());
-        while (!doc.getBoolean("secondary")) {
+        while (!failPointClient.getDatabase("admin").runCommand(new Document("isMaster", 1)).getBoolean("secondary", false)) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
             }
-            doc = primaryDatabase.runCommand(new BasicDBObject("isMaster", 1));
-            System.out.println("--- isMaster doc: " + doc.toString());
         }
-//        while (!primaryDatabase.runCommand(new BasicDBObject("isMaster", 1)).getBoolean("secondary")) {
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException ex) {
-//            }
-//        }
-        primaryClient.close();
     }
 
     private void insertDocument() {
-        COMMAND_LISTENER.reset();
-
         try {
-            clientCollection.insertOne(new Document("x", 22));
+            clientUnderTest.getDatabase(DATABASE_NAME).getCollection(COLLECTION_NAME).insertOne(new Document());
         } catch (MongoException ex) {
             fail("Inserting a document failed: " + ex.getMessage());
         }
+    }
 
+    private boolean checkMasterNotFound() {
         List<CommandEvent> events = COMMAND_LISTENER.getEvents();
-
-        for (int i = 0; i < events.size(); i++) {
-            CommandEvent event = events.get(i);
-
+        for (CommandEvent event : events) {
             if (event instanceof CommandFailedEvent) {
                 MongoException ex = MongoException.fromThrowable(((CommandFailedEvent) event).getThrowable());
                 if (ex.getCode() == 10107) {
-                    notMasterErrorFound = true;
+                    return true;
                 }
             }
         }
+        return false;
     }
 
-    private MongoClient getClientFromStepdownNode() {
+    private MongoClient createMongoClientToTheOriginalPrimary() {
         return MongoClients.create(getMongoClientSettingsBuilder()
                 .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
                     @Override
