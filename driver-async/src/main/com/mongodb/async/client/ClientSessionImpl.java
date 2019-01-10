@@ -60,7 +60,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
     }
 
     @Override
-    public void setPinnedMongos(ServerDescription server) {
+    public void setPinnedMongos(final ServerDescription server) {
         pinnedMongos = server;
     }
 

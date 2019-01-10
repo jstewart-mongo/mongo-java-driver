@@ -16,7 +16,6 @@
 
 package com.mongodb.client;
 
-import com.mongodb.ServerAddress;
 import com.mongodb.TransactionOptions;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.lang.Nullable;
@@ -39,9 +38,10 @@ public interface ClientSession extends com.mongodb.session.ClientSession {
     /**
      * Pin the server address of the mongos on this session.
      *
+     * @param description the server description to pin to this session
      * @mongodb.server.release 4.0
      */
-    void setPinnedMongos(ServerDescription address);
+    void setPinnedMongos(@Nullable ServerDescription description);
 
     /**
      * Returns true if there is an active transaction on this session, and false otherwise

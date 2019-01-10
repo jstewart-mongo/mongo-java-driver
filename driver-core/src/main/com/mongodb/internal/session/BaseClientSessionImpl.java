@@ -54,7 +54,7 @@ public class BaseClientSessionImpl implements ClientSession {
     }
 
     @Override
-    public void setPinnedMongos(@Nullable ServerDescription address) {
+    public void setPinnedMongos(@Nullable final ServerDescription address) {
         pinnedMongos = address;
     }
 

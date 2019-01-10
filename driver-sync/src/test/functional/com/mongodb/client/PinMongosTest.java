@@ -136,25 +136,19 @@ public class PinMongosTest extends DatabaseTestCase {
         try {
             for (BsonValue cur : definition.getArray("operations")) {
                 BsonDocument operation = cur.asDocument();
-                System.out.println("--- operation: " + operation.toString());
                 String operationName = operation.getString("name").getValue();
                 BsonValue expectedResult = operation.get("result");
                 try {
                     if (operationName.equals("startTransaction")) {
-                        System.out.println("--- starting transaction");
                         clientSession = sessionsMap.get(operation.getString("object").getValue());
                         nonNullClientSession(clientSession).startTransaction();
-                        System.out.println("--- DONE starting transaction");
                     } else if (operationName.equals("commitTransaction")) {
-                        System.out.println("--- committing transaction");
                         nonNullClientSession(clientSession).commitTransaction();
-                        System.out.println("--- DONE committing transaction");
                     } else if (operationName.equals("abortTransaction")) {
-                        System.out.println("--- aborting transaction");
                         nonNullClientSession(clientSession).abortTransaction();
-                        System.out.println("--- DONE aborting transaction");
                     } else {
-                        BsonDocument actualOutcome = createJsonPoweredCrudTestHelper(mongoClient, namespace).getOperationResults(operation, clientSession);
+                        BsonDocument actualOutcome = createJsonPoweredCrudTestHelper(mongoClient, namespace)
+                                .getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
                             BsonValue actualResult = actualOutcome.get("result");
 

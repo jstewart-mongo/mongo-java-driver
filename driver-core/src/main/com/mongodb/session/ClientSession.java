@@ -47,6 +47,7 @@ public interface ClientSession extends Closeable {
     /**
      * Set the server address of the pinned mongos.
      *
+     * @param address the server address to pin
      * @mongodb.server.release 4.0
      */
     void setPinnedMongos(ServerDescription address);

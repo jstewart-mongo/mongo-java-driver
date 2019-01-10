@@ -176,7 +176,7 @@ public class MongoClientDelegate {
                 if (session != null && session.hasActiveTransaction() && !binding.getReadPreference().equals(primary())) {
                     throw new MongoClientException("Read preference in a transaction must be primary");
                 }
-                selectServer(actualClientSession, (ClientSessionBinding)binding);
+                selectServer(actualClientSession, (ClientSessionBinding) binding);
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
@@ -191,7 +191,7 @@ public class MongoClientDelegate {
             ClientSession actualClientSession = getClientSession(session);
             WriteBinding binding = getWriteBinding(readConcern, actualClientSession, session == null && actualClientSession != null);
             try {
-                selectServer(actualClientSession, (ClientSessionBinding)binding);
+                selectServer(actualClientSession, (ClientSessionBinding) binding);
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
@@ -201,8 +201,8 @@ public class MongoClientDelegate {
             }
         }
 
-        void selectServer(ClientSession session, ClientSessionBinding binding) {
-            if (session.hasActiveTransaction() && session.getPinnedMongos() == null) {
+        void selectServer(@Nullable final ClientSession session, @Nullable final ClientSessionBinding binding) {
+            if (binding != null && session != null && session.hasActiveTransaction() && session.getPinnedMongos() == null) {
                 ServerDescription server = binding.getWriteConnectionSource().getServerDescription();
                 if (server.isMongos()) {
                     session.setPinnedMongos(server);

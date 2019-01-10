@@ -141,30 +141,25 @@ public class PinMongosTest extends DatabaseTestCase {
                 BsonValue expectedResult = operation.get("result");
                 try {
                     if (operationName.equals("startTransaction")) {
-                        System.out.println("--- starting transaction");
                         clientSession = sessionsMap.get(operation.getString("object").getValue());
                         nonNullClientSession(clientSession).startTransaction();
-                        System.out.println("--- DONE starting transaction");
                     } else if (operationName.equals("commitTransaction")) {
-                        System.out.println("--- committing transaction");
                         new MongoOperation<Void>() {
                             @Override
                             public void execute() {
                                 nonNullClientSession(clientSession).commitTransaction(getCallback());
                             }
                         }.get();
-                        System.out.println("--- DONE committing transaction");
                     } else if (operationName.equals("abortTransaction")) {
-                        System.out.println("--- aborting transaction");
                         new MongoOperation<Void>() {
                             @Override
                             public void execute() {
                                 nonNullClientSession(clientSession).abortTransaction(getCallback());
                             }
                         }.get();
-                        System.out.println("--- DONE aborting transaction");
                     } else {
-                        BsonDocument actualOutcome = createJsonPoweredCrudTestHelper(mongoClient, namespace).getOperationResults(operation, clientSession);
+                        BsonDocument actualOutcome = createJsonPoweredCrudTestHelper(mongoClient, namespace)
+                                .getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
                             BsonValue actualResult = actualOutcome.get("result");
 
