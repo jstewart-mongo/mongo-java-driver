@@ -23,8 +23,10 @@ import com.mongodb.ReadConcern;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
+import com.mongodb.lang.Nullable;
 import com.mongodb.operation.AbortTransactionOperation;
 import com.mongodb.operation.CommitTransactionOperation;
 
@@ -41,14 +43,26 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
     private TransactionState transactionState = TransactionState.NONE;
     private boolean messageSentInCurrentTransaction;
     private boolean commitInProgress;
-
     private TransactionOptions transactionOptions;
+    private ServerDescription pinnedMongos;
 
     ClientSessionImpl(final ServerSessionPool serverSessionPool, final MongoClient mongoClient, final ClientSessionOptions options,
                       final OperationExecutor executor) {
         super(serverSessionPool, mongoClient, options);
         this.executor = executor;
-   }
+        this.pinnedMongos = null;
+    }
+
+    @Override
+    @Nullable
+    public ServerDescription getPinnedMongos() {
+        return pinnedMongos;
+    }
+
+    @Override
+    public void setPinnedMongos(ServerDescription server) {
+        pinnedMongos = server;
+    }
 
     @Override
     public boolean hasActiveTransaction() {

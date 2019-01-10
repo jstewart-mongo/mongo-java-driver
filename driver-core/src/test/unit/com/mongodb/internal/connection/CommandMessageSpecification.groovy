@@ -88,7 +88,7 @@ class CommandMessageSpecification extends Specification {
 
         if (readPreference != ReadPreference.primary()) {
             expectedCommandDocument.append('$readPreference', readPreference.toDocument())
-        } else if (clusterConnectionMode == ClusterConnectionMode.SINGLE && serverType != ServerType.SHARD_ROUTER) {
+        } else if (clusterConnectionMode == ClusterConnectionMode.SINGLE && serverType != ServerType.MONGOS) {
             expectedCommandDocument.append('$readPreference', ReadPreference.primaryPreferred().toDocument())
         }
         getCommandDocument(byteBuf, replyHeader) == expectedCommandDocument
@@ -96,7 +96,7 @@ class CommandMessageSpecification extends Specification {
         where:
         [readPreference, serverType, clusterConnectionMode, sessionContext, responseExpected] << [
                 [ReadPreference.primary(), ReadPreference.secondary()],
-                [ServerType.REPLICA_SET_PRIMARY, ServerType.SHARD_ROUTER],
+                [ServerType.REPLICA_SET_PRIMARY, ServerType.MONGOS],
                 [ClusterConnectionMode.SINGLE, ClusterConnectionMode.MULTIPLE],
                 [
                         Stub(SessionContext) {
@@ -139,7 +139,7 @@ class CommandMessageSpecification extends Specification {
         def expectedFlagBits = 0
         if (readPreference.isSlaveOk()) {
             expectedFlagBits = 4
-        } else if (clusterConnectionMode == ClusterConnectionMode.SINGLE && serverType != ServerType.SHARD_ROUTER) {
+        } else if (clusterConnectionMode == ClusterConnectionMode.SINGLE && serverType != ServerType.MONGOS) {
             expectedFlagBits = 4
         }
         BsonDocument expectedCommand
@@ -172,7 +172,7 @@ class CommandMessageSpecification extends Specification {
         where:
         [readPreference, serverType, clusterConnectionMode, responseExpected] << [
                 [ReadPreference.primary(), ReadPreference.secondary()],
-                [ServerType.REPLICA_SET_PRIMARY, ServerType.SHARD_ROUTER],
+                [ServerType.REPLICA_SET_PRIMARY, ServerType.MONGOS],
                 [ClusterConnectionMode.SINGLE, ClusterConnectionMode.MULTIPLE],
                 [true, false]
         ].combinations()

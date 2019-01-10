@@ -39,7 +39,7 @@ import org.bson.codecs.Decoder;
 import java.util.List;
 
 import static com.mongodb.assertions.Assertions.isTrue;
-import static com.mongodb.connection.ServerType.SHARD_ROUTER;
+import static com.mongodb.connection.ServerType.MONGOS;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 
 @SuppressWarnings("deprecation")  // because this class implements deprecated methods
@@ -258,7 +258,7 @@ public class DefaultServerConnection extends AbstractReferenceCounted implements
 
     private boolean getSlaveOk(final boolean slaveOk) {
         return slaveOk
-               || (clusterConnectionMode == ClusterConnectionMode.SINGLE && wrapped.getDescription().getServerType() != SHARD_ROUTER);
+               || (clusterConnectionMode == ClusterConnectionMode.SINGLE && wrapped.getDescription().getServerType() != MONGOS);
     }
 
     private <T> T executeProtocol(final LegacyProtocol<T> protocol) {

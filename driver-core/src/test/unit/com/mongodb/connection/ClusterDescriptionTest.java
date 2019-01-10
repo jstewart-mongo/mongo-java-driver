@@ -301,7 +301,7 @@ public class ClusterDescriptionTest {
                 builder().state(CONNECTED)
                         .ok(true)
                         .address(new ServerAddress("loc:27017"))
-                        .type(ServerType.SHARD_ROUTER)
+                        .type(ServerType.MONGOS)
                         .logicalSessionTimeoutMinutes(5)
                         .build()
         ));
@@ -311,7 +311,7 @@ public class ClusterDescriptionTest {
                 builder().state(CONNECTED)
                         .ok(true)
                         .address(new ServerAddress("loc:27017"))
-                        .type(ServerType.SHARD_ROUTER)
+                        .type(ServerType.MONGOS)
                         .logicalSessionTimeoutMinutes(5)
                         .build(),
                 builder().state(CONNECTING)
@@ -324,13 +324,13 @@ public class ClusterDescriptionTest {
                 builder().state(CONNECTED)
                         .ok(true)
                         .address(new ServerAddress("loc:27017"))
-                        .type(ServerType.SHARD_ROUTER)
+                        .type(ServerType.MONGOS)
                         .logicalSessionTimeoutMinutes(5)
                         .build(),
                 builder().state(CONNECTED)
                         .ok(true)
                         .address(new ServerAddress("loc:27018"))
-                        .type(ServerType.SHARD_ROUTER)
+                        .type(ServerType.MONGOS)
                         .logicalSessionTimeoutMinutes(3)
                         .build()
         ));

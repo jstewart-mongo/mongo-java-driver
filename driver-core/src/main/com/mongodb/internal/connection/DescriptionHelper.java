@@ -50,7 +50,7 @@ import static com.mongodb.connection.ServerType.REPLICA_SET_ARBITER;
 import static com.mongodb.connection.ServerType.REPLICA_SET_OTHER;
 import static com.mongodb.connection.ServerType.REPLICA_SET_PRIMARY;
 import static com.mongodb.connection.ServerType.REPLICA_SET_SECONDARY;
-import static com.mongodb.connection.ServerType.SHARD_ROUTER;
+import static com.mongodb.connection.ServerType.MONGOS;
 import static com.mongodb.connection.ServerType.STANDALONE;
 import static com.mongodb.connection.ServerType.UNKNOWN;
 import static java.util.Arrays.asList;
@@ -191,7 +191,7 @@ public final class DescriptionHelper {
         }
 
         if (isMasterResult.containsKey("msg") && isMasterResult.get("msg").equals(new BsonString("isdbgrid"))) {
-            return SHARD_ROUTER;
+            return MONGOS;
         }
 
         return STANDALONE;

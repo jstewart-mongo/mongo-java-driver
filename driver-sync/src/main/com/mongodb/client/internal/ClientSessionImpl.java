@@ -23,8 +23,10 @@ import com.mongodb.ReadConcern;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
+import com.mongodb.lang.Nullable;
 import com.mongodb.operation.AbortTransactionOperation;
 import com.mongodb.operation.CommitTransactionOperation;
 
@@ -42,11 +44,24 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
     private boolean messageSentInCurrentTransaction;
     private boolean commitInProgress;
     private TransactionOptions transactionOptions;
+    private ServerDescription pinnedMongos;
 
     ClientSessionImpl(final ServerSessionPool serverSessionPool, final Object originator, final ClientSessionOptions options,
                       final MongoClientDelegate delegate) {
         super(serverSessionPool, originator, options);
         this.delegate = delegate;
+        this.pinnedMongos = null;
+    }
+
+    @Override
+    @Nullable
+    public ServerDescription getPinnedMongos() {
+        return pinnedMongos;
+    }
+
+    @Override
+    public void setPinnedMongos(ServerDescription server) {
+        pinnedMongos = server;
     }
 
     @Override
@@ -99,6 +114,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
+        pinnedMongos = null;
     }
 
     @Override

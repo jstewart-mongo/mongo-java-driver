@@ -59,7 +59,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.connection.ServerType.SHARD_ROUTER;
+import static com.mongodb.connection.ServerType.MONGOS;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.CommandOperationHelper.CommandTransformer;
@@ -930,7 +930,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         if (maxTimeMS > 0) {
             document.put("$maxTimeMS", new BsonInt64(maxTimeMS));
         }
-        if (connectionDescription.getServerType() == SHARD_ROUTER && !readPreference.equals(primary())) {
+        if (connectionDescription.getServerType() == MONGOS && !readPreference.equals(primary())) {
             document.put("$readPreference", readPreference.toDocument());
         }
         if (comment != null) {

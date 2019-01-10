@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.async.client;
+package com.mongodb.client;
 
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoCommandException;
@@ -22,7 +22,6 @@ import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.MongoWriteConcernException;
 import com.mongodb.WriteConcern;
-import com.mongodb.async.FutureResultCallback;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.connection.ServerVersion;
 import com.mongodb.lang.Nullable;
@@ -51,7 +50,7 @@ import java.util.Map;
 
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
-import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
+import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -94,7 +93,7 @@ public class PinMongosTest extends DatabaseTestCase {
     public void setUp() {
         assumeTrue(canRunTests());
 
-        mongoClient = MongoClients.create(getMongoClientBuilderFromConnectionString()
+        mongoClient = MongoClients.create(getMongoClientSettingsBuilder()
                 .build());
 
         CollectionHelper<BsonDocument> collectionHelper = new CollectionHelper<BsonDocument>(new BsonDocumentCodec(), namespace);
@@ -137,6 +136,7 @@ public class PinMongosTest extends DatabaseTestCase {
         try {
             for (BsonValue cur : definition.getArray("operations")) {
                 BsonDocument operation = cur.asDocument();
+                System.out.println("--- operation: " + operation.toString());
                 String operationName = operation.getString("name").getValue();
                 BsonValue expectedResult = operation.get("result");
                 try {
@@ -147,21 +147,11 @@ public class PinMongosTest extends DatabaseTestCase {
                         System.out.println("--- DONE starting transaction");
                     } else if (operationName.equals("commitTransaction")) {
                         System.out.println("--- committing transaction");
-                        new MongoOperation<Void>() {
-                            @Override
-                            public void execute() {
-                                nonNullClientSession(clientSession).commitTransaction(getCallback());
-                            }
-                        }.get();
+                        nonNullClientSession(clientSession).commitTransaction();
                         System.out.println("--- DONE committing transaction");
                     } else if (operationName.equals("abortTransaction")) {
                         System.out.println("--- aborting transaction");
-                        new MongoOperation<Void>() {
-                            @Override
-                            public void execute() {
-                                nonNullClientSession(clientSession).abortTransaction(getCallback());
-                            }
-                        }.get();
+                        nonNullClientSession(clientSession).abortTransaction();
                         System.out.println("--- DONE aborting transaction");
                     } else {
                         BsonDocument actualOutcome = createJsonPoweredCrudTestHelper(mongoClient, namespace).getOperationResults(operation, clientSession);
@@ -246,14 +236,7 @@ public class PinMongosTest extends DatabaseTestCase {
     }
 
     private ClientSession createSession() {
-        final ClientSessionOptions options = ClientSessionOptions.builder()
-                .build();
-        return new MongoOperation<ClientSession>() {
-            @Override
-            public void execute() {
-                mongoClient.startSession(options, getCallback());
-            }
-        }.get();
+        return mongoClient.startSession(ClientSessionOptions.builder().build());
     }
 
     private String getErrorContainsField(final BsonValue expectedResult) {
@@ -317,14 +300,6 @@ public class PinMongosTest extends DatabaseTestCase {
 
     private boolean canRunTests() {
         return serverVersionAtLeast(asList(4, 1, 6)) && isSharded();
-    }
-
-    <T> T futureResult(final FutureResultCallback<T> callback) {
-        try {
-            return callback.get();
-        } catch (Throwable t) {
-            throw new MongoException("FutureResultCallback failed", t);
-        }
     }
 
     private ServerVersion getServerVersion(final String fieldName) {

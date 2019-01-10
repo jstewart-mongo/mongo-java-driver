@@ -18,6 +18,8 @@ package com.mongodb.session;
 
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.annotations.NotThreadSafe;
+import com.mongodb.connection.ServerDescription;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 
@@ -32,6 +34,22 @@ import java.io.Closeable;
  */
 @NotThreadSafe
 public interface ClientSession extends Closeable {
+
+    /**
+     * Get the server address of the pinned mongos on this session.
+     *
+     * @return the server address of the pinned mongos
+     * @mongodb.server.release 4.0
+     */
+    @Nullable
+    ServerDescription getPinnedMongos();
+
+    /**
+     * Set the server address of the pinned mongos.
+     *
+     * @mongodb.server.release 4.0
+     */
+    void setPinnedMongos(ServerDescription address);
 
     /**
      * Get the options for this session.

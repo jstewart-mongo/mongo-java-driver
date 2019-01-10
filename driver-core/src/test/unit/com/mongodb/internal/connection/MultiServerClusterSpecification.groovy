@@ -39,7 +39,7 @@ import static com.mongodb.connection.ServerConnectionState.CONNECTING
 import static com.mongodb.connection.ServerType.REPLICA_SET_GHOST
 import static com.mongodb.connection.ServerType.REPLICA_SET_PRIMARY
 import static com.mongodb.connection.ServerType.REPLICA_SET_SECONDARY
-import static com.mongodb.connection.ServerType.SHARD_ROUTER
+import static com.mongodb.connection.ServerType.MONGOS
 import static com.mongodb.connection.ServerType.STANDALONE
 import static java.util.concurrent.TimeUnit.MILLISECONDS
 
@@ -197,7 +197,7 @@ class MultiServerClusterSpecification extends Specification {
                 factory)
 
         when:
-        sendNotification(secondServer, SHARD_ROUTER)
+        sendNotification(secondServer, MONGOS)
 
         then:
         cluster.getDescription().type == REPLICA_SET
@@ -241,7 +241,7 @@ class MultiServerClusterSpecification extends Specification {
         def cluster = new MultiServerCluster(
                 CLUSTER_ID, ClusterSettings.builder().requiredClusterType(SHARDED).hosts([firstServer, secondServer]).build(),
                 factory)
-        sendNotification(firstServer, SHARD_ROUTER)
+        sendNotification(firstServer, MONGOS)
 
         when:
         sendNotification(secondServer, REPLICA_SET_PRIMARY)

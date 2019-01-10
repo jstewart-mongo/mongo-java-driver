@@ -91,14 +91,19 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     private class SessionBindingConnectionSource implements ConnectionSource {
         private ConnectionSource wrapped;
+        private ServerDescription serverDescription;
 
         SessionBindingConnectionSource(final ConnectionSource wrapped) {
             this.wrapped = wrapped;
+            this.serverDescription = session.getPinnedMongos();
+            if (this.serverDescription == null) {
+                this.serverDescription = wrapped.getServerDescription();
+            }
         }
 
         @Override
         public ServerDescription getServerDescription() {
-            return wrapped.getServerDescription();
+            return serverDescription;
         }
 
         @Override

@@ -83,9 +83,9 @@ public enum ServerType {
     },
 
     /**
-     * A router to a sharded cluster, i.e. a mongos server.
+     * A mongos server.
      */
-    SHARD_ROUTER {
+    MONGOS {
         @Override
         public ClusterType getClusterType() {
             return ClusterType.SHARDED;
