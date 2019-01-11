@@ -25,9 +25,11 @@ import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncClusterBinding;
+import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.AsyncReadWriteBinding;
 import com.mongodb.binding.AsyncWriteBinding;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.diagnostics.logging.Logger;
 import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.lang.Nullable;
@@ -74,6 +76,9 @@ class OperationExecutorImpl implements OperationExecutor {
                     if (session != null && session.hasActiveTransaction() && !binding.getReadPreference().equals(primary())) {
                         throw new MongoClientException("Read preference in a transaction must be primary");
                     }
+                    if (binding instanceof ClientSessionBinding) {
+                        selectServer(clientSession, (ClientSessionBinding) binding, errHandlingCallback);
+                    }
                     operation.executeAsync(binding, new SingleResultCallback<T>() {
                         @Override
                         public void onResult(final T result, final Throwable t) {
@@ -109,6 +114,9 @@ class OperationExecutorImpl implements OperationExecutor {
                 } else {
                     final AsyncWriteBinding binding = getReadWriteBinding(ReadPreference.primary(), readConcern, clientSession,
                             session == null && clientSession != null);
+                    if (binding instanceof ClientSessionBinding) {
+                        selectServer(clientSession, (ClientSessionBinding) binding, errHandlingCallback);
+                    }
                     operation.executeAsync(binding, new SingleResultCallback<T>() {
                         @Override
                         public void onResult(final T result, final Throwable t) {
@@ -123,6 +131,25 @@ class OperationExecutorImpl implements OperationExecutor {
                 }
             }
         });
+    }
+
+    private <T> void selectServer(@Nullable final ClientSession session, @Nullable final ClientSessionBinding binding,
+                                  final SingleResultCallback<T> errHandlingCallback) {
+        if (binding != null && session != null && session.hasActiveTransaction() && session.getPinnedMongos() == null) {
+            binding.getWriteConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+                @Override
+                public void onResult(final AsyncConnectionSource result, final Throwable t) {
+                    if (t != null) {
+                        errHandlingCallback.onResult(null, t);
+                    } else {
+                        ServerDescription server = result.getServerDescription();
+                        if (server != null && server.isMongos()) {
+                            session.setPinnedMongos(server);
+                        }
+                    }
+                }
+            });
+        }
     }
 
 

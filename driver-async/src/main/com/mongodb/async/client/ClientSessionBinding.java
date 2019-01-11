@@ -104,14 +104,19 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
 
     private class SessionBindingAsyncConnectionSource implements AsyncConnectionSource {
         private AsyncConnectionSource wrapped;
+        private ServerDescription serverDescription;
 
         SessionBindingAsyncConnectionSource(final AsyncConnectionSource wrapped) {
             this.wrapped = wrapped;
+            this.serverDescription = session.getPinnedMongos();
+            if (this.serverDescription == null) {
+                this.serverDescription = wrapped.getServerDescription();
+            }
         }
 
         @Override
         public ServerDescription getServerDescription() {
-            return wrapped.getServerDescription();
+            return serverDescription;
         }
 
         @Override
