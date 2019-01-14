@@ -25,16 +25,19 @@ import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncClusterBinding;
-import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.AsyncReadWriteBinding;
 import com.mongodb.binding.AsyncWriteBinding;
-import com.mongodb.connection.ServerDescription;
+import com.mongodb.binding.AsyncSingleServerBinding;
+import com.mongodb.connection.Cluster;
+import com.mongodb.connection.ClusterType;
+import com.mongodb.connection.Server;
 import com.mongodb.diagnostics.logging.Logger;
 import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.AsyncReadOperation;
 import com.mongodb.operation.AsyncWriteOperation;
+import com.mongodb.selector.ReadPreferenceServerSelector;
 
 import static com.mongodb.MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL;
 import static com.mongodb.MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL;
@@ -76,9 +79,6 @@ class OperationExecutorImpl implements OperationExecutor {
                     if (session != null && session.hasActiveTransaction() && !binding.getReadPreference().equals(primary())) {
                         throw new MongoClientException("Read preference in a transaction must be primary");
                     }
-                    if (binding instanceof ClientSessionBinding) {
-                        selectServer(clientSession, (ClientSessionBinding) binding, errHandlingCallback);
-                    }
                     operation.executeAsync(binding, new SingleResultCallback<T>() {
                         @Override
                         public void onResult(final T result, final Throwable t) {
@@ -114,9 +114,6 @@ class OperationExecutorImpl implements OperationExecutor {
                 } else {
                     final AsyncWriteBinding binding = getReadWriteBinding(ReadPreference.primary(), readConcern, clientSession,
                             session == null && clientSession != null);
-                    if (binding instanceof ClientSessionBinding) {
-                        selectServer(clientSession, (ClientSessionBinding) binding, errHandlingCallback);
-                    }
                     operation.executeAsync(binding, new SingleResultCallback<T>() {
                         @Override
                         public void onResult(final T result, final Throwable t) {
@@ -133,26 +130,6 @@ class OperationExecutorImpl implements OperationExecutor {
         });
     }
 
-    private <T> void selectServer(@Nullable final ClientSession session, @Nullable final ClientSessionBinding binding,
-                                  final SingleResultCallback<T> errHandlingCallback) {
-        if (binding != null && session != null && session.hasActiveTransaction() && session.getPinnedMongos() == null) {
-            binding.getWriteConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
-                @Override
-                public void onResult(final AsyncConnectionSource result, final Throwable t) {
-                    if (t != null) {
-                        errHandlingCallback.onResult(null, t);
-                    } else {
-                        ServerDescription server = result.getServerDescription();
-                        if (server != null && server.isMongos()) {
-                            session.setPinnedMongos(server);
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-
     private void labelException(final Throwable t, final ClientSession session) {
         if ((t instanceof MongoSocketException || t instanceof MongoTimeoutException)
                 && session != null && session.hasActiveTransaction()
@@ -164,8 +141,21 @@ class OperationExecutorImpl implements OperationExecutor {
     private AsyncReadWriteBinding getReadWriteBinding(final ReadPreference readPreference, final ReadConcern readConcern,
                                                       @Nullable final ClientSession session, final boolean ownsSession) {
         notNull("readPreference", readPreference);
-        AsyncReadWriteBinding readWriteBinding = new AsyncClusterBinding(mongoClient.getCluster(),
-                getReadPreferenceForBinding(readPreference, session), readConcern);
+        AsyncReadWriteBinding readWriteBinding;
+        Cluster cluster = mongoClient.getCluster();
+        if (session.hasActiveTransaction() && cluster.getCurrentDescription().getType() == ClusterType.SHARDED) {
+            if (session.getPinnedMongosAddress() == null) {
+                Server server = cluster.selectServer(
+                        new ReadPreferenceServerSelector(getReadPreferenceForBinding(readPreference, session)));
+                readWriteBinding = new AsyncSingleServerBinding(cluster, server.getDescription().getAddress());
+                session.setPinnedMongosAddress(server.getDescription().getAddress());
+            } else {
+                readWriteBinding = new AsyncSingleServerBinding(cluster, session.getPinnedMongosAddress());
+            }
+        } else {
+            readWriteBinding = new AsyncClusterBinding(mongoClient.getCluster(),
+                    getReadPreferenceForBinding(readPreference, session), readConcern);
+        }
         if (session != null) {
             readWriteBinding = new ClientSessionBinding(session, ownsSession, readWriteBinding);
         }

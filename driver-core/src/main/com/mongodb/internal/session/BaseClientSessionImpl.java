@@ -16,7 +16,7 @@
 
 package com.mongodb.internal.session;
 
-import com.mongodb.connection.ServerDescription;
+import com.mongodb.ServerAddress;
 import com.mongodb.lang.Nullable;
 import com.mongodb.session.ClientSession;
 import com.mongodb.ClientSessionOptions;
@@ -35,7 +35,7 @@ public class BaseClientSessionImpl implements ClientSession {
     private final ClientSessionOptions options;
     private BsonDocument clusterTime;
     private BsonTimestamp operationTime;
-    private ServerDescription pinnedMongos;
+    private ServerAddress pinnedMongosAddress;
     private volatile boolean closed;
 
     public BaseClientSessionImpl(final ServerSessionPool serverSessionPool, final Object originator, final ClientSessionOptions options) {
@@ -43,19 +43,19 @@ public class BaseClientSessionImpl implements ClientSession {
         this.serverSession = serverSessionPool.get();
         this.originator = originator;
         this.options = options;
-        this.pinnedMongos = null;
+        this.pinnedMongosAddress = null;
         closed = false;
     }
 
     @Override
     @Nullable
-    public ServerDescription getPinnedMongos() {
-        return pinnedMongos;
+    public ServerAddress getPinnedMongosAddress() {
+        return pinnedMongosAddress;
     }
 
     @Override
-    public void setPinnedMongos(@Nullable final ServerDescription address) {
-        pinnedMongos = address;
+    public void setPinnedMongosAddress(@Nullable final ServerAddress address) {
+        pinnedMongosAddress = address;
     }
 
     @Override
@@ -128,7 +128,7 @@ public class BaseClientSessionImpl implements ClientSession {
         if (!closed) {
             closed = true;
             serverSessionPool.release(serverSession);
-            pinnedMongos = null;
+            pinnedMongosAddress = null;
         }
     }
 }

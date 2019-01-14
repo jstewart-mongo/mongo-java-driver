@@ -23,6 +23,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.Server;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.ReadConcernAwareNoOpSessionContext;
+import com.mongodb.lang.Nullable;
 import com.mongodb.selector.ReadPreferenceServerSelector;
 import com.mongodb.selector.ServerSelector;
 import com.mongodb.selector.WritableServerSelector;

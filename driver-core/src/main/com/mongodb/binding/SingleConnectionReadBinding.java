@@ -20,6 +20,7 @@ import com.mongodb.ReadPreference;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.NoOpSessionContext;
+import com.mongodb.lang.Nullable;
 import com.mongodb.session.SessionContext;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -35,6 +36,7 @@ public class SingleConnectionReadBinding extends AbstractReferenceCounted implem
     private final ReadPreference readPreference;
     private final ServerDescription serverDescription;
     private final Connection connection;
+    private ConnectionSource connectionSource;
 
     /**
      * Construct an instance.
@@ -48,6 +50,7 @@ public class SingleConnectionReadBinding extends AbstractReferenceCounted implem
         this.readPreference = notNull("readPreference", readPreference);
         this.serverDescription = notNull("serverDescription", serverDescription);
         this.connection = notNull("connection", connection).retain();
+        this.connectionSource = null;
     }
 
     @Override
@@ -57,7 +60,11 @@ public class SingleConnectionReadBinding extends AbstractReferenceCounted implem
 
     @Override
     public ConnectionSource getReadConnectionSource() {
-        return new SingleConnectionSource();
+        if (connectionSource == null) {
+            return new SingleConnectionSource();
+        } else {
+            return connectionSource;
+        }
     }
 
     @Override

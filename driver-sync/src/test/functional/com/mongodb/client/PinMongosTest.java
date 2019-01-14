@@ -17,10 +17,12 @@
 package com.mongodb.client;
 
 import com.mongodb.ClientSessionOptions;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.MongoWriteConcernException;
+import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.connection.ServerVersion;
@@ -43,6 +45,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -93,8 +96,8 @@ public class PinMongosTest extends DatabaseTestCase {
     public void setUp() {
         assumeTrue(canRunTests());
 
-        mongoClient = MongoClients.create(getMongoClientSettingsBuilder()
-                .build());
+        mongoClient = MongoClients.create("mongodb://localhost:27017,localhost:27027,localhost:27037");
+        // mongoClient = MongoClients.create(getMongoClientSettingsBuilder().build());
 
         CollectionHelper<BsonDocument> collectionHelper = new CollectionHelper<BsonDocument>(new BsonDocumentCodec(), namespace);
         collectionHelper.drop();

@@ -19,6 +19,7 @@ package com.mongodb.binding;
 import com.mongodb.ReadPreference;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ServerDescription;
+import com.mongodb.lang.Nullable;
 import com.mongodb.session.SessionContext;
 
 import static org.bson.assertions.Assertions.notNull;
@@ -26,10 +27,12 @@ import static org.bson.assertions.Assertions.notNull;
 public class SessionBinding implements ReadWriteBinding {
     private final ReadWriteBinding wrapped;
     private final SessionContext sessionContext;
+    private ConnectionSource connectionSource;
 
     public SessionBinding(final ReadWriteBinding wrapped) {
         this.wrapped = notNull("wrapped", wrapped);
         this.sessionContext = new SimpleSessionContext();
+        this.connectionSource = null;
     }
 
     @Override
@@ -55,7 +58,11 @@ public class SessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getReadConnectionSource() {
-        return new SessionBindingConnectionSource(wrapped.getReadConnectionSource());
+        if (connectionSource == null) {
+            return new SessionBindingConnectionSource(wrapped.getReadConnectionSource());
+        } else {
+            return connectionSource;
+        }
     }
 
     @Override

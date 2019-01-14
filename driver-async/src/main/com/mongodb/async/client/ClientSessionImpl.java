@@ -20,10 +20,10 @@ import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoInternalException;
 import com.mongodb.ReadConcern;
+import com.mongodb.ServerAddress;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.async.SingleResultCallback;
-import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
@@ -44,24 +44,24 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
     private boolean messageSentInCurrentTransaction;
     private boolean commitInProgress;
     private TransactionOptions transactionOptions;
-    private ServerDescription pinnedMongos;
+    private ServerAddress pinnedMongosAddress;
 
     ClientSessionImpl(final ServerSessionPool serverSessionPool, final MongoClient mongoClient, final ClientSessionOptions options,
                       final OperationExecutor executor) {
         super(serverSessionPool, mongoClient, options);
         this.executor = executor;
-        this.pinnedMongos = null;
+        this.pinnedMongosAddress = null;
     }
 
     @Override
     @Nullable
-    public ServerDescription getPinnedMongos() {
-        return pinnedMongos;
+    public ServerAddress getPinnedMongosAddress() {
+        return pinnedMongosAddress;
     }
 
     @Override
-    public void setPinnedMongos(final ServerDescription server) {
-        pinnedMongos = server;
+    public void setPinnedMongosAddress(final ServerAddress server) {
+        pinnedMongosAddress = server;
     }
 
     @Override
@@ -114,7 +114,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
-        pinnedMongos = null;
+        pinnedMongosAddress = null;
     }
 
     @Override

@@ -17,8 +17,8 @@
 package com.mongodb.session;
 
 import com.mongodb.ClientSessionOptions;
+import com.mongodb.ServerAddress;
 import com.mongodb.annotations.NotThreadSafe;
-import com.mongodb.connection.ServerDescription;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -42,7 +42,7 @@ public interface ClientSession extends Closeable {
      * @mongodb.server.release 4.0
      */
     @Nullable
-    ServerDescription getPinnedMongos();
+    ServerAddress getPinnedMongosAddress();
 
     /**
      * Set the server address of the pinned mongos.
@@ -50,7 +50,7 @@ public interface ClientSession extends Closeable {
      * @param address the server address to pin
      * @mongodb.server.release 4.0
      */
-    void setPinnedMongos(ServerDescription address);
+    void setPinnedMongosAddress(ServerAddress address);
 
     /**
      * Get the options for this session.
