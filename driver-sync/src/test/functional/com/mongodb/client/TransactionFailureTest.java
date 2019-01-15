@@ -16,48 +16,24 @@
 
 package com.mongodb.client;
 
-import com.mongodb.ClusterFixture;
-import com.mongodb.MongoNamespace;
-import com.mongodb.client.test.CollectionHelper;
-import com.mongodb.connection.ServerVersion;
-import org.bson.BsonArray;
-import org.bson.BsonBoolean;
-import org.bson.BsonDocument;
-import org.bson.BsonString;
-import org.bson.BsonValue;
+import com.mongodb.MongoClientException;
 import org.bson.Document;
-import org.bson.codecs.DocumentCodec;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import util.JsonPoweredTestHelper;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
-import static com.mongodb.ClusterFixture.isStandalone;
-import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
-import static com.mongodb.client.Fixture.getDefaultDatabaseName;
-import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-// See https://github.com/mongodb/specifications/tree/master/source/retryable-writes/tests
-public class MongoTest {
+public class TransactionFailureTest {
+    private MongoClient mongoClient;
+    private MongoDatabase database;
+    private MongoCollection<Document> collection;
 
-    public MongoTest() {
+    public TransactionFailureTest() {
     }
 
     @BeforeClass
@@ -70,18 +46,22 @@ public class MongoTest {
 
     @Before
     public void setUp() {
+        assumeTrue(canRunTests());
+
+        mongoClient = MongoClients.create();
+        database = mongoClient.getDatabase("testTransaction");
+        collection = database.getCollection("test");
     }
 
     @After
     public void cleanUp() {
+        if (mongoClient != null) {
+            mongoClient.close();
+        }
     }
 
-    @Test
-    public void shouldPassAllOutcomes() {
-        MongoClient mongoClient = MongoClients.create();
-        MongoDatabase database = mongoClient.getDatabase("mydb");
-        MongoCollection<Document> collection = database.getCollection("test");
-
+    @Test(expected = MongoClientException.class)
+    public void testTransactionFails() {
         ClientSession clientSession = mongoClient.startSession();
         clientSession.startTransaction();
         collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"));
@@ -91,6 +71,7 @@ public class MongoTest {
     }
 
     private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
+        return serverVersionLessThan("3.7.0")
+                || (serverVersionLessThan("4.1.0") && isSharded());
     }
 }
