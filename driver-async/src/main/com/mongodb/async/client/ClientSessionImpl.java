@@ -86,7 +86,8 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
         int wireVersion = client.getCluster().getCurrentDescription().getServerDescriptions().get(0).getMaxWireVersion();
         if (wireVersion < 7
                 || (wireVersion < 8 && client.getCluster().getCurrentDescription().getType() == ClusterType.SHARDED)) {
-            throw new MongoClientException("Transactions are not supported by the MongoDB cluster to which this client is connected.");
+            throw new MongoClientException("Transactions are not supported by the MongoDB cluster to which this client is connected." +
+                    " (wire version: " + wireVersion + ", type: " + client.getCluster().getCurrentDescription().getType() + ")");
         }
 
         notNull("transactionOptions", transactionOptions);
