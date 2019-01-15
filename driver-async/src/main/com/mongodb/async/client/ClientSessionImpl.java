@@ -23,6 +23,7 @@ import com.mongodb.ReadConcern;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.connection.ClusterType;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.operation.AbortTransactionOperation;
@@ -81,6 +82,13 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
 
     @Override
     public void startTransaction(final TransactionOptions transactionOptions) {
+        MongoClientImpl client = (MongoClientImpl) ClientSessionImpl.super.getOriginator();
+        int wireVersion = client.getCluster().getCurrentDescription().getServerDescriptions().get(0).getMaxWireVersion();
+        if (wireVersion < 7
+                || (wireVersion < 8 && client.getCluster().getCurrentDescription().getType() == ClusterType.SHARDED)) {
+            throw new MongoClientException("Transactions are not supported by the MongoDB cluster to which this client is connected.");
+        }
+
         notNull("transactionOptions", transactionOptions);
         if (transactionState == TransactionState.IN) {
             throw new IllegalStateException("Transaction already in progress");
