@@ -518,10 +518,6 @@ axes:
         display_name: Sharded Cluster
         variables:
            TOPOLOGY: "sharded_cluster"
-      - id: "sharded-cluster-multiple-mongos"
-        display_name: Sharded Cluster with Multiple Mongos
-        variables:
-          TOPOLOGY: "sharded_cluster_multiple_mongos"
   - id: auth
     display_name: Authentication
     values:
@@ -619,20 +615,6 @@ buildvariants:
 
 - matrix_name: "tests-jdk-newer-secure"
   matrix_spec: { auth: "auth", ssl: "ssl", jdk: ["jdk8", "jdk11"], version: ["4.0", "latest"], topology: "*", os: "linux" }
-  display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
-  tags: ["tests-variant"]
-  tasks:
-     - name: "test"
-
-- matrix_name: "tests-jdk-secure-multi-mongos"
-  matrix_spec: { auth: "auth", ssl: "ssl", jdk: ["jdk6", "jdk8", "jdk11"], version: ["latest"], topology: "sharded_cluster_multiple_mongos", os: "linux" }
-  display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
-  tags: ["tests-variant"]
-  tasks:
-     - name: "test"
-
-- matrix_name: "tests-jdk-unsecure-multi-mongos"
-  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: ["jdk6", "jdk8", "jdk11"], version: ["latest"], topology: "sharded_cluster_multiple_mongos", os: "linux" }
   display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:

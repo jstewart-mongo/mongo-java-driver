@@ -66,16 +66,8 @@ provision_ssl () {
 if [ "$TOPOLOGY" == "sharded_cluster" ]; then
 
      if [ "$AUTH" = "auth" ]; then
-       export MONGODB_URI="mongodb://bob:pwd123@localhost:27017/?authSource=admin"
-     else
-       export MONGODB_URI="mongodb://localhost:27017"
-     fi
-fi
-
-if [ "$TOPOLOGY" == "sharded_cluster_multiple_mongos" ]; then
-    if [ "$AUTH" = "auth" ]; then
         export MONGODB_URI=`sed -e "s!^\(mongodb://\)\(.*\)!\1bob:pwd123@\2?authSource=admin!" <<< "$MONGODB_URI"`
-    fi
+     fi
 fi
 
 if [ "$COMPRESSOR" != "" ]; then
