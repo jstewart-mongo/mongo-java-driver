@@ -17,7 +17,6 @@
 package com.mongodb.internal.connection
 
 import com.mongodb.MongoConfigurationException
-import com.mongodb.MongoSecurityException
 import com.mongodb.ServerAddress
 import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ClusterSettings
