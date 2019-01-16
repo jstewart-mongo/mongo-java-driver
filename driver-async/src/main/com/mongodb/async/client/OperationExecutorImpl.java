@@ -143,7 +143,8 @@ class OperationExecutorImpl implements OperationExecutor {
         notNull("readPreference", readPreference);
         AsyncReadWriteBinding readWriteBinding;
         Cluster cluster = mongoClient.getCluster();
-        if (session.hasActiveTransaction() && cluster.getCurrentDescription().getType() == ClusterType.SHARDED) {
+        if (session != null && session.hasActiveTransaction()
+                && cluster.getCurrentDescription().getType() == ClusterType.SHARDED) {
             if (session.getPinnedMongosAddress() == null) {
                 Server server = cluster.selectServer(
                         new ReadPreferenceServerSelector(getReadPreferenceForBinding(readPreference, session)));

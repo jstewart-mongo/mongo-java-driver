@@ -104,7 +104,6 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
 
     private class SessionBindingAsyncConnectionSource implements AsyncConnectionSource {
         private AsyncConnectionSource wrapped;
-        private ServerDescription serverDescription;
 
         SessionBindingAsyncConnectionSource(final AsyncConnectionSource wrapped) {
             this.wrapped = wrapped;
@@ -112,7 +111,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
 
         @Override
         public ServerDescription getServerDescription() {
-            return serverDescription;
+            return wrapped.getServerDescription();
         }
 
         @Override
