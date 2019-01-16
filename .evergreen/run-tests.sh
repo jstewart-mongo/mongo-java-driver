@@ -8,8 +8,7 @@ set -o errexit  # Exit the script with error if any of the commands fail
 #       SSL                     Set to enable SSL. Values are "ssl" / "nossl" (default)
 #       MONGODB_URI             Set the suggested connection MONGODB_URI (including credentials and topology info)
 #       TOPOLOGY                Allows you to modify variables and the MONGODB_URI based on test topology
-#                               Supported values: "server", "replica_set", "sharded_cluster",
-#                                                 "sharded_cluster_multiple_mongos"
+#                               Supported values: "server", "replica_set", "sharded_cluster"
 #       COMPRESSOR              Set to enable compression. Values are "snappy" and "zlib" (default is no compression)
 #       JDK                     Set the version of java to be used.  Java versions can be set from the java toolchain /opt/java
 #                               "jdk5", "jdk6", "jdk7", "jdk8", "jdk9"
@@ -66,7 +65,10 @@ provision_ssl () {
 if [ "$TOPOLOGY" == "sharded_cluster" ]; then
 
      if [ "$AUTH" = "auth" ]; then
-        export MONGODB_URI=`sed -e "s!^\(mongodb://\)\(.*\)!\1bob:pwd123@\2?authSource=admin!" <<< "$MONGODB_URI"`
+#        export MONGODB_URI=`sed -e "s!^\(mongodb://\)\(.*\)!\1bob:pwd123@\2?authSource=admin!" <<< "$MONGODB_URI"`
+       export MONGODB_URI="mongodb://bob:pwd123@localhost:27017/?authSource=admin"
+     else
+       export MONGODB_URI="mongodb://localhost:27017"
      fi
 fi
 
