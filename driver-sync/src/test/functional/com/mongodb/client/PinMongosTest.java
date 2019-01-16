@@ -93,7 +93,6 @@ public class PinMongosTest extends DatabaseTestCase {
     public void setUp() {
         assumeTrue(canRunTests());
 
-        // mongoClient = MongoClients.create("mongodb://localhost:27017,localhost:27027,localhost:27037");
         mongoClient = MongoClients.create(getMongoClientSettingsBuilder().build());
 
         CollectionHelper<BsonDocument> collectionHelper = new CollectionHelper<BsonDocument>(new BsonDocumentCodec(), namespace);
