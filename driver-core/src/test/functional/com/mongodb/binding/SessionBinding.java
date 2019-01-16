@@ -26,12 +26,10 @@ import static org.bson.assertions.Assertions.notNull;
 public class SessionBinding implements ReadWriteBinding {
     private final ReadWriteBinding wrapped;
     private final SessionContext sessionContext;
-    private ConnectionSource connectionSource;
 
     public SessionBinding(final ReadWriteBinding wrapped) {
         this.wrapped = notNull("wrapped", wrapped);
         this.sessionContext = new SimpleSessionContext();
-        this.connectionSource = null;
     }
 
     @Override
@@ -57,11 +55,7 @@ public class SessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getReadConnectionSource() {
-        if (connectionSource == null) {
-            return new SessionBindingConnectionSource(wrapped.getReadConnectionSource());
-        } else {
-            return connectionSource;
-        }
+        return new SessionBindingConnectionSource(wrapped.getReadConnectionSource());
     }
 
     @Override

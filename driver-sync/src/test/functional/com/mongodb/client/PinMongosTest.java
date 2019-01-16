@@ -50,6 +50,7 @@ import java.util.Map;
 
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
+import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -92,8 +93,8 @@ public class PinMongosTest extends DatabaseTestCase {
     public void setUp() {
         assumeTrue(canRunTests());
 
-        mongoClient = MongoClients.create("mongodb://localhost:27017,localhost:27027,localhost:27037");
-        // mongoClient = MongoClients.create(getMongoClientSettingsBuilder().build());
+        // mongoClient = MongoClients.create("mongodb://localhost:27017,localhost:27027,localhost:27037");
+        mongoClient = MongoClients.create(getMongoClientSettingsBuilder().build());
 
         CollectionHelper<BsonDocument> collectionHelper = new CollectionHelper<BsonDocument>(new BsonDocumentCodec(), namespace);
         collectionHelper.drop();

@@ -173,7 +173,7 @@ public class MongoClientDelegate {
         public <T> T execute(final ReadOperation<T> operation, final ReadPreference readPreference, final ReadConcern readConcern,
                              @Nullable final ClientSession session) {
             ClientSession actualClientSession = getClientSession(session);
-            ReadBinding binding = getReadBinding(readPreference, readConcern, session,
+            ReadBinding binding = getReadBinding(readPreference, readConcern, actualClientSession,
                     session == null && actualClientSession != null);
 
             try {

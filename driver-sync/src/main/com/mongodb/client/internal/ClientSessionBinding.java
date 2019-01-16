@@ -91,7 +91,6 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     private class SessionBindingConnectionSource implements ConnectionSource {
         private ConnectionSource wrapped;
-        private ServerDescription serverDescription;
 
         SessionBindingConnectionSource(final ConnectionSource wrapped) {
             this.wrapped = wrapped;
@@ -99,7 +98,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
         @Override
         public ServerDescription getServerDescription() {
-            return serverDescription;
+            return wrapped.getServerDescription();
         }
 
         @Override
