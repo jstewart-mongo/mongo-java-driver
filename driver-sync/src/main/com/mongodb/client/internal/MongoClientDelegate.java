@@ -217,8 +217,8 @@ public class MongoClientDelegate {
         ReadWriteBinding getReadWriteBinding(final ReadPreference readPreference, final ReadConcern readConcern,
                                              @Nullable final ClientSession session, final boolean ownsSession) {
             ReadWriteBinding readWriteBinding;
-
-            if (session.hasActiveTransaction() && cluster.getCurrentDescription().getType() == ClusterType.SHARDED) {
+            if (session != null && session.hasActiveTransaction()
+                    && cluster.getCurrentDescription().getType() == ClusterType.SHARDED) {
                 if (session.getPinnedMongosAddress() == null) {
                     Server server = getCluster().selectServer(
                             new ReadPreferenceServerSelector(getReadPreferenceForBinding(readPreference, session)));
