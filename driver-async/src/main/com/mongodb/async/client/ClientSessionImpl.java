@@ -20,13 +20,11 @@ import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoInternalException;
 import com.mongodb.ReadConcern;
-import com.mongodb.ServerAddress;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
-import com.mongodb.lang.Nullable;
 import com.mongodb.operation.AbortTransactionOperation;
 import com.mongodb.operation.CommitTransactionOperation;
 
@@ -44,24 +42,11 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
     private boolean messageSentInCurrentTransaction;
     private boolean commitInProgress;
     private TransactionOptions transactionOptions;
-    private ServerAddress pinnedMongosAddress;
 
     ClientSessionImpl(final ServerSessionPool serverSessionPool, final MongoClient mongoClient, final ClientSessionOptions options,
                       final OperationExecutor executor) {
         super(serverSessionPool, mongoClient, options);
         this.executor = executor;
-        this.pinnedMongosAddress = null;
-    }
-
-    @Override
-    @Nullable
-    public ServerAddress getPinnedMongosAddress() {
-        return pinnedMongosAddress;
-    }
-
-    @Override
-    public void setPinnedMongosAddress(final ServerAddress server) {
-        pinnedMongosAddress = server;
     }
 
     @Override
@@ -114,7 +99,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
-        pinnedMongosAddress = null;
+        super.setPinnedMongosAddress(null);
     }
 
     @Override

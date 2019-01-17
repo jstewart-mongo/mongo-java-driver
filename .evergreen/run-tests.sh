@@ -84,19 +84,13 @@ if [ "$SSL" != "nossl" ]; then
    provision_ssl
 fi
 
-if [ "$SAFE_FOR_MULTI_MONGOS" == "true" ]; then
-    export TRANSACTION_URI="-Dorg.mongodb.test.transaction.uri=${MONGODB_URI}"
-fi
-
 echo "Running $AUTH tests over $SSL for $TOPOLOGY and connecting to $MONGODB_URI"
 
 echo "Running tests with ${JDK}"
 ./gradlew -version
 
 if [ "$SLOW_TESTS_ONLY" == "true" ]; then
-    ./gradlew -PjdkHome=/opt/java/${JDK} -Dorg.mongodb.test.uri=${MONGODB_URI} \
-              ${TRANSACTION_URI} ${GRADLE_EXTRA_VARS} ${ASYNC_TYPE} --stacktrace --info testSlowOnly
+    ./gradlew -PjdkHome=/opt/java/${JDK} -Dorg.mongodb.test.uri=${MONGODB_URI} ${GRADLE_EXTRA_VARS} ${ASYNC_TYPE} --stacktrace --info testSlowOnly
 else
-    ./gradlew -PjdkHome=/opt/java/${JDK} -Dorg.mongodb.test.uri=${MONGODB_URI} \
-              ${TRANSACTION_URI} ${GRADLE_EXTRA_VARS} ${ASYNC_TYPE} --stacktrace --info test
+    ./gradlew -PjdkHome=/opt/java/${JDK} -Dorg.mongodb.test.uri=${MONGODB_URI} ${GRADLE_EXTRA_VARS} ${ASYNC_TYPE} --stacktrace --info test
 fi

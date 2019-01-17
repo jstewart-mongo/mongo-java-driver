@@ -55,6 +55,7 @@ public class BaseClientSessionImpl implements ClientSession {
 
     @Override
     public void setPinnedMongosAddress(@Nullable final ServerAddress address) {
+        isTrue("pinned mongos null check", address == null || pinnedMongosAddress == null);
         pinnedMongosAddress = address;
     }
 
