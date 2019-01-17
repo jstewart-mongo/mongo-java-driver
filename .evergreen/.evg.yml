@@ -469,6 +469,7 @@ axes:
         display_name: "latest"
         variables:
            VERSION: "latest"
+           SAFE_FOR_MULTI_MONGOS: true
       - id: "4.0"
         display_name: "4.0"
         variables:
