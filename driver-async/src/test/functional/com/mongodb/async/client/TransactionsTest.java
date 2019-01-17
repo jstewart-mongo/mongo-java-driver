@@ -30,6 +30,7 @@ import com.mongodb.WriteConcern;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.connection.SocketSettings;
+import com.mongodb.connection.SslSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import com.mongodb.lang.Nullable;
@@ -60,9 +61,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.mongodb.ClusterFixture.getMultiMongosConnectionString;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
+import static com.mongodb.async.client.Fixture.getConnectionString;
 import static com.mongodb.async.client.Fixture.getDefaultDatabaseName;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
@@ -132,7 +135,18 @@ public class TransactionsTest {
 
         BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        mongoClient = MongoClients.create(Fixture.getMongoClientBuilderFromConnectionString()
+        MongoClientSettings.Builder builder = MongoClientSettings.builder()
+                .applyConnectionString(getMultiMongosConnectionString());
+        if (System.getProperty("java.version").startsWith("1.6.")) {
+            builder.applyToSslSettings(new Block<SslSettings.Builder>() {
+                @Override
+                public void apply(final SslSettings.Builder builder) {
+                    builder.invalidHostNameAllowed(true);
+                }
+            });
+        }
+
+        mongoClient = MongoClients.create(builder
                 .addCommandListener(commandListener)
                 .applyToSocketSettings(new Block<SocketSettings.Builder>() {
                     @Override

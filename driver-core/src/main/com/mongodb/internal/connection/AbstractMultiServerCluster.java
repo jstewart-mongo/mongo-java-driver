@@ -330,7 +330,7 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
     private boolean handleShardRouterChanged(final ServerDescription newDescription) {
         if (!newDescription.isShardRouter()) {
             LOGGER.error(format("Expecting a %s, but found a %s.  Removing %s from client view of cluster.",
-                    SHARD_ROUTER, newDescription.getType(), newDescription.getAddress()));
+                                 SHARD_ROUTER, newDescription.getType(), newDescription.getAddress()));
             removeServer(newDescription.getAddress());
         }
         return true;
