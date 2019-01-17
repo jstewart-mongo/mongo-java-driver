@@ -83,7 +83,7 @@ public enum ServerType {
     },
 
     /**
-     * A mongos server.
+     * A router to a sharded cluster, i.e. a mongos server.
      */
     SHARD_ROUTER {
         @Override

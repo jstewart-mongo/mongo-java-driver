@@ -61,11 +61,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
+import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static com.mongodb.client.Fixture.getDefaultDatabaseName;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -422,6 +424,10 @@ public class TransactionsTest {
     }
 
     private boolean canRunTests() {
-        return serverVersionAtLeast(4, 0) && isDiscoverableReplicaSet();
+        if (this.filename.equals("pin-mongos.json")) {
+            return serverVersionAtLeast(asList(4, 1, 6)) && isSharded();
+        } else {
+            return serverVersionAtLeast(4, 0) && isDiscoverableReplicaSet();
+        }
     }
 }
