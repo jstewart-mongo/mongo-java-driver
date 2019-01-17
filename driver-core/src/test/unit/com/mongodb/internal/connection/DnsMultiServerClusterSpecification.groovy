@@ -25,7 +25,7 @@ import spock.lang.Specification
 
 import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE
 import static com.mongodb.connection.ClusterType.SHARDED
-import static com.mongodb.connection.ServerType.MONGOS
+import static com.mongodb.connection.ServerType.SHARD_ROUTER
 
 class DnsMultiServerClusterSpecification extends Specification {
 
@@ -84,8 +84,8 @@ class DnsMultiServerClusterSpecification extends Specification {
         1 * clusterListener.clusterDescriptionChanged(_)
 
         when: 'the servers notify'
-        factory.sendNotification(firstServer, MONGOS)
-        factory.sendNotification(secondServer, MONGOS)
+        factory.sendNotification(firstServer, SHARD_ROUTER)
+        factory.sendNotification(secondServer, SHARD_ROUTER)
         def firstTestServer = factory.getServer(firstServer)
         def secondTestServer = factory.getServer(secondServer)
         def clusterDescription = cluster.getDescription()
@@ -100,7 +100,7 @@ class DnsMultiServerClusterSpecification extends Specification {
 
         when: 'the listener is initialized with a different server'
         initializer.initialize([secondServer, thirdServer])
-        factory.sendNotification(secondServer, MONGOS)
+        factory.sendNotification(secondServer, SHARD_ROUTER)
         def thirdTestServer = factory.getServer(thirdServer)
         clusterDescription = cluster.getDescription()
 

@@ -113,7 +113,7 @@ public class AbstractServerDiscoveryAndMonitoringTest {
         } else if (serverTypeString.equals("RSOther")) {
             serverType = ServerType.REPLICA_SET_OTHER;
         } else if (serverTypeString.equals("Mongos")) {
-            serverType = ServerType.MONGOS;
+            serverType = ServerType.SHARD_ROUTER;
         } else if (serverTypeString.equals("Standalone")) {
             serverType = ServerType.STANDALONE;
         } else if (serverTypeString.equals("PossiblePrimary")) {

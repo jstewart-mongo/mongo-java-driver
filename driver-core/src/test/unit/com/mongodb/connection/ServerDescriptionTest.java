@@ -74,7 +74,7 @@ public class ServerDescriptionTest {
         assertEquals(UNKNOWN, serverDescription.getType());
 
         assertFalse(serverDescription.isReplicaSetMember());
-        assertFalse(serverDescription.isMongos());
+        assertFalse(serverDescription.isShardRouter());
         assertFalse(serverDescription.isStandAlone());
 
         assertFalse(serverDescription.isPrimary());
@@ -140,7 +140,7 @@ public class ServerDescriptionTest {
         assertEquals(REPLICA_SET_PRIMARY, serverDescription.getType());
 
         assertTrue(serverDescription.isReplicaSetMember());
-        assertFalse(serverDescription.isMongos());
+        assertFalse(serverDescription.isShardRouter());
         assertFalse(serverDescription.isStandAlone());
 
         assertTrue(serverDescription.isPrimary());
@@ -257,7 +257,7 @@ public class ServerDescriptionTest {
 
     private ServerDescription.Builder createBuilder() {
         return builder().address(new ServerAddress())
-                       .type(ServerType.MONGOS)
+                       .type(ServerType.SHARD_ROUTER)
                        .tagSet(new TagSet(singletonList(new Tag("dc", "ny"))))
                        .setName("test")
                        .maxDocumentSize(100)
@@ -329,7 +329,7 @@ public class ServerDescriptionTest {
     public void testIsPrimaryAndIsSecondary() throws UnknownHostException {
         ServerDescription serverDescription = builder()
                                                                .address(new ServerAddress())
-                                                               .type(ServerType.MONGOS)
+                                                               .type(ServerType.SHARD_ROUTER)
                                                                .ok(false)
                                                                .state(CONNECTED)
                                                                .build();
@@ -338,7 +338,7 @@ public class ServerDescriptionTest {
 
         serverDescription = builder()
                                              .address(new ServerAddress())
-                                             .type(ServerType.MONGOS)
+                                             .type(ServerType.SHARD_ROUTER)
                                              .ok(true)
                                              .state(CONNECTED)
                                              .build();
@@ -377,7 +377,7 @@ public class ServerDescriptionTest {
     public void testHasTags() throws UnknownHostException {
         ServerDescription serverDescription = builder()
                                                                .address(new ServerAddress())
-                                                               .type(ServerType.MONGOS)
+                                                               .type(ServerType.SHARD_ROUTER)
                                                                .ok(false)
                                                                .state(CONNECTED)
                                                                .build();
@@ -385,7 +385,7 @@ public class ServerDescriptionTest {
 
         serverDescription = builder()
                                              .address(new ServerAddress())
-                                             .type(ServerType.MONGOS)
+                                             .type(ServerType.SHARD_ROUTER)
                                              .ok(true)
                                              .state(CONNECTED)
                                              .build();

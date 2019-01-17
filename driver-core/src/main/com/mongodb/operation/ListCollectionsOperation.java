@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.connection.ServerType.MONGOS;
+import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotZero;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
@@ -339,7 +339,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
 
 
         document.put("$query", query);
-        if (connectionDescription.getServerType() == MONGOS && !readPreference.equals(primary())) {
+        if (connectionDescription.getServerType() == SHARD_ROUTER && !readPreference.equals(primary())) {
             document.put("$readPreference", readPreference.toDocument());
         }
         if (maxTimeMS > 0) {

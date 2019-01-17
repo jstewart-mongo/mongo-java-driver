@@ -46,7 +46,7 @@ import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE;
 import static com.mongodb.connection.ClusterType.UNKNOWN;
 import static com.mongodb.connection.ServerConnectionState.CONNECTING;
 import static com.mongodb.connection.ServerType.REPLICA_SET_GHOST;
-import static com.mongodb.connection.ServerType.MONGOS;
+import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.connection.ServerType.STANDALONE;
 import static java.lang.String.format;
 
@@ -328,9 +328,9 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
     }
 
     private boolean handleShardRouterChanged(final ServerDescription newDescription) {
-        if (!newDescription.isMongos()) {
+        if (!newDescription.isShardRouter()) {
             LOGGER.error(format("Expecting a %s, but found a %s.  Removing %s from client view of cluster.",
-                                 MONGOS, newDescription.getType(), newDescription.getAddress()));
+                    SHARD_ROUTER, newDescription.getType(), newDescription.getAddress()));
             removeServer(newDescription.getAddress());
         }
         return true;

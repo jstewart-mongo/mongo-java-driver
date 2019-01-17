@@ -46,7 +46,7 @@ import static com.mongodb.ReadPreference.primaryPreferred;
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE;
 import static com.mongodb.connection.ClusterConnectionMode.SINGLE;
-import static com.mongodb.connection.ServerType.MONGOS;
+import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.connection.BsonWriterHelper.writePayload;
 import static com.mongodb.internal.connection.ReadConcernHelper.getReadConcernDocument;
 import static com.mongodb.internal.operation.ServerVersionHelper.THREE_DOT_SIX_WIRE_VERSION;
@@ -216,7 +216,7 @@ public final class CommandMessage extends RequestMessage {
     }
 
     private boolean isDirectConnectionToNonShardRouter() {
-        return clusterConnectionMode == SINGLE && getSettings().getServerType() != MONGOS;
+        return clusterConnectionMode == SINGLE && getSettings().getServerType() != SHARD_ROUTER;
     }
 
     private boolean useOpMsg() {

@@ -35,7 +35,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 /**
  * A simple binding where all connection sources are bound to the server specified in the constructor.
  *
- * @since 3.0
+ * @since 3.11
  */
 @Deprecated
 public class AsyncSingleServerBinding extends AbstractReferenceCounted implements AsyncReadWriteBinding {

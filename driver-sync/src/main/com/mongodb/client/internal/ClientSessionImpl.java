@@ -44,24 +44,22 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
     private boolean messageSentInCurrentTransaction;
     private boolean commitInProgress;
     private TransactionOptions transactionOptions;
-    private ServerAddress pinnedMongosAddress;
 
     ClientSessionImpl(final ServerSessionPool serverSessionPool, final Object originator, final ClientSessionOptions options,
                       final MongoClientDelegate delegate) {
         super(serverSessionPool, originator, options);
         this.delegate = delegate;
-        this.pinnedMongosAddress = null;
     }
 
     @Override
     @Nullable
     public ServerAddress getPinnedMongosAddress() {
-        return pinnedMongosAddress;
+        return super.getPinnedMongosAddress();
     }
 
     @Override
     public void setPinnedMongosAddress(final ServerAddress address) {
-        pinnedMongosAddress = address;
+        super.setPinnedMongosAddress(address);
     }
 
     @Override
@@ -114,7 +112,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
-        pinnedMongosAddress = null;
+        super.setPinnedMongosAddress(null);
     }
 
     @Override

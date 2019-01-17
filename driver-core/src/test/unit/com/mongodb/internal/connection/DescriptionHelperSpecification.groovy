@@ -511,7 +511,7 @@ class DescriptionHelperSpecification extends Specification {
                          .version(serverVersion)
                          .maxWireVersion(3)
                          .maxDocumentSize(16777216)
-                         .type(ServerType.MONGOS)
+                         .type(ServerType.SHARD_ROUTER)
                          .build()
     }
 }

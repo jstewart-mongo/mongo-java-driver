@@ -85,7 +85,7 @@ public enum ServerType {
     /**
      * A mongos server.
      */
-    MONGOS {
+    SHARD_ROUTER {
         @Override
         public ClusterType getClusterType() {
             return ClusterType.SHARDED;

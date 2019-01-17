@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.connection.ServerType.MONGOS;
+import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
@@ -215,7 +215,7 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         if (maxTimeMS > 0) {
             document.put("$maxTimeMS", new BsonInt64(maxTimeMS));
         }
-        if (connectionDescription.getServerType() == MONGOS && !readPreference.equals(primary())) {
+        if (connectionDescription.getServerType() == SHARD_ROUTER && !readPreference.equals(primary())) {
             document.put("$readPreference", readPreference.toDocument());
         }
         return document;

@@ -200,7 +200,7 @@ class ServerMonitorSpecification extends OperationFunctionalSpecification {
         builder().ok(true)
                 .state(CONNECTED)
                 .address(new ServerAddress())
-                .type(ServerType.MONGOS)
+                .type(ServerType.SHARD_ROUTER)
                 .tagSet(new TagSet(asList(new Tag('dc', 'ny'))))
                 .setName('test')
                 .primary('localhost:27017')

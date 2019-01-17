@@ -35,7 +35,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerConnectionState.CONNECTED;
 import static com.mongodb.connection.ServerType.REPLICA_SET_PRIMARY;
 import static com.mongodb.connection.ServerType.REPLICA_SET_SECONDARY;
-import static com.mongodb.connection.ServerType.MONGOS;
+import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.connection.ServerType.STANDALONE;
 import static com.mongodb.connection.ServerType.UNKNOWN;
 
@@ -501,21 +501,21 @@ public class ServerDescription {
     }
 
     /**
-     * Gets whether this is a server that is the entry point to a sharded instance of MongoDB.
-     *
-     * @return true if this server is a mongos instance
-     */
-    public boolean isMongos() {
-        return type == MONGOS;
-    }
-
-    /**
      * Gets whether this server is a replica set member.
      *
      * @return true if this server is part of a replica set
      */
     public boolean isReplicaSetMember() {
         return type.getClusterType() == ClusterType.REPLICA_SET;
+    }
+
+    /**
+     * Gets whether this is a server that is the entry point to a sharded instance of MongoDB.
+     *
+     * @return true if this server is a mongos instance
+     */
+    public boolean isShardRouter() {
+        return type == SHARD_ROUTER;
     }
 
     /**
@@ -533,7 +533,7 @@ public class ServerDescription {
      * @return true if this server is the primary in a replica set, is a mongos, or is a single standalone server
      */
     public boolean isPrimary() {
-        return ok && (type == REPLICA_SET_PRIMARY || type == MONGOS || type == STANDALONE);
+        return ok && (type == REPLICA_SET_PRIMARY || type == SHARD_ROUTER || type == STANDALONE);
     }
 
     /**
@@ -542,7 +542,7 @@ public class ServerDescription {
      * @return true if this server is a secondary in a replica set, is a mongos, or is a single standalone server
      */
     public boolean isSecondary() {
-        return ok && (type == REPLICA_SET_SECONDARY || type == MONGOS || type == STANDALONE);
+        return ok && (type == REPLICA_SET_SECONDARY || type == SHARD_ROUTER || type == STANDALONE);
     }
 
     /**
@@ -663,7 +663,7 @@ public class ServerDescription {
 
     /**
      * Returns true if the server has the given tags.  A server of either type {@code ServerType.STANDALONE} or {@code
-     * ServerType.MONGOS} is considered to have all tags, so this method will always return true for instances of either of those
+     * ServerType.SHARD_ROUTER} is considered to have all tags, so this method will always return true for instances of either of those
      * types.
      *
      * @param desiredTags the tags
@@ -674,7 +674,7 @@ public class ServerDescription {
             return false;
         }
 
-        if (type == STANDALONE || type == MONGOS) {
+        if (type == STANDALONE || type == SHARD_ROUTER) {
             return true;
         }
 
