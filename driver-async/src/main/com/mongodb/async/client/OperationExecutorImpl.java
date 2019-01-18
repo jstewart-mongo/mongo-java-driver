@@ -83,21 +83,31 @@ class OperationExecutorImpl implements OperationExecutor {
                             new SingleResultCallback<AsyncReadWriteBinding>() {
                                 @Override
                                 public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
-                                    if (session != null && session.hasActiveTransaction()
-                                            && !binding.getReadPreference().equals(primary())) {
-                                        throw new MongoClientException("Read preference in a transaction must be primary");
-                                    }
-                                    operation.executeAsync(binding, new SingleResultCallback<T>() {
-                                        @Override
-                                        public void onResult(final T result, final Throwable t) {
-                                            try {
-                                                labelException(t, session);
-                                                errHandlingCallback.onResult(result, t);
-                                            } finally {
-                                                binding.release();
-                                            }
+                                    if (t != null) {
+                                        errHandlingCallback.onResult(null, t);
+                                        if (binding != null) {
+                                            binding.release();
                                         }
-                                    });
+                                    } else {
+                                        if (session != null && session.hasActiveTransaction()
+                                                && !binding.getReadPreference().equals(primary())) {
+                                            binding.release();
+                                            errHandlingCallback.onResult(null,
+                                                    new MongoClientException("Read preference in a transaction must be primary"));
+                                        } else {
+                                            operation.executeAsync(binding, new SingleResultCallback<T>() {
+                                                @Override
+                                                public void onResult(final T result, final Throwable t) {
+                                                    try {
+                                                        labelException(t, session);
+                                                        errHandlingCallback.onResult(result, t);
+                                                    } finally {
+                                                        binding.release();
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    }
                                 }
                             });
                 }
@@ -128,6 +138,11 @@ class OperationExecutorImpl implements OperationExecutor {
                                 @Override
                                 public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
                                     if (t != null) {
+                                        errHandlingCallback.onResult(null, t);
+                                        if (binding != null) {
+                                            binding.release();
+                                        }
+                                    } else {
                                         operation.executeAsync(binding, new SingleResultCallback<T>() {
                                             @Override
                                             public void onResult(final T result, final Throwable t) {

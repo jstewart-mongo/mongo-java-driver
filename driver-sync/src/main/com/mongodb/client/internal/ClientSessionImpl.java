@@ -52,17 +52,6 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
     }
 
     @Override
-    @Nullable
-    public ServerAddress getPinnedMongosAddress() {
-        return super.getPinnedMongosAddress();
-    }
-
-    @Override
-    public void setPinnedMongosAddress(final ServerAddress address) {
-        super.setPinnedMongosAddress(address);
-    }
-
-    @Override
     public boolean hasActiveTransaction() {
         return transactionState == TransactionState.IN || (transactionState == TransactionState.COMMITTED && commitInProgress);
     }
@@ -112,7 +101,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
-        super.setPinnedMongosAddress(null);
+        setPinnedMongosAddress(null);
     }
 
     @Override
