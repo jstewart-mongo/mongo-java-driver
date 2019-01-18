@@ -18,6 +18,7 @@ package com.mongodb.client;
 
 import com.mongodb.Block;
 import com.mongodb.ClientSessionOptions;
+import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
@@ -62,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.mongodb.ClusterFixture.getConnectionString;
 import static com.mongodb.ClusterFixture.getMultiMongosConnectionString;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
@@ -69,7 +71,6 @@ import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static com.mongodb.client.Fixture.getDefaultDatabaseName;
-import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -136,8 +137,12 @@ public class TransactionsTest {
 
         BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
+        ConnectionString connectionString = getConnectionString();
+        if (this.filename.equals("pin-mongos.java")) {
+            connectionString = getMultiMongosConnectionString();
+        }
         MongoClientSettings.Builder builder = MongoClientSettings.builder()
-                .applyConnectionString(getMultiMongosConnectionString());
+                .applyConnectionString(connectionString);
         if (System.getProperty("java.version").startsWith("1.6.")) {
             builder.applyToSslSettings(new Block<SslSettings.Builder>() {
                 @Override
@@ -437,10 +442,12 @@ public class TransactionsTest {
     }
 
     private boolean canRunTests() {
-        if (this.filename.equals("pin-mongos.json")) {
-            return serverVersionAtLeast(asList(4, 1, 6)) && isSharded();
+        if (isSharded()) {
+            return serverVersionAtLeast(4, 1);
+        } else if (isDiscoverableReplicaSet()) {
+            return serverVersionAtLeast(4, 0);
         } else {
-            return serverVersionAtLeast(4, 0) && isDiscoverableReplicaSet();
+            return false;
         }
     }
 }

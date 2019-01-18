@@ -89,9 +89,9 @@ if [ "$COMPRESSOR" != "" ]; then
 
      if [ "$SAFE_FOR_MULTI_MONGOS" == "true" ]; then
          if [[ "$TRANSACTION_URI" == *"?"* ]]; then
-             export MONGODB_URI="${TRANSACTION_URI}&compressors=${COMPRESSOR}"
+             export TRANSACTION_URI="${TRANSACTION_URI}&compressors=${COMPRESSOR}"
          else
-             export MONGODB_URI="${TRANSACTION_URI}/?compressors=${COMPRESSOR}"
+             export TRANSACTION_URI="${TRANSACTION_URI}/?compressors=${COMPRESSOR}"
          fi
      fi
 fi

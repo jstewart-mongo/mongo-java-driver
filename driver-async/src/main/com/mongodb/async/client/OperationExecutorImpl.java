@@ -171,14 +171,14 @@ class OperationExecutorImpl implements OperationExecutor {
         final SingleResultCallback<AsyncReadWriteBinding> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
         final Cluster cluster = mongoClient.getCluster();
         if (session != null && session.hasActiveTransaction()) {
-            getClusterDescription(cluster, new SingleResultCallback<ClusterType>() {
+            getClusterType(cluster, new SingleResultCallback<ClusterType>() {
                 @Override
                 public void onResult(final ClusterType clusterType, final Throwable t) {
                     if (t != null) {
                         errHandlingCallback.onResult(null, t);
                     } else {
                         if (clusterType == ClusterType.SHARDED) {
-                            bindWithPinnedMongos(cluster, readPreference, session, errHandlingCallback, callback);
+                            bindWithPinnedMongos(cluster, readPreference, session, ownsSession, errHandlingCallback, callback);
                         } else {
                             allocateReadWriteBinding(readPreference, readConcern, session, ownsSession, callback);
                         }
@@ -190,7 +190,8 @@ class OperationExecutorImpl implements OperationExecutor {
         }
     }
 
-    private void bindWithPinnedMongos(final Cluster cluster, final ReadPreference readPreference, final ClientSession session,
+    private void bindWithPinnedMongos(final Cluster cluster, final ReadPreference readPreference,
+                                      final ClientSession session, final boolean ownsSession,
                                       final SingleResultCallback<AsyncReadWriteBinding> errHandlingCallback,
                                       final SingleResultCallback<AsyncReadWriteBinding> callback) {
         if (session.getPinnedMongosAddress() == null) {
@@ -203,13 +204,17 @@ class OperationExecutorImpl implements OperationExecutor {
                                 errHandlingCallback.onResult(null, t);
                             } else {
                                 session.setPinnedMongosAddress(server.getDescription().getAddress());
-                                callback.onResult(new AsyncSingleServerBinding(cluster,
-                                        server.getDescription().getAddress()), null);
+                                AsyncSingleServerBinding binding =
+                                        new AsyncSingleServerBinding(cluster, server.getDescription().getAddress(),
+                                                getReadPreferenceForBinding(readPreference, session));
+                                callback.onResult(new ClientSessionBinding(session, ownsSession, binding), null);
                             }
                         }
                     });
         } else {
-            callback.onResult(new AsyncSingleServerBinding(cluster, session.getPinnedMongosAddress()), null);
+            AsyncSingleServerBinding binding = new AsyncSingleServerBinding(cluster, session.getPinnedMongosAddress(),
+                    getReadPreferenceForBinding(readPreference, session));
+            callback.onResult(new ClientSessionBinding(session, ownsSession, binding), null);
         }
     }
 
@@ -225,7 +230,7 @@ class OperationExecutorImpl implements OperationExecutor {
         }
     }
 
-    private void getClusterDescription(final Cluster cluster, final SingleResultCallback<ClusterType> callback) {
+    private void getClusterType(final Cluster cluster, final SingleResultCallback<ClusterType> callback) {
         ClusterDescription description = cluster.getCurrentDescription();
         if (description.getType() != ClusterType.UNKNOWN) {
             callback.onResult(description.getType(), null);

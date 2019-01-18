@@ -222,10 +222,12 @@ public class MongoClientDelegate {
                 if (session.getPinnedMongosAddress() == null) {
                     Server server = getCluster().selectServer(
                             new ReadPreferenceServerSelector(getReadPreferenceForBinding(readPreference, session)));
-                    readWriteBinding = new SingleServerBinding(cluster, server.getDescription().getAddress());
+                    readWriteBinding = new SingleServerBinding(cluster, server.getDescription().getAddress(),
+                            getReadPreferenceForBinding(readPreference, session));
                     session.setPinnedMongosAddress(server.getDescription().getAddress());
                 } else {
-                    readWriteBinding = new SingleServerBinding(cluster, session.getPinnedMongosAddress());
+                    readWriteBinding = new SingleServerBinding(cluster, session.getPinnedMongosAddress(),
+                            getReadPreferenceForBinding(readPreference, session));
                 }
             } else {
                 readWriteBinding = new ClusterBinding(cluster, getReadPreferenceForBinding(readPreference, session),
