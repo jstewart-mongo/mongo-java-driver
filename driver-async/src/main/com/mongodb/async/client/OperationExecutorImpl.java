@@ -175,7 +175,7 @@ class OperationExecutorImpl implements OperationExecutor {
                 @Override
                 public void onResult(final ClusterType clusterType, final Throwable t) {
                     if (t != null) {
-                        errHandlingCallback.     onResult(null, t);
+                        errHandlingCallback.onResult(null, t);
                     } else {
                         if (clusterType == ClusterType.SHARDED) {
                             bindWithPinnedMongos(cluster, readPreference, session, errHandlingCallback, callback);
