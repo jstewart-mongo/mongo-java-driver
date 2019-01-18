@@ -85,9 +85,6 @@ class OperationExecutorImpl implements OperationExecutor {
                                 public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
                                     if (t != null) {
                                         errHandlingCallback.onResult(null, t);
-                                        if (binding != null) {
-                                            binding.release();
-                                        }
                                     } else {
                                         if (session != null && session.hasActiveTransaction()
                                                 && !binding.getReadPreference().equals(primary())) {
@@ -139,9 +136,6 @@ class OperationExecutorImpl implements OperationExecutor {
                                 public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
                                     if (t != null) {
                                         errHandlingCallback.onResult(null, t);
-                                        if (binding != null) {
-                                            binding.release();
-                                        }
                                     } else {
                                         operation.executeAsync(binding, new SingleResultCallback<T>() {
                                             @Override
@@ -232,7 +226,7 @@ class OperationExecutorImpl implements OperationExecutor {
     }
 
     private void getClusterDescription(final Cluster cluster, final SingleResultCallback<ClusterType> callback) {
-        ClusterDescription description = cluster.getDescription();
+        ClusterDescription description = cluster.getCurrentDescription();
         if (description.getType() != ClusterType.UNKNOWN) {
             callback.onResult(description.getType(), null);
         } else {
