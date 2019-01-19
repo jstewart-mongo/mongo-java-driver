@@ -136,7 +136,7 @@ public class TransactionsTest {
         BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
         ConnectionString connectionString = getConnectionString();
-        if (this.filename.equals("pin-mongos.java")) {
+        if (this.filename.equals("pin-mongos.json")) {
             connectionString = getMultiMongosConnectionString();
         }
         MongoClientSettings.Builder builder = MongoClientSettings.builder()
