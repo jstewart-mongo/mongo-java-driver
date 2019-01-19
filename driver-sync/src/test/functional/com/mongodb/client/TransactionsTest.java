@@ -294,6 +294,11 @@ public class TransactionsTest {
                         BsonDocument actualOutcome = helper.getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
                             BsonValue actualResult = actualOutcome.get("result");
+                            if (actualResult.isDocument()) {
+                                if (((BsonDocument) actualResult).containsKey("recoveryToken")) {
+                                    ((BsonDocument) actualResult).remove("recoveryToken");
+                                }
+                            }
 
                             assertEquals("Expected operation result differs from actual", expectedResult, actualResult);
                         }
