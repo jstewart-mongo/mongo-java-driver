@@ -18,7 +18,7 @@ package com.mongodb.async.client;
 
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
-import com.mongodb.async.SingleResultCallback;
+import com.mongodb.async.FutureResultCallback;
 import org.bson.Document;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -48,7 +48,7 @@ public class TransactionFailureTest {
 
     @Before
     public void setUp() {
-        assumeTrue(canRunTests());
+        //assumeTrue(canRunTests());
 
         mongoClient = MongoClients.create();
         database = mongoClient.getDatabase("testTransaction");
@@ -66,16 +66,11 @@ public class TransactionFailureTest {
     public void testTransactionFails() {
         final ClientSession clientSession = createSession();
         clientSession.startTransaction();
-        collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"), new SingleResultCallback<Void>() {
-            @Override
-            public void onResult(final Void result, final Throwable t) {
-            }
-        });
-        collection.insertOne(clientSession, Document.parse("{_id: 2, a: 1}"), new SingleResultCallback<Void>() {
-            @Override
-            public void onResult(final Void result, final Throwable t) {
-            }
-        });
+
+        FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
+        collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"), futureResultCallback);
+        futureResult(futureResultCallback);
+
         new MongoOperation<Void>() {
             @Override
             public void execute() {
@@ -84,6 +79,16 @@ public class TransactionFailureTest {
         }.get();
 
         clientSession.close();
+    }
+
+    <T> T futureResult(final FutureResultCallback<T> callback) {
+        try {
+            return callback.get();
+        } catch (MongoClientException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted", e);
+        }
     }
 
     private ClientSession createSession() {
