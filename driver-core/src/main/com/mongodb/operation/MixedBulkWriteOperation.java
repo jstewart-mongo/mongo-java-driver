@@ -33,6 +33,8 @@ import com.mongodb.bulk.UpdateRequest;
 import com.mongodb.bulk.WriteRequest;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
+import com.mongodb.diagnostics.logging.Logger;
+import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.connection.MongoWriteConcernWithResponseException;
 import com.mongodb.internal.connection.ProtocolHelper;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
@@ -58,6 +60,7 @@ import static com.mongodb.operation.OperationHelper.isRetryableWrite;
 import static com.mongodb.operation.OperationHelper.validateWriteRequests;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
+import static java.lang.String.format;
 
 /**
  * An operation to execute a series of write operations in bulk.
@@ -66,6 +69,8 @@ import static com.mongodb.operation.OperationHelper.withReleasableConnection;
  */
 @Deprecated
 public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteResult>, WriteOperation<BulkWriteResult> {
+    private static final Logger LOGGER = Loggers.getLogger("mixedBulkWrite");
+
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
     private final MongoNamespace namespace;
     private final List<? extends WriteRequest> writeRequests;
@@ -285,6 +290,10 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
 
     private BulkWriteResult retryExecuteBatches(final WriteBinding binding, final BulkWriteBatch retryBatch,
                                                 final MongoException originalError) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info(format("retrying the following op: %s %s", retryBatch.getPayload().getPayloadType(),
+                    retryBatch.getCommand().toJson()));
+        }
         return withReleasableConnection(binding, originalError, new CallableWithConnectionAndSource<BulkWriteResult>() {
             @Override
             public BulkWriteResult call(final ConnectionSource source, final Connection connection) {
