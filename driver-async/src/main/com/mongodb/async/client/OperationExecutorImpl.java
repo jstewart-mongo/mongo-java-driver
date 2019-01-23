@@ -33,7 +33,6 @@ import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.Server;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.connection.ServerType;
 import com.mongodb.diagnostics.logging.Logger;
 import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.lang.Nullable;
@@ -48,9 +47,7 @@ import static com.mongodb.MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL;
 import static com.mongodb.MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL;
 import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.connection.ServerDescription.MAX_DRIVER_WIRE_VERSION;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_ZERO_WIRE_VERSION;
 
 class OperationExecutorImpl implements OperationExecutor {
     private static final Logger LOGGER = Loggers.getLogger("client");
@@ -81,44 +78,35 @@ class OperationExecutorImpl implements OperationExecutor {
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    checkTransactionSupport(session, new SingleResultCallback<Void>() {
-                        @Override
-                        public void onResult(final Void result, final Throwable t) {
-                            if (t != null) {
-                                errHandlingCallback.onResult(null, t);
-                            } else {
-                                getReadWriteBinding(readPreference, readConcern, clientSession,
-                                        session == null && clientSession != null,
-                                        new SingleResultCallback<AsyncReadWriteBinding>() {
-                                            @Override
-                                            public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
-                                                if (t != null) {
-                                                    errHandlingCallback.onResult(null, t);
-                                                } else {
-                                                    if (session != null && session.hasActiveTransaction()
-                                                            && !binding.getReadPreference().equals(primary())) {
+                    getReadWriteBinding(readPreference, readConcern, clientSession,
+                            session == null && clientSession != null,
+                            new SingleResultCallback<AsyncReadWriteBinding>() {
+                                @Override
+                                public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
+                                    if (t != null) {
+                                        errHandlingCallback.onResult(null, t);
+                                    } else {
+                                        if (session != null && session.hasActiveTransaction()
+                                                && !binding.getReadPreference().equals(primary())) {
+                                            binding.release();
+                                            errHandlingCallback.onResult(null,
+                                                    new MongoClientException("Read preference in a transaction must be primary"));
+                                        } else {
+                                            operation.executeAsync(binding, new SingleResultCallback<T>() {
+                                                @Override
+                                                public void onResult(final T result, final Throwable t) {
+                                                    try {
+                                                        labelException(t, session);
+                                                        errHandlingCallback.onResult(result, t);
+                                                    } finally {
                                                         binding.release();
-                                                        errHandlingCallback.onResult(null,
-                                                              new MongoClientException("Read preference in a transaction must be primary"));
-                                                    } else {
-                                                        operation.executeAsync(binding, new SingleResultCallback<T>() {
-                                                            @Override
-                                                            public void onResult(final T result, final Throwable t) {
-                                                                try {
-                                                                    labelException(t, session);
-                                                                    errHandlingCallback.onResult(result, t);
-                                                                } finally {
-                                                                    binding.release();
-                                                                }
-                                                            }
-                                                        });
                                                     }
                                                 }
-                                            }
-                                        });
-                            }
-                        }
-                    });
+                                            });
+                                        }
+                                    }
+                                }
+                            });
                 }
             }
         });
@@ -141,75 +129,31 @@ class OperationExecutorImpl implements OperationExecutor {
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    checkTransactionSupport(clientSession, new SingleResultCallback<Void>() {
-                        @Override
-                        public void onResult(final Void result, final Throwable t) {
-                            if (t != null) {
-                                errHandlingCallback.onResult(null, t);
-                            } else {
-                                getReadWriteBinding(ReadPreference.primary(), readConcern, clientSession,
-                                        session == null && clientSession != null,
-                                        new SingleResultCallback<AsyncReadWriteBinding>() {
-                                            @Override
-                                            public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
-                                                if (t != null) {
-                                                    errHandlingCallback.onResult(null, t);
-                                                } else {
-                                                    operation.executeAsync(binding, new SingleResultCallback<T>() {
-                                                        @Override
-                                                        public void onResult(final T result, final Throwable t) {
-                                                            try {
-                                                                labelException(t, session);
-                                                                errHandlingCallback.onResult(result, t);
-                                                            } finally {
-                                                                binding.release();
-                                                            }
-                                                        }
-                                                    });
-                                                }
-                                            }
-                                        });
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    private void checkTransactionSupport(final ClientSession session, final SingleResultCallback<Void> errHandlingCallback) {
-        if (session != null && session.hasActiveTransaction()) {
-            final String exceptionString = "Transactions are not supported by the MongoDB cluster to which this client is connected.";
-            getMaxWireVersion(mongoClient.getCluster(), new SingleResultCallback<Integer>() {
-                @Override
-                public void onResult(final Integer wireVersion, final Throwable t) {
-                    if (t != null) {
-                        errHandlingCallback.onResult(null, t);
-                    } else {
-                        if (wireVersion < FOUR_DOT_ZERO_WIRE_VERSION) {
-                            errHandlingCallback.onResult(null, new MongoClientException(exceptionString));
-                        } else {
-                            getClusterType(mongoClient.getCluster(), new SingleResultCallback<ClusterType>() {
+                    getReadWriteBinding(ReadPreference.primary(), readConcern, clientSession,
+                            session == null && clientSession != null,
+                            new SingleResultCallback<AsyncReadWriteBinding>() {
                                 @Override
-                                public void onResult(final ClusterType clusterType, final Throwable t) {
+                                public void onResult(final AsyncReadWriteBinding binding, final Throwable t) {
                                     if (t != null) {
                                         errHandlingCallback.onResult(null, t);
                                     } else {
-                                        if (wireVersion < MAX_DRIVER_WIRE_VERSION && clusterType == ClusterType.SHARDED) {
-                                            errHandlingCallback.onResult(null, new MongoClientException(exceptionString));
-                                        } else {
-                                            errHandlingCallback.onResult(null, null);
-                                        }
+                                        operation.executeAsync(binding, new SingleResultCallback<T>() {
+                                            @Override
+                                            public void onResult(final T result, final Throwable t) {
+                                                try {
+                                                    labelException(t, session);
+                                                    errHandlingCallback.onResult(result, t);
+                                                } finally {
+                                                    binding.release();
+                                                }
+                                            }
+                                        });
                                     }
                                 }
                             });
-                        }
-                    }
                 }
-            });
-        } else {
-            errHandlingCallback.onResult(null, null);
-        }
+            }
+        });
     }
 
     private void labelException(final Throwable t, final ClientSession session) {
@@ -307,41 +251,6 @@ class OperationExecutorImpl implements OperationExecutor {
                         callback.onResult(null, t);
                     } else {
                         callback.onResult(server.getDescription().getType().getClusterType(), null);
-                    }
-                }
-            });
-        }
-    }
-
-    private void getMaxWireVersion(final Cluster cluster, final SingleResultCallback<Integer> callback) {
-        ClusterDescription clusterDescription = cluster.getCurrentDescription();
-        int wireVersion = MAX_DRIVER_WIRE_VERSION + 1;
-        if (clusterDescription.getType() != ClusterType.UNKNOWN) {
-            for (ServerDescription serverDescription : clusterDescription.getServerDescriptions()) {
-                if (serverDescription.getType() != ServerType.UNKNOWN) {
-                    if (serverDescription.getMaxWireVersion() < wireVersion) {
-                        wireVersion = serverDescription.getMaxWireVersion();
-                    }
-                }
-            }
-            callback.onResult(wireVersion, null);
-        } else {
-            mongoClient.getCluster().selectServerAsync(new ServerSelector() {
-                @Override
-                public List<ServerDescription> select(final ClusterDescription clusterDescription) {
-                    if (clusterDescription.getConnectionMode() == ClusterConnectionMode.SINGLE) {
-                        return clusterDescription.getAny();
-                    } else {
-                        return clusterDescription.getAnyPrimaryOrSecondary();
-                    }
-                }
-            }, new SingleResultCallback<Server>() {
-                @Override
-                public void onResult(final Server server, final Throwable t) {
-                    if (t != null) {
-                        callback.onResult(null, t);
-                    } else {
-                        callback.onResult(server.getDescription().getMaxWireVersion(), null);
                     }
                 }
             });
