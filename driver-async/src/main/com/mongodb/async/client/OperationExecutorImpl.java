@@ -48,7 +48,9 @@ import static com.mongodb.MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL;
 import static com.mongodb.MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL;
 import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.notNull;
+import static com.mongodb.connection.ServerDescription.MAX_DRIVER_WIRE_VERSION;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
+import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_ZERO_WIRE_VERSION;
 
 class OperationExecutorImpl implements OperationExecutor {
     private static final Logger LOGGER = Loggers.getLogger("client");
@@ -184,7 +186,7 @@ class OperationExecutorImpl implements OperationExecutor {
                     if (t != null) {
                         errHandlingCallback.onResult(null, t);
                     } else {
-                        if (wireVersion < 7) {
+                        if (wireVersion < FOUR_DOT_ZERO_WIRE_VERSION) {
                             errHandlingCallback.onResult(null, new MongoClientException(exceptionString));
                         } else {
                             getClusterType(mongoClient.getCluster(), new SingleResultCallback<ClusterType>() {
@@ -193,7 +195,7 @@ class OperationExecutorImpl implements OperationExecutor {
                                     if (t != null) {
                                         errHandlingCallback.onResult(null, t);
                                     } else {
-                                        if (wireVersion < 8 && clusterType == ClusterType.SHARDED) {
+                                        if (wireVersion < MAX_DRIVER_WIRE_VERSION && clusterType == ClusterType.SHARDED) {
                                             errHandlingCallback.onResult(null, new MongoClientException(exceptionString));
                                         } else {
                                             errHandlingCallback.onResult(null, null);
@@ -312,13 +314,14 @@ class OperationExecutorImpl implements OperationExecutor {
     }
 
     private void getMaxWireVersion(final Cluster cluster, final SingleResultCallback<Integer> callback) {
-        ClusterDescription description = cluster.getCurrentDescription();
-        int wireVersion = 0;
-        if (description.getType() != ClusterType.UNKNOWN) {
-            for (ServerDescription serverDescription : description.getServerDescriptions()) {
+        ClusterDescription clusterDescription = cluster.getCurrentDescription();
+        int wireVersion = MAX_DRIVER_WIRE_VERSION + 1;
+        if (clusterDescription.getType() != ClusterType.UNKNOWN) {
+            for (ServerDescription serverDescription : clusterDescription.getServerDescriptions()) {
                 if (serverDescription.getType() != ServerType.UNKNOWN) {
-                    wireVersion = serverDescription.getMaxWireVersion();
-                    break;
+                    if (serverDescription.getMaxWireVersion() < wireVersion) {
+                        wireVersion = serverDescription.getMaxWireVersion();
+                    }
                 }
             }
             callback.onResult(wireVersion, null);

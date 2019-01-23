@@ -65,20 +65,16 @@ public class TransactionFailureTest {
     @Test(expected = MongoClientException.class)
     public void testTransactionFails() {
         final ClientSession clientSession = createSession();
-        clientSession.startTransaction();
 
-        FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
-        collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"), futureResultCallback);
-        futureResult(futureResultCallback);
+        try {
+            clientSession.startTransaction();
 
-        new MongoOperation<Void>() {
-            @Override
-            public void execute() {
-                clientSession.commitTransaction(getCallback());
-            }
-        }.get();
-
-        clientSession.close();
+            FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
+            collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"), futureResultCallback);
+            futureResult(futureResultCallback);
+        } finally {
+            clientSession.close();
+        }
     }
 
     <T> T futureResult(final FutureResultCallback<T> callback) {

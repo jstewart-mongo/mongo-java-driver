@@ -63,11 +63,12 @@ public class TransactionFailureTest {
     @Test(expected = MongoClientException.class)
     public void testTransactionFails() {
         ClientSession clientSession = mongoClient.startSession();
-        clientSession.startTransaction();
-        collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"));
-        collection.insertOne(clientSession, Document.parse("{_id: 2, a: 1}"));
-        clientSession.commitTransaction();
-        clientSession.close();
+        try {
+            clientSession.startTransaction();
+            collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"));
+        } finally {
+            clientSession.close();
+        }
     }
 
     private boolean canRunTests() {

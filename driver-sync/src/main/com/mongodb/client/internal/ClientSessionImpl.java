@@ -34,6 +34,8 @@ import com.mongodb.operation.CommitTransactionOperation;
 
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
+import static com.mongodb.connection.ServerDescription.MAX_DRIVER_WIRE_VERSION;
+import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_ZERO_WIRE_VERSION;
 
 final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
 
@@ -109,16 +111,17 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
     }
 
     private void checkServerVersionForTransactionSupport() {
-        ClusterDescription clusterDescription = delegate.getCluster().getCurrentDescription();
-        int wireVersion = 0;
+        ClusterDescription clusterDescription = delegate.getCluster().getDescription();
+        int wireVersion = MAX_DRIVER_WIRE_VERSION + 1;
         for (ServerDescription serverDescription : clusterDescription.getServerDescriptions()) {
             if (serverDescription.getType() != ServerType.UNKNOWN) {
-                wireVersion = serverDescription.getMaxWireVersion();
-                break;
+                if (serverDescription.getMaxWireVersion() < wireVersion) {
+                    wireVersion = serverDescription.getMaxWireVersion();
+                }
             }
         }
-        if (wireVersion < 7
-                || (wireVersion < 8 && clusterDescription.getType() == ClusterType.SHARDED)) {
+        if (wireVersion < FOUR_DOT_ZERO_WIRE_VERSION
+                || (wireVersion < MAX_DRIVER_WIRE_VERSION && clusterDescription.getType() == ClusterType.SHARDED)) {
             throw new MongoClientException("Transactions are not supported by the MongoDB cluster to which this client is connected.");
         }
     }
