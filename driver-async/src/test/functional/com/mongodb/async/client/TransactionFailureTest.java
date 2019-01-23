@@ -48,7 +48,7 @@ public class TransactionFailureTest {
 
     @Before
     public void setUp() {
-        //assumeTrue(canRunTests());
+        assumeTrue(canRunTests());
 
         mongoClient = MongoClients.create();
         database = mongoClient.getDatabase("testTransaction");
