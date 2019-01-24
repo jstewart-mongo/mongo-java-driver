@@ -21,7 +21,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
 import com.mongodb.connection.ByteBufferBsonOutput;
 import com.mongodb.connection.ClusterConnectionMode;
-import com.mongodb.connection.ServerType;
 import com.mongodb.connection.SplittablePayload;
 import com.mongodb.internal.validator.MappedFieldNameValidator;
 import com.mongodb.session.SessionContext;
