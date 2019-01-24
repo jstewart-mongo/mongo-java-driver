@@ -38,7 +38,7 @@ public class TransactionFailureTest extends DatabaseTestCase {
     }
 
     @Test(expected = MongoClientException.class)
-    public void testTransactionFails() {
+    public void testTransactionFails() throws InterruptedException {
         final ClientSession clientSession = createSession();
 
         try {
@@ -47,10 +47,6 @@ public class TransactionFailureTest extends DatabaseTestCase {
             FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
             collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"), futureResultCallback);
             futureResultCallback.get();
-        } catch (MongoClientException e) {
-            throw e;
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted", e);
         } finally {
             clientSession.close();
         }
@@ -68,7 +64,7 @@ public class TransactionFailureTest extends DatabaseTestCase {
 
 
     private boolean canRunTests() {
-        return serverVersionLessThan("3.7.0")
+        return serverVersionLessThan("4.0")
                 || (serverVersionLessThan("4.1.0") && isSharded());
     }
 }

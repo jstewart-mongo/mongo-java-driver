@@ -47,10 +47,10 @@ import static com.mongodb.ReadPreference.primaryPreferred;
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE;
 import static com.mongodb.connection.ClusterConnectionMode.SINGLE;
-import static com.mongodb.connection.ServerDescription.MAX_DRIVER_WIRE_VERSION;
 import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.connection.BsonWriterHelper.writePayload;
 import static com.mongodb.internal.connection.ReadConcernHelper.getReadConcernDocument;
+import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_TWO_WIRE_VERSION;
 import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_ZERO_WIRE_VERSION;
 import static com.mongodb.internal.operation.ServerVersionHelper.THREE_DOT_SIX_WIRE_VERSION;
 
@@ -266,7 +266,7 @@ public final class CommandMessage extends RequestMessage {
     private void checkServerVersionForTransactionSupport() {
         int wireVersion = getSettings().getMaxWireVersion();
         if (wireVersion < FOUR_DOT_ZERO_WIRE_VERSION
-                || (wireVersion < MAX_DRIVER_WIRE_VERSION && getSettings().getServerType() == SHARD_ROUTER)) {
+                || (wireVersion < FOUR_DOT_TWO_WIRE_VERSION && getSettings().getServerType() == SHARD_ROUTER)) {
             throw new MongoClientException("Transactions are not supported by the MongoDB cluster to which this client is connected.");
         }
     }
