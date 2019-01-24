@@ -20,46 +20,21 @@ import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
 import com.mongodb.async.FutureResultCallback;
 import org.bson.Document;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
 import static org.junit.Assume.assumeTrue;
 
-public class TransactionFailureTest {
-    private MongoClient mongoClient;
-    private MongoDatabase database;
-    private MongoCollection<Document> collection;
-
+public class TransactionFailureTest extends DatabaseTestCase {
     public TransactionFailureTest() {
-    }
-
-    @BeforeClass
-    public static void beforeClass() {
-    }
-
-    @AfterClass
-    public static void afterClass() {
     }
 
     @Before
     public void setUp() {
         assumeTrue(canRunTests());
-
-        mongoClient = MongoClients.create();
-        database = mongoClient.getDatabase("testTransaction");
-        collection = database.getCollection("test");
-    }
-
-    @After
-    public void cleanUp() {
-        if (mongoClient != null) {
-            mongoClient.close();
-        }
+        super.setUp();
     }
 
     @Test(expected = MongoClientException.class)
@@ -71,19 +46,13 @@ public class TransactionFailureTest {
 
             FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
             collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"), futureResultCallback);
-            futureResult(futureResultCallback);
-        } finally {
-            clientSession.close();
-        }
-    }
-
-    <T> T futureResult(final FutureResultCallback<T> callback) {
-        try {
-            return callback.get();
+            futureResultCallback.get();
         } catch (MongoClientException e) {
             throw e;
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted", e);
+        } finally {
+            clientSession.close();
         }
     }
 
@@ -92,7 +61,7 @@ public class TransactionFailureTest {
         return new MongoOperation<ClientSession>() {
             @Override
             public void execute() {
-                mongoClient.startSession(options, getCallback());
+                client.startSession(options, getCallback());
             }
         }.get();
     }

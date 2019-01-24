@@ -18,51 +18,26 @@ package com.mongodb.client;
 
 import com.mongodb.MongoClientException;
 import org.bson.Document;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
 import static org.junit.Assume.assumeTrue;
 
-public class TransactionFailureTest {
-    private MongoClient mongoClient;
-    private MongoDatabase database;
-    private MongoCollection<Document> collection;
-
+public class TransactionFailureTest extends DatabaseTestCase {
     public TransactionFailureTest() {
-    }
-
-    @BeforeClass
-    public static void beforeClass() {
-    }
-
-    @AfterClass
-    public static void afterClass() {
     }
 
     @Before
     public void setUp() {
         assumeTrue(canRunTests());
-
-        mongoClient = MongoClients.create();
-        database = mongoClient.getDatabase("testTransaction");
-        collection = database.getCollection("test");
-    }
-
-    @After
-    public void cleanUp() {
-        if (mongoClient != null) {
-            mongoClient.close();
-        }
+        super.setUp();
     }
 
     @Test(expected = MongoClientException.class)
     public void testTransactionFails() {
-        ClientSession clientSession = mongoClient.startSession();
+        ClientSession clientSession = client.startSession();
         try {
             clientSession.startTransaction();
             collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"));
