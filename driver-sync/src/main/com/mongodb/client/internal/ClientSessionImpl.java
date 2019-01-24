@@ -23,10 +23,6 @@ import com.mongodb.ReadConcern;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
-import com.mongodb.connection.ClusterDescription;
-import com.mongodb.connection.ClusterType;
-import com.mongodb.connection.ServerDescription;
-import com.mongodb.connection.ServerType;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.operation.AbortTransactionOperation;
@@ -34,8 +30,6 @@ import com.mongodb.operation.CommitTransactionOperation;
 
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.connection.ServerDescription.MAX_DRIVER_WIRE_VERSION;
-import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_ZERO_WIRE_VERSION;
 
 final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
 
@@ -87,8 +81,6 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
 
     @Override
     public void startTransaction(final TransactionOptions transactionOptions) {
-        checkServerVersionForTransactionSupport();
-
         notNull("transactionOptions", transactionOptions);
         if (transactionState == TransactionState.IN) {
             throw new IllegalStateException("Transaction already in progress");
@@ -108,22 +100,6 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
         setPinnedMongosAddress(null);
-    }
-
-    private void checkServerVersionForTransactionSupport() {
-        ClusterDescription clusterDescription = delegate.getCluster().getDescription();
-        int wireVersion = MAX_DRIVER_WIRE_VERSION + 1;
-        for (ServerDescription serverDescription : clusterDescription.getServerDescriptions()) {
-            if (serverDescription.getType() != ServerType.UNKNOWN) {
-                if (serverDescription.getMaxWireVersion() < wireVersion) {
-                    wireVersion = serverDescription.getMaxWireVersion();
-                }
-            }
-        }
-        if (wireVersion < FOUR_DOT_ZERO_WIRE_VERSION
-                || (wireVersion < MAX_DRIVER_WIRE_VERSION && clusterDescription.getType() == ClusterType.SHARDED)) {
-            throw new MongoClientException("Transactions are not supported by the MongoDB cluster to which this client is connected.");
-        }
     }
 
     @Override
