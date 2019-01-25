@@ -48,6 +48,8 @@ import static com.mongodb.bulk.WriteRequest.Type.REPLACE;
 import static com.mongodb.bulk.WriteRequest.Type.UPDATE;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotSix;
+import static com.mongodb.operation.CommandOperationHelper.logRetryExecute;
+import static com.mongodb.operation.CommandOperationHelper.logUnableToRetry;
 import static com.mongodb.operation.CommandOperationHelper.shouldAttemptToRetry;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
@@ -58,7 +60,6 @@ import static com.mongodb.operation.OperationHelper.isRetryableWrite;
 import static com.mongodb.operation.OperationHelper.validateWriteRequests;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
-import static java.lang.String.format;
 
 /**
  * An operation to execute a series of write operations in bulk.
@@ -275,9 +276,19 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
         }
 
         if (exception == null) {
-            return currentBatch.getResult();
+            try {
+                return currentBatch.getResult();
+            } catch (MongoException e) {
+                if (originalBatch.getRetryWrites()) {
+                    logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), e);
+                }
+                throw exception;
+            }
         } else if (!(exception instanceof MongoWriteConcernWithResponseException)
                 && !shouldAttemptToRetry(originalBatch.getRetryWrites(), exception)) {
+            if (originalBatch.getRetryWrites()) {
+                logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), exception);
+            }
             throw exception;
         } else {
             return retryExecuteBatches(binding, currentBatch, exception);
@@ -286,7 +297,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
 
     private BulkWriteResult retryExecuteBatches(final WriteBinding binding, final BulkWriteBatch retryBatch,
                                                 final MongoException originalError) {
-        logRetryExecute(retryBatch, originalError);
+        logRetryExecute(retryBatch.getPayload().getPayloadType().toString(), originalError);
         return withReleasableConnection(binding, originalError, new CallableWithConnectionAndSource<BulkWriteResult>() {
             @Override
             public BulkWriteResult call(final ConnectionSource source, final Connection connection) {
@@ -340,7 +351,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
 
     private void retryExecuteBatchesAsync(final AsyncWriteBinding binding, final BulkWriteBatch retryBatch,
                                           final Throwable originalError, final SingleResultCallback<BulkWriteResult> callback) {
-        logRetryExecute(retryBatch, originalError);
+        logRetryExecute(retryBatch.getPayload().getPayloadType().toString(), originalError);
         withConnection(binding, new AsyncCallableWithConnectionAndSource() {
             @Override
             public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
@@ -449,6 +460,9 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             public void onResult(final BsonDocument result, final Throwable t) {
                 if (t != null) {
                     if (isSecondAttempt || !shouldAttemptToRetry(retryWrites, t)) {
+                        if (retryWrites && !isSecondAttempt) {
+                            logUnableToRetry(batch.getPayload().getPayloadType().toString(), t);
+                        }
                         if (t instanceof MongoWriteConcernWithResponseException) {
                             addBatchResult((BsonDocument) ((MongoWriteConcernWithResponseException) t).getResponse(), binding, connection,
                                     batch, retryWrites, callback);
@@ -484,6 +498,9 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             executeBatchesAsync(binding, connection, nextBatch, retryWrites, callback);
         } else {
             if (batch.hasErrors()) {
+                if (retryWrites) {
+                    logUnableToRetry(batch.getPayload().getPayloadType().toString(), batch.getError());
+                }
                 callback.onResult(null, batch.getError());
             } else {
                 callback.onResult(batch.getResult(), null);
@@ -503,13 +520,6 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
         } catch (Throwable t) {
             connection.release();
             throw MongoException.fromThrowableNonNull(t);
-        }
-    }
-
-    private void logRetryExecute(final BulkWriteBatch retryBatch, final Throwable originalError) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(format("Retrying command %s due to an error \"%s\"", retryBatch.getPayload().getPayloadType(),
-                    originalError));
         }
     }
 }

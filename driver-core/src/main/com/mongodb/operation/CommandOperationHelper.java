@@ -56,6 +56,7 @@ import static com.mongodb.operation.OperationHelper.canRetryWrite;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
 final class CommandOperationHelper {
@@ -454,6 +455,7 @@ final class CommandOperationHelper {
                 } catch (MongoException e) {
                     exception = e;
                     if (!shouldAttemptToRetry(command, e)) {
+                        logUnableToRetry(command.getFirstKey(), e);
                         throw exception;
                     }
                 } finally {
@@ -469,6 +471,7 @@ final class CommandOperationHelper {
                             if (!canRetryWrite(source.getServerDescription(), connection.getDescription(), binding.getSessionContext())) {
                                 throw originalException;
                             }
+                            logRetryExecute(originalCommand.getFirstKey(), originalException);
                             return transformer.apply(connection.command(database, originalCommand, fieldNameValidator,
                                     readPreference, commandResultDecoder, binding.getSessionContext()),
                                     connection.getDescription().getServerAddress());
@@ -554,6 +557,7 @@ final class CommandOperationHelper {
             }
 
             private void retryableCommand(final Throwable originalError) {
+                logRetryExecute(command.getFirstKey(), originalError);
                 withConnection(binding, new AsyncCallableWithConnectionAndSource() {
                     @Override
                     public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
@@ -710,6 +714,18 @@ final class CommandOperationHelper {
 
     static boolean shouldAttemptToRetry(final boolean retryWritesEnabled, final Throwable exception) {
         return retryWritesEnabled && isRetryableException(exception);
+    }
+
+    static void logRetryExecute(final String operation, final Throwable originalError) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(format("Retrying operation %s due to an error \"%s\"", operation, originalError));
+        }
+    }
+
+    static void logUnableToRetry(final String operation, final Throwable originalError) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(format("Unable to retry operation %s due to error \"%s\"", operation, originalError));
+        }
     }
 
     private CommandOperationHelper() {
