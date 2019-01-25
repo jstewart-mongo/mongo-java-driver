@@ -33,8 +33,6 @@ import com.mongodb.bulk.UpdateRequest;
 import com.mongodb.bulk.WriteRequest;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.connection.MongoWriteConcernWithResponseException;
 import com.mongodb.internal.connection.ProtocolHelper;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
@@ -69,8 +67,6 @@ import static java.lang.String.format;
  */
 @Deprecated
 public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteResult>, WriteOperation<BulkWriteResult> {
-    private static final Logger LOGGER = Loggers.getLogger("mixedBulkWrite");
-
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
     private final MongoNamespace namespace;
     private final List<? extends WriteRequest> writeRequests;
@@ -290,10 +286,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
 
     private BulkWriteResult retryExecuteBatches(final WriteBinding binding, final BulkWriteBatch retryBatch,
                                                 final MongoException originalError) {
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info(format("retrying the following op: %s %s", retryBatch.getPayload().getPayloadType(),
-                    retryBatch.getCommand().toJson()));
-        }
+        logRetryExecute(retryBatch, originalError);
         return withReleasableConnection(binding, originalError, new CallableWithConnectionAndSource<BulkWriteResult>() {
             @Override
             public BulkWriteResult call(final ConnectionSource source, final Connection connection) {
@@ -347,6 +340,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
 
     private void retryExecuteBatchesAsync(final AsyncWriteBinding binding, final BulkWriteBatch retryBatch,
                                           final Throwable originalError, final SingleResultCallback<BulkWriteResult> callback) {
+        logRetryExecute(retryBatch, originalError);
         withConnection(binding, new AsyncCallableWithConnectionAndSource() {
             @Override
             public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
@@ -509,6 +503,13 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
         } catch (Throwable t) {
             connection.release();
             throw MongoException.fromThrowableNonNull(t);
+        }
+    }
+
+    private void logRetryExecute(final BulkWriteBatch retryBatch, final Throwable originalError) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(format("Retrying command %s due to an error \"%s\"", retryBatch.getPayload().getPayloadType(),
+                    originalError));
         }
     }
 }
