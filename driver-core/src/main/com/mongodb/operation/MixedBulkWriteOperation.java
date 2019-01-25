@@ -282,7 +282,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
                 if (originalBatch.getRetryWrites()) {
                     logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), e);
                 }
-                throw exception;
+                throw e;
             }
         } else if (!(exception instanceof MongoWriteConcernWithResponseException)
                 && !shouldAttemptToRetry(originalBatch.getRetryWrites(), exception)) {
