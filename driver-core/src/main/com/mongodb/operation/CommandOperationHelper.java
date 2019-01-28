@@ -53,6 +53,7 @@ import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionA
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.canRetryWrite;
+import static com.mongodb.operation.OperationHelper.isRetryableWrite;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
@@ -455,7 +456,9 @@ final class CommandOperationHelper {
                 } catch (MongoException e) {
                     exception = e;
                     if (!shouldAttemptToRetry(command, e)) {
-                        logUnableToRetry(command.getFirstKey(), e);
+                        if (isRetryWritesEnabled(command)) {
+                            logUnableToRetry(command.getFirstKey(), e);
+                        }
                         throw exception;
                     }
                 } finally {
@@ -548,6 +551,9 @@ final class CommandOperationHelper {
 
             private void checkRetryableException(final Throwable originalError, final SingleResultCallback<R> releasingCallback) {
                 if (!shouldAttemptToRetry(command, originalError)) {
+                    if (isRetryWritesEnabled(command)) {
+                        logUnableToRetry(command.getFirstKey(), originalError);
+                    }
                     releasingCallback.onResult(null, originalError);
                 } else {
                     oldConnection.release();
@@ -706,10 +712,12 @@ final class CommandOperationHelper {
     }
 
     private static boolean shouldAttemptToRetry(@Nullable final BsonDocument command, final Throwable exception) {
-        return shouldAttemptToRetry(command != null
-                        && (command.containsKey("txnNumber")
-                        || command.getFirstKey().equals("commitTransaction") || command.getFirstKey().equals("abortTransaction")),
-                exception);
+        return isRetryWritesEnabled(command) && isRetryableException(exception);
+    }
+
+    private static boolean isRetryWritesEnabled(@Nullable final BsonDocument command) {
+        return (command != null && (command.containsKey("txnNumber")
+                || command.getFirstKey().equals("commitTransaction") || command.getFirstKey().equals("abortTransaction")));
     }
 
     static boolean shouldAttemptToRetry(final boolean retryWritesEnabled, final Throwable exception) {
