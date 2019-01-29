@@ -30,9 +30,11 @@ import org.bson.types.ObjectId;
 
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -257,6 +259,28 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      */
     public Date getDate(final Object key) {
         return (Date) get(key);
+    }
+
+    /**
+     * Gets the list value of the given key, casting the list elements to the given {@code Class<T>}.  This is useful to avoid having
+     * casts in client code, though the effect is the same.
+     *
+     * @param key   the key
+     * @param clazz the non-null class to cast the list value to
+     * @param <T>   the type of the class
+     * @return the list value of the given key, or null if the instance does not contain this key.
+     * @throws ClassCastException if the list value of the given key is not of type T
+     */
+    public <T> List<T> getList(final Object key, final Class<T> clazz) {
+        notNull("clazz", clazz);
+        List<T> list = new ArrayList<T>();
+        Object value = documentAsMap.get(key);
+        if (value instanceof List) {
+            for (T item : (List<T>) value) {
+                list.add(item);
+            }
+        }
+        return list;
     }
 
     /**
