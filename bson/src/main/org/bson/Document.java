@@ -289,7 +289,6 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @throws ClassCastException if the value of the given key is not of type T
      * @since 3.5
      */
-    @SuppressWarnings("unchecked")
     public <T> List<T> getList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
         notNull("defaultValue", defaultValue);
         notNull("clazz", clazz);
