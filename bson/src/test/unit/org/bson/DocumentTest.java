@@ -37,11 +37,8 @@ import static java.util.Arrays.asList;
 import static org.bson.codecs.configuration.CodecRegistries.fromCodecs;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -109,53 +106,6 @@ public class DocumentTest {
         assertEquals(2, x2);
         assertEquals(Arrays.asList("three", "four"), y2);
         assertEquals("bar", z2);
-    }
-
-    @Test
-    public void shouldGetListFromDocument() {
-        // given
-        Document d = new Document("x", 1)
-                .append("y", Arrays.asList("two", "three"))
-                .append("z", Arrays.asList(new Document("a", 1), new Document("b", 2)))
-                .append("w", new Document("a", Arrays.asList("One", "Two")))
-                .append("q", "notAList");
-
-        // when the value is a list
-        String three = d.getList("y", String.class).get(1);
-        int b = d.getList("z", Document.class).get(1).getInteger("b");
-        String two = d.get("w", Document.class).getList("a", String.class).get(1);
-
-        // extract the value from the list
-        assertEquals("three", three);
-        assertEquals(2, b);
-        assertEquals("Two", two);
-
-        // when the key is not found
-        List<String> nullValue = d.getList("yy", String.class);
-
-        // then it returns null
-        assertNull(nullValue);
-
-        // when the key is not found
-        List<String> defaultListValue = Arrays.asList("zero", "one");
-        List<String> listValue = d.getList("yy", String.class, defaultListValue);
-
-        // then it returns the default value
-        assertEquals(defaultListValue, listValue);
-    }
-
-    @Test
-    public void shouldThrowExceptionIfValueIsNotAList() {
-        // given
-        Document d = new Document("x", 1);
-
-        // when the value is not a list, throw exception
-        try {
-            List<Integer> notAList = d.getList("x", Integer.class);
-            fail("ClassCastException not thrown from getList");
-        } catch (ClassCastException e) {
-            assertThat(e.getMessage(), is("Value for key \"x\" is not a list."));
-        }
     }
 
     @Test

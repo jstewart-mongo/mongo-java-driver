@@ -30,7 +30,6 @@ import org.bson.types.ObjectId;
 
 import java.io.Serializable;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -274,7 +273,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      */
     public <T> List<T> getList(final Object key, final Class<T> clazz) {
         notNull("clazz", clazz);
-        return constructValuesList(key, documentAsMap.get(key), clazz, null);
+        return constructValuesList(key, clazz, null);
     }
 
     /**
@@ -292,31 +291,31 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     public <T> List<T> getList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
         notNull("defaultValue", defaultValue);
         notNull("clazz", clazz);
-        return constructValuesList(key, documentAsMap.get(key), clazz, defaultValue);
+        return constructValuesList(key, clazz, defaultValue);
     }
 
     /**
      * Construct the list of values for the specified key, or return the default value if the value is null.
      * @param key    the key
-     * @param value  the value
      * @param clazz  the non-null class to cast the list value to
      * @param defaultValue  what to return if value is null
      * @param <T>    the type of the class
      * @return the list value of the given key, or the default list value if the instance does not contain the key.
      * @throws ClassCastException if the value of the given type is not of type T or value is not a list
      */
-    private <T> List<T> constructValuesList(final Object key, final Object value, final Class<T> clazz, final List<T> defaultValue) {
+    @SuppressWarnings("unchecked")
+    private <T> List<T> constructValuesList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
+        List<?> value = get(key, List.class);
         if (value == null) {
             return defaultValue;
-        } else if (!(value instanceof List)) {
-            throw new ClassCastException(format("Value for key \"%s\" is not a list.", key));
         }
 
-        List<T> list = new ArrayList<T>();
-        for (Object item : (List<Object>) value) {
-            list.add(clazz.cast(item));
+        for (Object item : value) {
+            if (!clazz.isInstance(item)) {
+                throw new ClassCastException(format("List element cannot be cast to %s", clazz.getName()));
+            }
         }
-        return list;
+        return (List<T>) value;
     }
 
     /**
