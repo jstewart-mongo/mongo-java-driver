@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.lang.String.format;
 import static org.bson.assertions.Assertions.notNull;
 
 /**
@@ -269,16 +270,52 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param clazz the non-null class to cast the list value to
      * @param <T>   the type of the class
      * @return the list value of the given key, or null if the instance does not contain this key.
-     * @throws ClassCastException if the list value of the given key is not of type T
+     * @throws ClassCastException if the elements in the list value of the given key is not of type T or the value is not a list
      */
     public <T> List<T> getList(final Object key, final Class<T> clazz) {
         notNull("clazz", clazz);
+        return constructValuesList(key, documentAsMap.get(key), clazz, null);
+    }
+
+    /**
+     * Gets the list value of the given key, casting the list elements to {@code Class<T>} or returning the default list value if null.
+     * This is useful to avoid having casts in client code, though the effect is the same.
+     *
+     * @param key   the key
+     * @param clazz the non-null class to cast the list value to
+     * @param defaultValue what to return if the value is null
+     * @param <T>   the type of the class
+     * @return the list value of the given key, or the default list value if the instance does not contain this key.
+     * @throws ClassCastException if the value of the given key is not of type T
+     * @since 3.5
+     */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
+        notNull("defaultValue", defaultValue);
+        notNull("clazz", clazz);
+        return constructValuesList(key, documentAsMap.get(key), clazz, defaultValue);
+    }
+
+    /**
+     * Construct the list of values for the specified key, or return the default value if the value is null.
+     * @param key    the key
+     * @param value  the value
+     * @param clazz  the non-null class to cast the list value to
+     * @param defaultValue  what to return if value is null
+     * @param <T>    the type of the class
+     * @return the list value of the given key, or the default list value if the instance does not contain the key.
+     * @throws ClassCastException if the value of the given type is not of type T or value is not a list
+     */
+    private <T> List<T> constructValuesList(final Object key, final Object value, final Class<T> clazz, final List<T> defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        } else if (!(value instanceof List)) {
+            throw new ClassCastException(format("Value for key \"%s\" is not a list.", key));
+        }
+
         List<T> list = new ArrayList<T>();
-        Object value = documentAsMap.get(key);
-        if (value instanceof List) {
-            for (T item : (List<T>) value) {
-                list.add(item);
-            }
+        for (Object item : (List<Object>) value) {
+            list.add(clazz.cast(item));
         }
         return list;
     }
