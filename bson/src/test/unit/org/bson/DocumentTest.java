@@ -152,6 +152,7 @@ public class DocumentTest {
         // when the value is not a list, throw exception
         try {
             List<Integer> notAList = d.getList("x", Integer.class);
+            fail("ClassCastException not thrown from getList");
         } catch (ClassCastException e) {
             assertThat(e.getMessage(), is("Value for key \"x\" is not a list."));
         }
