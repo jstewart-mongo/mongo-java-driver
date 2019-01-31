@@ -70,10 +70,8 @@ class DocumentSpecification extends Specification {
         Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
 
         then:
-        document.getEmbedded(null, String) == null
-        document.getEmbedded(List.of(), String) == null
         document.getEmbedded(List.of('notAKey'), String) == null
-        document.getEmbedded(List.of('b', 'b', 'm'), String) == null
+        document.getEmbedded(List.of('b', 'y', 'notAKey'), String) == null
     }
 
     def 'should return embedded value'() {
@@ -85,7 +83,6 @@ class DocumentSpecification extends Specification {
         Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
                 .append('l', new Document('long', 2L))
                 .append('d', new Document('double', 3.0 as double))
-                .append('s', new Document('string', 'hi'))
                 .append('t', new Document('boolean', true))
                 .append('o', new Document('objectId', objectId))
                 .append('n', new Document('date', date))
@@ -101,24 +98,31 @@ class DocumentSpecification extends Specification {
         document.getEmbedded(List.of('b', 'y'), Document).getString('m') == 'one'
         document.getEmbedded(List.of('b', 'y'), Document).getInteger('len') == 3
 
-        document.getEmbeddedInteger(List.of('b', 'y', 'len')) == 3
-        document.getEmbeddedInteger(List.of('b', 'y', 'len'), 10) == 3
-        document.getEmbeddedInteger(List.of('b', 'b', 'm'), 10) == 10
-        document.getEmbeddedInteger(List.of(), 10) == 10
-        document.getEmbeddedInteger(List.of('x'), 10) == 10
-
-        document.getEmbeddedLong(List.of('l', 'long')) == 2L
-        document.getEmbeddedDouble(List.of('d', 'double')) == 3.0d
-        document.getEmbeddedString(List.of('s', 'string')) == 'hi'
-        document.getEmbeddedBoolean(List.of('t', 'boolean')) == true
-        document.getEmbeddedBoolean(List.of('t', 'x'), false) == false
-        document.getEmbeddedObjectId(List.of('o', 'objectId')) == objectId
-        document.getEmbeddedDate(List.of('n', 'date')) == date
+        document.getEmbedded(Arrays.asList('l', 'long'), Long) == 2L
+        document.getEmbedded(Arrays.asList('d', 'double'), Double) == 3.0d
+        document.getEmbedded(Arrays.asList('l', 'long'), Number) == 2L
+        document.getEmbedded(Arrays.asList('d', 'double'), Number) == 3.0d
+        document.getEmbedded(Arrays.asList('t', 'boolean'), Boolean) == true
+        document.getEmbedded(Arrays.asList('t', 'x'), false) == false
+        document.getEmbedded(Arrays.asList('o', 'objectId'), ObjectId) == objectId
+        document.getEmbedded(Arrays.asList('n', 'date'), Date) == date
     }
 
     def 'should throw an exception getting an embedded value'() {
         given:
         Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
+
+        when:
+        document.getEmbedded(null, String) == null
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        document.getEmbedded(List.of(), String) == null
+
+        then:
+        thrown(IllegalStateException)
 
         when:
         document.getEmbedded(List.of('b', 'y', 'm'), Integer)
@@ -133,13 +137,19 @@ class DocumentSpecification extends Specification {
         thrown(ClassCastException)
 
         when:
-        document.getEmbeddedInteger(List.of('b', 'y', 'm'))
+        document.getEmbedded(List.of('b', 'b', 'm'), String)
 
         then:
         thrown(ClassCastException)
 
         when:
-        document.getEmbeddedInteger(List.of('b', 'x'), 10)
+        document.getEmbedded(List.of('b', 'x', 'm'), String)
+
+        then:
+        thrown(ClassCastException)
+
+        when:
+        document.getEmbedded(Arrays.asList('b', 'x', 'm'), 'invalid')
 
         then:
         thrown(ClassCastException)
