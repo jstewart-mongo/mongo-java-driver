@@ -32,7 +32,9 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -159,6 +161,67 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Gets the value of the given list of keys, casting it to the given {@code Class<T>}.  This is useful to avoid having casts in
+     * client code, though the effect is the same.  So to get the embedded value of a key list that is of type String, you would write
+     * {@code String name = doc.getEmbedded(List.of("book", "title"), String.class)} instead of
+     * {@code String name = (String) doc.get("book").get("title") }.
+     *
+     * @param keys  the list of keys
+     * @param clazz the non-null class to cast the value to
+     * @param <T>   the type of the class
+     * @return the value of the given embedded key, or null if the instance does not contain this embedded key.
+     * @throws ClassCastException if the value of the given embedded key is not of type T
+     */
+    public <T> T getEmbedded(final List<Object> keys, final Class<T> clazz) {
+        notNull("clazz", clazz);
+        return getEmbeddedValue(keys, clazz, null);
+    }
+
+    /**
+     * Gets the value of the given key, casting it to {@code Class<T>} or returning the default value if null.
+     * This is useful to avoid having casts in client code, though the effect is the same.
+     *
+     * @param keys  the list of keys
+     * @param defaultValue what to return if the value is null
+     * @param <T>   the type of the class
+     * @return the value of the given key, or null if the instance does not contain this key.
+     * @throws ClassCastException if the value of the given key is not of type T
+     * @since 3.5
+     */
+    public <T> T getEmbedded(final List<Object> keys, final T defaultValue) {
+        notNull("defaultValue", defaultValue);
+        return getEmbeddedValue(keys, null, defaultValue);
+    }
+
+    /**
+     * Gets the value of the given list of keys, casting it to {@code Class<T>} or returning the default value if null.
+     * This is useful to avoid having casts in client code, though the effect is the same.
+     *
+     * @param keys  the list of keys
+     * @param clazz the non-null class to cast the value to
+     * @param defaultValue what to return if the embedded value is null
+     * @param <T>   the type of the class
+     * @return the value of the given embedded key, or null if the instance does not contain this key
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T getEmbeddedValue(final List<Object> keys, final Class<T> clazz, final T defaultValue) {
+        if (keys == null || keys.isEmpty()) {
+            return defaultValue;
+        }
+        Object value = this;
+        Iterator<Object> keyIterator = keys.iterator();
+        while (keyIterator.hasNext()) {
+            value = ((Document) value).get(keyIterator.next());
+            if (!(value instanceof Document)) {
+                if (value == null || keyIterator.hasNext()) {
+                    return defaultValue;
+                }
+            }
+        }
+        return clazz != null ? clazz.cast(value) : (T) value;
+    }
+
+    /**
      * Gets the value of the given key as an Integer.
      *
      * @param key the key
@@ -182,6 +245,29 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Gets the embedded value of the given key list as an Integer.
+     *
+     * @param keys the keys
+     * @return the value as an integer, which may be null
+     * @throws java.lang.ClassCastException if the embedded value is not an integer
+     */
+    public Integer getEmbeddedInteger(final List<Object> keys) {
+        return getEmbedded(keys, Integer.class);
+    }
+
+    /**
+     * Gets the embedded value of the given key list as a primitive int.
+     *
+     * @param keys the keys
+     * @param defaultValue what to return if the value is null
+     * @return the value as an integer, which may be null
+     * @throws java.lang.ClassCastException if the value is not an integer
+     */
+    public int getEmbeddedInteger(final List<Object> keys, final int defaultValue) {
+        return getEmbedded(keys, defaultValue);
+    }
+
+    /**
      * Gets the value of the given key as a Long.
      *
      * @param key the key
@@ -190,6 +276,17 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      */
     public Long getLong(final Object key) {
         return (Long) get(key);
+    }
+
+    /**
+     * Gets the embedded value of the given key list as a Long.
+     *
+     * @param keys the key list
+     * @return the embedded value as a long, which may be null
+     * @throws java.lang.ClassCastException if the value is not an long
+     */
+    public Long getEmbeddedLong(final List<Object> keys) {
+        return getEmbedded(keys, Long.class);
     }
 
     /**
@@ -204,6 +301,17 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Gets the embedded value of the given key list as a Double.
+     *
+     * @param keys the key list
+     * @return the embedded value as a double, which may be null
+     * @throws java.lang.ClassCastException if the value is not an double
+     */
+    public Double getEmbeddedDouble(final List<Object> keys) {
+        return getEmbedded(keys, Double.class);
+    }
+
+    /**
      * Gets the value of the given key as a String.
      *
      * @param key the key
@@ -212,6 +320,17 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      */
     public String getString(final Object key) {
         return (String) get(key);
+    }
+
+    /**
+     * Gets the embedded value of the given key list as a String.
+     *
+     * @param keys the key list
+     * @return the embedded value as a String, which may be null
+     * @throws java.lang.ClassCastException if the value is not a String
+     */
+    public String getEmbeddedString(final List<Object> keys) {
+        return getEmbedded(keys, String.class);
     }
 
     /**
@@ -238,6 +357,29 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Gets the embedded value of the given key list as a Boolean.
+     *
+     * @param keys the key list
+     * @return the embedded value as a Boolean, which may be null
+     * @throws java.lang.ClassCastException if the value is not an boolean
+     */
+    public Boolean getEmbeddedBoolean(final List<Object> keys) {
+        return getEmbedded(keys, Boolean.class);
+    }
+
+    /**
+     * Gets the embedded value of the given key list as a primitive boolean.
+     *
+     * @param keys the key list
+     * @param defaultValue what to return if the value is null
+     * @return the value as a primitive boolean
+     * @throws java.lang.ClassCastException if the value is not a boolean
+     */
+    public boolean getEmbeddedBoolean(final List<Object> keys, final boolean defaultValue) {
+        return getEmbedded(keys, defaultValue);
+    }
+
+    /**
      * Gets the value of the given key as an ObjectId.
      *
      * @param key the key
@@ -249,6 +391,17 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Gets the embedded value of the given key list as an ObjectId.
+     *
+     * @param keys the key list
+     * @return the embedded value as an ObjectId, which may be null
+     * @throws java.lang.ClassCastException if the value is not an ObjectId
+     */
+    public ObjectId getEmbeddedObjectId(final List<Object> keys) {
+        return getEmbedded(keys, ObjectId.class);
+    }
+
+    /**
      * Gets the value of the given key as a Date.
      *
      * @param key the key
@@ -257,6 +410,17 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      */
     public Date getDate(final Object key) {
         return (Date) get(key);
+    }
+
+    /**
+     * Gets the embedded value of the given key list as a Date.
+     *
+     * @param keys the key list
+     * @return the embedded value as a Date, which may be null
+     * @throws java.lang.ClassCastException if the value is not a Date
+     */
+    public Date getEmbeddedDate(final List<Object> keys) {
+        return getEmbedded(keys, Date.class);
     }
 
     /**
