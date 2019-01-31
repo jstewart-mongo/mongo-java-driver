@@ -270,6 +270,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param <T>   the type of the class
      * @return the list value of the given key, or null if the instance does not contain this key.
      * @throws ClassCastException if the elements in the list value of the given key is not of type T or the value is not a list
+     * @since 3.10
      */
     public <T> List<T> getList(final Object key, final Class<T> clazz) {
         notNull("clazz", clazz);
@@ -286,7 +287,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param <T>   the type of the class
      * @return the list value of the given key, or the default list value if the instance does not contain this key.
      * @throws ClassCastException if the value of the given key is not of type T
-     * @since 3.5
+     * @since 3.10
      */
     public <T> List<T> getList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
         notNull("defaultValue", defaultValue);
@@ -294,15 +295,9 @@ public class Document implements Map<String, Object>, Serializable, Bson {
         return constructValuesList(key, clazz, defaultValue);
     }
 
-    /**
-     * Construct the list of values for the specified key, or return the default value if the value is null.
-     * @param key    the key
-     * @param clazz  the non-null class to cast the list value to
-     * @param defaultValue  what to return if value is null
-     * @param <T>    the type of the class
-     * @return the list value of the given key, or the default list value if the instance does not contain the key.
-     * @throws ClassCastException if the value of the given type is not of type T or value is not a list
-     */
+
+    // Construct the list of values for the specified key, or return the default value if the value is null.
+    // A ClassCastException will be thrown if an element in the list is not of type T.
     @SuppressWarnings("unchecked")
     private <T> List<T> constructValuesList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
         List<?> value = get(key, List.class);
@@ -311,7 +306,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
         }
 
         for (Object item : value) {
-            if (!clazz.isInstance(item)) {
+            if (!clazz.isAssignableFrom(item.getClass())) {
                 throw new ClassCastException(format("List element cannot be cast to %s", clazz.getName()));
             }
         }
