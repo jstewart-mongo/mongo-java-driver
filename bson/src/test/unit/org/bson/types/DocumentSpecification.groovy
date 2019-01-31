@@ -72,6 +72,7 @@ class DocumentSpecification extends Specification {
         then:
         document.getEmbedded(List.of('notAKey'), String) == null
         document.getEmbedded(List.of('b', 'y', 'notAKey'), String) == null
+        Document.parse('{}').getEmbedded(List.of('a', 'b'), Integer) == null
     }
 
     def 'should return embedded value'() {

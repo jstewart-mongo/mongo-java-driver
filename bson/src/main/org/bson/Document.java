@@ -222,7 +222,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
             value = ((Document) value).get(key);
             if (!(value instanceof Document)) {
                 if (value == null) {
-                    if (keyIterator.hasNext()) {
+                    if (keyIterator.hasNext() && !isEmpty()) {
                         throw new ClassCastException(format("The key %s is not a Document", key));
                     }
                     return defaultValue;
