@@ -222,9 +222,6 @@ public class Document implements Map<String, Object>, Serializable, Bson {
             value = ((Document) value).get(key);
             if (!(value instanceof Document)) {
                 if (value == null) {
-                    if (keyIterator.hasNext() && !isEmpty()) {
-                        throw new ClassCastException(format("The key %s is not a Document", key));
-                    }
                     return defaultValue;
                 } else if (keyIterator.hasNext()) {
                     throw new ClassCastException(format("At key %s, the value is not a Document (%s)",

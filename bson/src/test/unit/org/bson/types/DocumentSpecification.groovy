@@ -72,7 +72,12 @@ class DocumentSpecification extends Specification {
         then:
         document.getEmbedded(List.of('notAKey'), String) == null
         document.getEmbedded(List.of('b', 'y', 'notAKey'), String) == null
+        document.getEmbedded(List.of('b', 'b', 'm'), String) == null
         Document.parse('{}').getEmbedded(List.of('a', 'b'), Integer) == null
+        Document.parse('{b: 1}').getEmbedded(['a'], Integer) == null
+        Document.parse('{b: 1}').getEmbedded(['a', 'b'], Integer) == null
+        Document.parse('{a: {c: 1}}').getEmbedded(['a', 'b'], Integer) == null
+        Document.parse('{a: {c: 1}}').getEmbedded(['a', 'b', 'c'], Integer) == null
     }
 
     def 'should return embedded value'() {
@@ -126,6 +131,12 @@ class DocumentSpecification extends Specification {
         thrown(IllegalStateException)
 
         when:
+        document.getEmbedded(['a', 'b'], Integer)
+
+        then:
+        thrown(ClassCastException)
+
+        when:
         document.getEmbedded(List.of('b', 'y', 'm'), Integer)
 
         then:
@@ -133,12 +144,6 @@ class DocumentSpecification extends Specification {
 
         when:
         document.getEmbedded(List.of('b', 'x'), Document)
-
-        then:
-        thrown(ClassCastException)
-
-        when:
-        document.getEmbedded(List.of('b', 'b', 'm'), String)
 
         then:
         thrown(ClassCastException)
