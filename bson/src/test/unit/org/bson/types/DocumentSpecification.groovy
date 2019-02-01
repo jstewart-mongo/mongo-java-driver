@@ -131,10 +131,10 @@ class DocumentSpecification extends Specification {
         Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
 
         then:
-        document.getEmbedded(List.of('notAKey'), String) == null
-        document.getEmbedded(List.of('b', 'y', 'notAKey'), String) == null
-        document.getEmbedded(List.of('b', 'b', 'm'), String) == null
-        Document.parse('{}').getEmbedded(List.of('a', 'b'), Integer) == null
+        document.getEmbedded(Arrays.asList('notAKey'), String) == null
+        document.getEmbedded(Arrays.asList('b', 'y', 'notAKey'), String) == null
+        document.getEmbedded(Arrays.asList('b', 'b', 'm'), String) == null
+        Document.parse('{}').getEmbedded(Arrays.asList('a', 'b'), Integer) == null
         Document.parse('{b: 1}').getEmbedded(['a'], Integer) == null
         Document.parse('{b: 1}').getEmbedded(['a', 'b'], Integer) == null
         Document.parse('{a: {c: 1}}').getEmbedded(['a', 'b'], Integer) == null
@@ -155,15 +155,15 @@ class DocumentSpecification extends Specification {
                 .append('n', new Document('date', date))
 
         then:
-        document.getEmbedded(List.of('a'), Integer) == 1
-        document.getEmbedded(List.of('b', 'x'), List).get(0) == 2
-        document.getEmbedded(List.of('b', 'x'), List).get(1) == 3
-        document.getEmbedded(List.of('b', 'x'), List).get(2) == 4
-        document.getEmbedded(List.of('b', 'y', 'm'), String) == 'one'
-        document.getEmbedded(List.of('b', 'y', 'len'), Integer) == 3
-        document.getEmbedded(List.of('a.b'), String) == 'two'
-        document.getEmbedded(List.of('b', 'y'), Document).getString('m') == 'one'
-        document.getEmbedded(List.of('b', 'y'), Document).getInteger('len') == 3
+        document.getEmbedded(Arrays.asList('a'), Integer) == 1
+        document.getEmbedded(Arrays.asList('b', 'x'), List).get(0) == 2
+        document.getEmbedded(Arrays.asList('b', 'x'), List).get(1) == 3
+        document.getEmbedded(Arrays.asList('b', 'x'), List).get(2) == 4
+        document.getEmbedded(Arrays.asList('b', 'y', 'm'), String) == 'one'
+        document.getEmbedded(Arrays.asList('b', 'y', 'len'), Integer) == 3
+        document.getEmbedded(Arrays.asList('a.b'), String) == 'two'
+        document.getEmbedded(Arrays.asList('b', 'y'), Document).getString('m') == 'one'
+        document.getEmbedded(Arrays.asList('b', 'y'), Document).getInteger('len') == 3
 
         document.getEmbedded(Arrays.asList('l', 'long'), Long) == 2L
         document.getEmbedded(Arrays.asList('d', 'double'), Double) == 3.0d
@@ -186,7 +186,7 @@ class DocumentSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        document.getEmbedded(List.of(), String) == null
+        document.getEmbedded(Arrays.asList(), String) == null
 
         then:
         thrown(IllegalStateException)
@@ -198,19 +198,19 @@ class DocumentSpecification extends Specification {
         thrown(ClassCastException)
 
         when:
-        document.getEmbedded(List.of('b', 'y', 'm'), Integer)
+        document.getEmbedded(Arrays.asList('b', 'y', 'm'), Integer)
 
         then:
         thrown(ClassCastException)
 
         when:
-        document.getEmbedded(List.of('b', 'x'), Document)
+        document.getEmbedded(Arrays.asList('b', 'x'), Document)
 
         then:
         thrown(ClassCastException)
 
         when:
-        document.getEmbedded(List.of('b', 'x', 'm'), String)
+        document.getEmbedded(Arrays.asList('b', 'x', 'm'), String)
 
         then:
         thrown(ClassCastException)
