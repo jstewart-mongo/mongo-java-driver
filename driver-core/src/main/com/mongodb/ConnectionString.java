@@ -564,6 +564,8 @@ public class ConnectionString {
                 compressorsList.add(zlibCompressor);
             } else if (cur.equals("snappy")) {
                 compressorsList.add(MongoCompressor.createSnappyCompressor());
+            } else if (cur.equals("zstandard")) {
+                compressorsList.add(MongoCompressor.createZstandardCompressor());
             } else if (!cur.isEmpty()) {
                 throw new IllegalArgumentException("Unsupported compressor '" + cur + "'");
             }
