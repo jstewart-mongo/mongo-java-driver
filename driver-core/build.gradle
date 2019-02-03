@@ -72,7 +72,7 @@ jar {
                     'org.ietf.jgss.*',
                     'io.netty.*;resolution:=optional',
                     'org.xerial.snappy.*;resolution:=optional',
-                    'com.github.luben.*;resolution:=optional',
+                    'com.github.luben.zstd.*;resolution:=optional',
                     'org.slf4j;resolution:=optional',
                     'jnr.unixsocket;resolution:=optional'
     }
