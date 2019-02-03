@@ -18,6 +18,7 @@ package com.mongodb.internal.connection;
 
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdInputStream;
+import com.mongodb.MongoInternalException;
 import org.bson.ByteBuf;
 import org.bson.io.BsonOutput;
 
@@ -40,11 +41,15 @@ public class ZstandardCompressor extends Compressor {
     public void compress(final List<ByteBuf> source, final BsonOutput target) {
         int uncompressedSize = getUncompressedSize(source);
 
-        byte[] singleByteArraySource = new byte[uncompressedSize];
-        copy(source, singleByteArraySource);
+        try {
+            byte[] singleByteArraySource = new byte[uncompressedSize];
+            copy(source, singleByteArraySource);
 
-        byte[] out = Zstd.compress(singleByteArraySource);
-        target.writeBytes(out, 0, out.length);
+            byte[] out = Zstd.compress(singleByteArraySource);
+            target.writeBytes(out, 0, out.length);
+        } catch (RuntimeException e) {
+            throw new MongoInternalException("Unexpected RuntimeException", e);
+        }
     }
 
     private int getUncompressedSize(final List<ByteBuf> source) {
