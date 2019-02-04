@@ -28,12 +28,12 @@ class MongoCompressorSpecification extends Specification {
         compressor.getProperty(MongoCompressor.LEVEL, -1) == -1
     }
 
-    def 'should create zstandard compressor'() {
+    def 'should create zstd compressor'() {
         when:
-        def compressor = MongoCompressor.createZstandardCompressor()
+        def compressor = MongoCompressor.createZstdCompressor()
 
         then:
-        compressor.getName() == 'zstandard'
+        compressor.getName() == 'zstd'
         compressor.getProperty(MongoCompressor.LEVEL, -1) == -1
     }
 

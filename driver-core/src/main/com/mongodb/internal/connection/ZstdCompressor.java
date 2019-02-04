@@ -26,10 +26,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class ZstandardCompressor extends Compressor {
+public class ZstdCompressor extends Compressor {
     @Override
     public String getName() {
-        return "zstandard";
+        return "zstd";
     }
 
     @Override

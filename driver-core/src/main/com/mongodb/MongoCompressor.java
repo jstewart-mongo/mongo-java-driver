@@ -62,13 +62,13 @@ public final class MongoCompressor {
     }
 
     /**
-     * Create an instance for zstandard compression.
+     * Create an instance for zstd compression.
      *
      * @return A compressor based on the zlib compression algorithm
      * @mongodb.server.release 4.2
      */
-    public static MongoCompressor createZstandardCompressor() {
-        return new MongoCompressor("zstandard");
+    public static MongoCompressor createZstdCompressor() {
+        return new MongoCompressor("zstd");
     }
 
     /**

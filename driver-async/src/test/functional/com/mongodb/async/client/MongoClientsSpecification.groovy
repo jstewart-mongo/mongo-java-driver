@@ -220,7 +220,7 @@ class MongoClientsSpecification extends FunctionalSpecification {
         uri                                         | compressorList
         'mongodb://localhost'                       | []
         'mongodb://localhost/?compressors=zlib'     | [MongoCompressor.createZlibCompressor()]
-        'mongodb://localhost/?compressors=zstandard' | [MongoCompressor.createZstandardCompressor()]
+        'mongodb://localhost/?compressors=zstd'     | [MongoCompressor.createZstdCompressor()]
     }
 
     @IgnoreIf({ !serverVersionAtLeast(3, 4) || !isStandalone() })
