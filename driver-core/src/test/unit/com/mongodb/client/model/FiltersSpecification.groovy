@@ -83,6 +83,8 @@ class FiltersSpecification extends Specification {
         toBson(eq('x', 1)) == parse('{x : 1}')
         toBson(eq('x', null)) == parse('{x : null}')
         toBson(eq(1)) == parse('{_id : 1}')
+
+        eq('x', 1).equals(eq('x', 1))
     }
 
     def 'should render $ne'() {
