@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class ZstdCompressor extends Compressor {
+class ZstdCompressor extends Compressor {
     @Override
     public String getName() {
         return "zstd";
@@ -41,12 +41,13 @@ public class ZstdCompressor extends Compressor {
     public void compress(final List<ByteBuf> source, final BsonOutput target) {
         int uncompressedSize = getUncompressedSize(source);
 
-        try {
-            byte[] singleByteArraySource = new byte[uncompressedSize];
-            copy(source, singleByteArraySource);
+        byte[] singleByteArraySource = new byte[uncompressedSize];
+        copy(source, singleByteArraySource);
 
-            byte[] out = Zstd.compress(singleByteArraySource);
-            target.writeBytes(out, 0, out.length);
+        try {
+            byte[] out = new byte[(int) Zstd.compressBound(uncompressedSize)];
+            int compressedSize = (int) Zstd.compress(out, singleByteArraySource, Zstd.maxCompressionLevel());
+            target.writeBytes(out, 0, compressedSize);
         } catch (RuntimeException e) {
             throw new MongoInternalException("Unexpected RuntimeException", e);
         }
