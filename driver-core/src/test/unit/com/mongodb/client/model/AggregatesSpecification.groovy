@@ -543,21 +543,6 @@ class AggregatesSpecification extends Specification {
         group(parse('{ month: { $month: "$date" }, day: { $dayOfMonth: "$date" }, year: { $year: "$date" } }'))
                 .equals(group(parse('{ month: { $month: "$date" }, day: { $dayOfMonth: "$date" }, year: { $year: "$date" } }')))
 
-        def groupDocument = parse('''{
-                            $group : {
-                                      _id : null,
-                                      sum: { $sum: { $multiply: [ "$price", "$quantity" ] } },
-                                      avg: { $avg: "$quantity" },
-                                      min: { $min: "$quantity" },
-                                      max: { $max: "$quantity" },
-                                      first: { $first: "$quantity" },
-                                      last: { $last: "$quantity" },
-                                      all: { $push: "$quantity" },
-                                      unique: { $addToSet: "$quantity" },
-                                      stdDevPop: { $stdDevPop: "$quantity" },
-                                      stdDevSamp: { $stdDevSamp: "$quantity" }
-                                     }
-                                  }''')
         group(null,
                 sum('sum', parse('{ $multiply: [ "$price", "$quantity" ] }')),
                 avg('avg', '$quantity'),
@@ -591,21 +576,6 @@ class AggregatesSpecification extends Specification {
         group(parse('{ month: { $month: "$date" }, day: { $dayOfMonth: "$date" }, year: { $year: "$date" } }')).hashCode() ==
                 group(parse('{ month: { $month: "$date" }, day: { $dayOfMonth: "$date" }, year: { $year: "$date" } }')).hashCode()
 
-        def groupDocument = parse('''{
-                            $group : {
-                                      _id : null,
-                                      sum: { $sum: { $multiply: [ "$price", "$quantity" ] } },
-                                      avg: { $avg: "$quantity" },
-                                      min: { $min: "$quantity" },
-                                      max: { $max: "$quantity" },
-                                      first: { $first: "$quantity" },
-                                      last: { $last: "$quantity" },
-                                      all: { $push: "$quantity" },
-                                      unique: { $addToSet: "$quantity" },
-                                      stdDevPop: { $stdDevPop: "$quantity" },
-                                      stdDevSamp: { $stdDevSamp: "$quantity" }
-                                     }
-                                  }''')
         group(null,
                 sum('sum', parse('{ $multiply: [ "$price", "$quantity" ] }')),
                 avg('avg', '$quantity'),
@@ -694,16 +664,16 @@ class AggregatesSpecification extends Specification {
     def 'should test equals for AddFieldsStage'() {
         expect:
         addFields(new Field('newField', null)).equals(addFields(new Field('newField', null)))
-        addFields(new Field('newField', 'hello')).equals(addFields(new Field('newField', 'hello'))) 
-        addFields(new Field('this', '$$CURRENT')).equals(addFields(new Field('this', '$$CURRENT'))) 
+        addFields(new Field('newField', 'hello')).equals(addFields(new Field('newField', 'hello')))
+        addFields(new Field('this', '$$CURRENT')).equals(addFields(new Field('this', '$$CURRENT')))
         addFields(new Field('myNewField', new Document('c', 3).append('d', 4)))
-                .equals(addFields(new Field('myNewField', new Document('c', 3).append('d', 4)))) 
+                .equals(addFields(new Field('myNewField', new Document('c', 3).append('d', 4))))
         addFields(new Field('alt3', new Document('$lt', asList('$a', 3))))
-                .equals(addFields(new Field('alt3', new Document('$lt', asList('$a', 3))))) 
+                .equals(addFields(new Field('alt3', new Document('$lt', asList('$a', 3)))))
         addFields(new Field('b', 3), new Field('c', 5))
-                .equals(addFields(new Field('b', 3), new Field('c', 5))) 
+                .equals(addFields(new Field('b', 3), new Field('c', 5)))
         addFields(asList(new Field('b', 3), new Field('c', 5)))
-                .equals(addFields(asList(new Field('b', 3), new Field('c', 5)))) 
+                .equals(addFields(asList(new Field('b', 3), new Field('c', 5))))
     }
 
     def 'should test hashCode for AddFieldsStage'() {
@@ -723,9 +693,9 @@ class AggregatesSpecification extends Specification {
 
     def 'should test equals for ReplaceRootStage'() {
         expect:
-        replaceRoot('$a1').equals(replaceRoot('$a1')) 
-        replaceRoot('$a1.b').equals(replaceRoot('$a1.b')) 
-        replaceRoot('$a1').equals(replaceRoot('$a1')) 
+        replaceRoot('$a1').equals(replaceRoot('$a1'))
+        replaceRoot('$a1.b').equals(replaceRoot('$a1.b'))
+        replaceRoot('$a1').equals(replaceRoot('$a1'))
     }
 
     def 'should test hashCode for ReplaceRootStage'() {
@@ -737,17 +707,17 @@ class AggregatesSpecification extends Specification {
 
     def 'should test equals for OutStage'() {
         expect:
-        out('authors').equals(out('authors')) 
+        out('authors').equals(out('authors'))
         out('authors', new AggregateOutStageOptions().mode(REPLACE_COLLECTION))
-                .equals(out('authors', new AggregateOutStageOptions().mode(REPLACE_COLLECTION))) 
+                .equals(out('authors', new AggregateOutStageOptions().mode(REPLACE_COLLECTION)))
         out('authors', new AggregateOutStageOptions().mode(REPLACE_DOCUMENTS))
-        .equals(out('authors', new AggregateOutStageOptions().mode(REPLACE_DOCUMENTS))) 
+        .equals(out('authors', new AggregateOutStageOptions().mode(REPLACE_DOCUMENTS)))
         out('authors', new AggregateOutStageOptions().mode(INSERT_DOCUMENTS))
-        .equals(out('authors', new AggregateOutStageOptions().mode(INSERT_DOCUMENTS))) 
+        .equals(out('authors', new AggregateOutStageOptions().mode(INSERT_DOCUMENTS)))
         out('authors', new AggregateOutStageOptions().databaseName('db1'))
-        .equals(out('authors', new AggregateOutStageOptions().databaseName('db1'))) 
+        .equals(out('authors', new AggregateOutStageOptions().databaseName('db1')))
         out('authors', new AggregateOutStageOptions().uniqueKey(new BsonDocument('x', new BsonInt32(1))))
-                .equals(out('authors', new AggregateOutStageOptions().uniqueKey(new BsonDocument('x', new BsonInt32(1))))) 
+                .equals(out('authors', new AggregateOutStageOptions().uniqueKey(new BsonDocument('x', new BsonInt32(1)))))
     }
 
     def 'should test hashCode for OutStage'() {

@@ -811,7 +811,6 @@ class FiltersSpecification extends Specification {
 
         geoWithinPolygon('loc', [[0d, 0d], [3d, 6d], [6d, 0d]])
                 .equals(geoWithinPolygon('loc', [[0d, 0d], [3d, 6d], [6d, 0d]]))
-
     }
 
     def 'should test hashCode for GeometryOperatorFilter'() {
@@ -826,7 +825,6 @@ class FiltersSpecification extends Specification {
 
         geoWithinPolygon('loc', [[0d, 0d], [3d, 6d], [6d, 0d]]).hashCode() ==
                 geoWithinPolygon('loc', [[0d, 0d], [3d, 6d], [6d, 0d]]).hashCode()
-
     }
 
     def 'should test equals for TextFilter'() {
