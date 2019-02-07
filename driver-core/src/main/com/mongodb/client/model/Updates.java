@@ -16,6 +16,7 @@
 
 package com.mongodb.client.model;
 
+import com.mongodb.client.model.geojson.codecs.GeoJsonCodecProvider;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
@@ -23,6 +24,10 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
+import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.DocumentCodecProvider;
+import org.bson.codecs.IterableCodecProvider;
+import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -32,6 +37,7 @@ import java.util.Map;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.client.model.BuildersHelper.encodeValue;
 import static java.util.Arrays.asList;
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 /**
  * A factory for document updates. A convenient way to use this class is to statically import all of its methods, which allows usage like:
@@ -43,6 +49,8 @@ import static java.util.Arrays.asList;
  * @mongodb.driver.manual reference/operator/update/ Update Operators
  */
 public final class Updates {
+    private static final CodecRegistry REGISTRY = fromProviders(asList(new BsonValueCodecProvider(), new ValueCodecProvider(),
+            new GeoJsonCodecProvider(), new DocumentCodecProvider(), new IterableCodecProvider()));
 
     /**
      * Combine a list of updates into a single update.
@@ -456,13 +464,19 @@ public final class Updates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             SimpleBsonKeyValue that = (SimpleBsonKeyValue) o;
 
-            if (!fieldName.equals(that.fieldName)) return false;
+            if (!fieldName.equals(that.fieldName)) {
+                return false;
+            }
             return value.equals(that.value);
         }
 
@@ -511,14 +525,22 @@ public final class Updates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             SimpleUpdate<?> that = (SimpleUpdate<?>) o;
 
-            if (!fieldName.equals(that.fieldName)) return false;
-            if (value != null ? !value.equals(that.value) : that.value != null) return false;
+            if (!fieldName.equals(that.fieldName)) {
+                return false;
+            }
+            if (value != null ? !value.equals(that.value) : that.value != null) {
+                return false;
+            }
             return operator != null ? operator.equals(that.operator) : that.operator == null;
         }
 
@@ -589,14 +611,22 @@ public final class Updates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             WithEachUpdate<?> that = (WithEachUpdate<?>) o;
 
-            if (!fieldName.equals(that.fieldName)) return false;
-            if (!values.equals(that.values)) return false;
+            if (!fieldName.equals(that.fieldName)) {
+                return false;
+            }
+            if (!values.equals(that.values)) {
+                return false;
+            }
             return operator != null ? operator.equals(that.operator) : that.operator == null;
         }
 
@@ -652,6 +682,30 @@ public final class Updates {
         }
 
         @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            if (!super.equals(o)) {
+                return false;
+            }
+
+            PushUpdate<?> that = (PushUpdate<?>) o;
+
+            return options.equals(that.options);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + options.hashCode();
+            return result;
+        }
+
+        @Override
         protected String additionalFieldsToString() {
             return ", options=" + options;
         }
@@ -690,13 +744,19 @@ public final class Updates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             PullAllUpdate<?> that = (PullAllUpdate<?>) o;
 
-            if (!fieldName.equals(that.fieldName)) return false;
+            if (!fieldName.equals(that.fieldName)) {
+                return false;
+            }
             return values.equals(that.values);
         }
 
@@ -748,9 +808,13 @@ public final class Updates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             CompositeUpdate that = (CompositeUpdate) o;
 

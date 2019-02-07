@@ -16,12 +16,17 @@
 
 package com.mongodb.client.model;
 
+import com.mongodb.client.model.geojson.codecs.GeoJsonCodecProvider;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
+import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.DocumentCodecProvider;
+import org.bson.codecs.IterableCodecProvider;
+import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -30,6 +35,7 @@ import java.util.List;
 import static com.mongodb.client.model.AggregateOutStageOptions.Mode.REPLACE_COLLECTION;
 import static java.util.Arrays.asList;
 import static org.bson.assertions.Assertions.notNull;
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 /**
  * Builders for aggregation pipeline stages.
@@ -39,6 +45,8 @@ import static org.bson.assertions.Assertions.notNull;
  * @since 3.1
  */
 public final class Aggregates {
+    private static final CodecRegistry REGISTRY = fromProviders(asList(new BsonValueCodecProvider(), new ValueCodecProvider(),
+            new GeoJsonCodecProvider(), new DocumentCodecProvider(), new IterableCodecProvider()));
 
     /**
      * Creates an $addFields pipeline stage
@@ -493,13 +501,19 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             SimplePipelineStage that = (SimplePipelineStage) o;
 
-            if (name != null ? !name.equals(that.name) : that.name != null) return false;
+            if (name != null ? !name.equals(that.name) : that.name != null) {
+                return false;
+            }
             return value != null ? value.equals(that.value) : that.value == null;
         }
 
@@ -560,14 +574,22 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             BucketStage<?, ?> that = (BucketStage<?, ?>) o;
 
-            if (groupBy != null ? !groupBy.equals(that.groupBy) : that.groupBy != null) return false;
-            if (boundaries != null ? !boundaries.equals(that.boundaries) : that.boundaries != null) return false;
+            if (groupBy != null ? !groupBy.equals(that.groupBy) : that.groupBy != null) {
+                return false;
+            }
+            if (boundaries != null ? !boundaries.equals(that.boundaries) : that.boundaries != null) {
+                return false;
+            }
             return options.equals(that.options);
         }
 
@@ -628,14 +650,22 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             BucketAutoStage<?> that = (BucketAutoStage<?>) o;
 
-            if (buckets != that.buckets) return false;
-            if (groupBy != null ? !groupBy.equals(that.groupBy) : that.groupBy != null) return false;
+            if (buckets != that.buckets) {
+                return false;
+            }
+            if (groupBy != null ? !groupBy.equals(that.groupBy) : that.groupBy != null) {
+                return false;
+            }
             return options.equals(that.options);
         }
 
@@ -708,15 +738,25 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             LookupStage<?> that = (LookupStage<?>) o;
 
-            if (from != null ? !from.equals(that.from) : that.from != null) return false;
-            if (let != null ? !let.equals(that.let) : that.let != null) return false;
-            if (pipeline != null ? !pipeline.equals(that.pipeline) : that.pipeline != null) return false;
+            if (from != null ? !from.equals(that.from) : that.from != null) {
+                return false;
+            }
+            if (let != null ? !let.equals(that.let) : that.let != null) {
+                return false;
+            }
+            if (pipeline != null ? !pipeline.equals(that.pipeline) : that.pipeline != null) {
+                return false;
+            }
             return as != null ? as.equals(that.as) : that.as == null;
         }
 
@@ -740,9 +780,6 @@ public final class Aggregates {
                     + '}';
         }
     }
-
-
-
 
     private static final class GraphLookupStage<TExpression> implements Bson {
         private final String from;
@@ -797,17 +834,31 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             GraphLookupStage<?> that = (GraphLookupStage<?>) o;
 
-            if (from != null ? !from.equals(that.from) : that.from != null) return false;
-            if (startWith != null ? !startWith.equals(that.startWith) : that.startWith != null) return false;
-            if (connectFromField != null ? !connectFromField.equals(that.connectFromField) : that.connectFromField != null) return false;
-            if (connectToField != null ? !connectToField.equals(that.connectToField) : that.connectToField != null) return false;
-            if (as != null ? !as.equals(that.as) : that.as != null) return false;
+            if (from != null ? !from.equals(that.from) : that.from != null) {
+                return false;
+            }
+            if (startWith != null ? !startWith.equals(that.startWith) : that.startWith != null) {
+                return false;
+            }
+            if (connectFromField != null ? !connectFromField.equals(that.connectFromField) : that.connectFromField != null) {
+                return false;
+            }
+            if (connectToField != null ? !connectToField.equals(that.connectToField) : that.connectToField != null) {
+                return false;
+            }
+            if (as != null ? !as.equals(that.as) : that.as != null) {
+                return false;
+            }
             return options != null ? options.equals(that.options) : that.options == null;
         }
 
@@ -868,13 +919,19 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             GroupStage<?> that = (GroupStage<?>) o;
 
-            if (id != null ? !id.equals(that.id) : that.id != null) return false;
+            if (id != null ? !id.equals(that.id) : that.id != null) {
+                return false;
+            }
             return fieldAccumulators != null ? fieldAccumulators.equals(that.fieldAccumulators) : that.fieldAccumulators == null;
         }
 
@@ -917,9 +974,13 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             SortByCountStage<?> that = (SortByCountStage<?>) o;
 
@@ -968,9 +1029,13 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             FacetStage that = (FacetStage) o;
 
@@ -1015,9 +1080,13 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             AddFieldsStage that = (AddFieldsStage) o;
 
@@ -1060,9 +1129,13 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             ReplaceRootStage<?> that = (ReplaceRootStage<?>) o;
 
@@ -1138,13 +1211,19 @@ public final class Aggregates {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             OutStage outStage = (OutStage) o;
 
-            if (collectionName != null ? !collectionName.equals(outStage.collectionName) : outStage.collectionName != null) return false;
+            if (collectionName != null ? !collectionName.equals(outStage.collectionName) : outStage.collectionName != null) {
+                return false;
+            }
             return options != null ? options.equals(outStage.options) : outStage.options == null;
         }
 
