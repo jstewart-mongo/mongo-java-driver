@@ -16,17 +16,12 @@
 
 package com.mongodb.client.model;
 
-import com.mongodb.client.model.geojson.codecs.GeoJsonCodecProvider;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.codecs.BsonValueCodecProvider;
-import org.bson.codecs.DocumentCodecProvider;
-import org.bson.codecs.IterableCodecProvider;
-import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -35,7 +30,6 @@ import java.util.List;
 import static com.mongodb.client.model.AggregateOutStageOptions.Mode.REPLACE_COLLECTION;
 import static java.util.Arrays.asList;
 import static org.bson.assertions.Assertions.notNull;
-import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 /**
  * Builders for aggregation pipeline stages.
@@ -45,8 +39,6 @@ import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
  * @since 3.1
  */
 public final class Aggregates {
-    private static final CodecRegistry REGISTRY = fromProviders(asList(new BsonValueCodecProvider(), new ValueCodecProvider(),
-            new GeoJsonCodecProvider(), new DocumentCodecProvider(), new IterableCodecProvider()));
 
     /**
      * Creates an $addFields pipeline stage

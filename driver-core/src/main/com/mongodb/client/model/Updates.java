@@ -16,7 +16,6 @@
 
 package com.mongodb.client.model;
 
-import com.mongodb.client.model.geojson.codecs.GeoJsonCodecProvider;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
@@ -24,10 +23,6 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.codecs.BsonValueCodecProvider;
-import org.bson.codecs.DocumentCodecProvider;
-import org.bson.codecs.IterableCodecProvider;
-import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -37,7 +32,6 @@ import java.util.Map;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.client.model.BuildersHelper.encodeValue;
 import static java.util.Arrays.asList;
-import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 /**
  * A factory for document updates. A convenient way to use this class is to statically import all of its methods, which allows usage like:
@@ -49,8 +43,6 @@ import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
  * @mongodb.driver.manual reference/operator/update/ Update Operators
  */
 public final class Updates {
-    private static final CodecRegistry REGISTRY = fromProviders(asList(new BsonValueCodecProvider(), new ValueCodecProvider(),
-            new GeoJsonCodecProvider(), new DocumentCodecProvider(), new IterableCodecProvider()));
 
     /**
      * Combine a list of updates into a single update.

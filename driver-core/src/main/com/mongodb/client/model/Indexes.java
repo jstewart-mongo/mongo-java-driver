@@ -136,7 +136,7 @@ public final class Indexes {
      * indexes are only usable via commands and so always return all results at once..
      * </p>
      *
-     * @param fieldName  the field to create a geoHaystack index on
+     * @param fieldName the field to create a geoHaystack index on
      * @param additional the additional field that forms the geoHaystack index key
      * @return the index specification
      * @mongodb.driver.manual core/geohaystack geoHaystack index
