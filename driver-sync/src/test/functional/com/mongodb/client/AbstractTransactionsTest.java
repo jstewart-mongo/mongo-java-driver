@@ -72,13 +72,13 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public abstract class AbstractTransactionsTest {
 
-    private String filename;
-    private String description;
-    private String databaseName;
-    private BsonArray data;
-    private BsonDocument definition;
+    private final String filename;
+    private final String description;
+    private final String databaseName;
+    private final BsonArray data;
+    private final BsonDocument definition;
     private JsonPoweredCrudTestHelper helper;
-    private TestCommandListener commandListener;
+    private final TestCommandListener commandListener;
     private MongoClient mongoClient;
     private CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
@@ -246,8 +246,6 @@ public abstract class AbstractTransactionsTest {
         }
 
         if (definition.containsKey("expectations")) {
-            // TODO: null operation may cause test failures, since it's used to grab the read preference
-            // TODO: though read-pref.json doesn't declare expectations, so maybe not
             List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), databaseName, null);
             List<CommandEvent> events = commandListener.getCommandStartedEvents();
 
