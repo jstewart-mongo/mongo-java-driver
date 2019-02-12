@@ -19,11 +19,11 @@ package com.mongodb.client.internal;
 import com.mongodb.client.Clock;
 
 public class ClientSessionClock implements Clock {
-    public static ClientSessionClock INSTANCE = new ClientSessionClock(0L);
+    public static final ClientSessionClock INSTANCE = new ClientSessionClock(0L);
 
     private long currentTime = 0L;
 
-    ClientSessionClock(long millis) {
+    ClientSessionClock(final long millis) {
         currentTime = millis;
     }
 
@@ -36,7 +36,7 @@ public class ClientSessionClock implements Clock {
     }
 
     @Override
-    public void setTime(long millis) {
+    public void setTime(final long millis) {
         currentTime = millis;
     }
 }

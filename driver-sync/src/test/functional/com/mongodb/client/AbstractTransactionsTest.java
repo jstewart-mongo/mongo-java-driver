@@ -45,10 +45,10 @@ import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.DocumentCodec;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,27 +69,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
-public class AbstractTransactionsTest {
+@RunWith(Parameterized.class)
+public abstract class AbstractTransactionsTest {
 
-    private final String filename;
-    private final String description;
-    private final String databaseName;
-    private final BsonArray data;
-    private final BsonDocument definition;
+    private String filename;
+    private String description;
+    private String databaseName;
+    private BsonArray data;
+    private BsonDocument definition;
     private JsonPoweredCrudTestHelper helper;
-    private final TestCommandListener commandListener;
+    private TestCommandListener commandListener;
     private MongoClient mongoClient;
     private CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
-
-    @BeforeClass
-    public static void beforeClass() {
-    }
-
-    @AfterClass
-    public static void afterClass() {
-    }
 
     public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;

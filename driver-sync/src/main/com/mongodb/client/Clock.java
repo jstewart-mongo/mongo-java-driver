@@ -16,6 +16,11 @@
 
 package com.mongodb.client;
 
+/**
+ * A clock to wrap time operations.
+ *
+ * @since 3.11
+ */
 public interface Clock {
     /**
      * Returns the current time in milliseconds.
@@ -24,6 +29,10 @@ public interface Clock {
      */
     long now();
 
-    // for testing purposes only
+    /**
+     * Set the time for the clock. For testing purposes only.
+     *
+     * @param millis the time in milliseconds
+     */
     void setTime(long millis);
 }
