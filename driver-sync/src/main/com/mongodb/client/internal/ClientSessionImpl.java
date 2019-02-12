@@ -20,6 +20,7 @@ import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoInternalException;
+import com.mongodb.MongoWriteConcernException;
 import com.mongodb.ReadConcern;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
@@ -29,6 +30,8 @@ import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.operation.AbortTransactionOperation;
 import com.mongodb.operation.CommitTransactionOperation;
+import org.bson.BsonBoolean;
+import org.bson.BsonDocument;
 
 import static com.mongodb.MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL;
 import static com.mongodb.MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL;
@@ -40,6 +43,9 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
     private enum TransactionState {
         NONE, IN, COMMITTED, ABORTED
     }
+
+    private static final int WRITE_CONCERN_ERROR_CODE = 64;
+    private static final int MAX_RETRY_TIME_LIMIT_MS = 120000;
 
     private final MongoClientDelegate delegate;
     private TransactionState transactionState = TransactionState.NONE;
@@ -165,6 +171,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
 
     @Override
     public <T> T withTransaction(final TransactionOptions options, final TransactionBody<T> transactionBody) {
+        long startTime = ClientSessionClock.INSTANCE.now();
         outer:
         while (true) {
             T retVal;
@@ -176,7 +183,8 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                     abortTransaction();
                 }
                 if (e instanceof MongoException) {
-                    if (((MongoException) e).hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                    if (((MongoException) e).hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) &&
+                            ClientSessionClock.INSTANCE.now() - startTime < MAX_RETRY_TIME_LIMIT_MS) {
                         continue;
                     }
                 }
@@ -188,10 +196,22 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                         commitTransaction();
                         break;
                     } catch (MongoException e) {
-                        if (e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
-                            continue;
-                        } else if (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
-                            continue outer;
+                        if (ClientSessionClock.INSTANCE.now() - startTime < MAX_RETRY_TIME_LIMIT_MS) {
+                            // Apply majority write concern if the commit is to be retried.
+                            transactionOptions = TransactionOptions.merge(TransactionOptions.builder()
+                                    .writeConcern(transactionOptions.getWriteConcern().withW("majority")).build(), transactionOptions);
+
+                            if (e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+                                if (e.getCode() == WRITE_CONCERN_ERROR_CODE) {
+                                    BsonDocument details = ((MongoWriteConcernException) e).getWriteConcernError().getDetails();
+                                    if (details.containsKey("wtimeout") && details.getBoolean("wtimeout") == BsonBoolean.TRUE) {
+                                        throw e;
+                                    }
+                                }
+                                continue;
+                            } else if (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                                continue outer;
+                            }
                         }
                         throw e;
                     }
