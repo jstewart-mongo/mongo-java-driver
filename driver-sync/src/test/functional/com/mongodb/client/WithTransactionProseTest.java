@@ -32,10 +32,9 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/transactions-convenient-api/tests/README.rst#prose-tests
-public class TransactionConvenientAPIProseTest extends DatabaseTestCase {
+public class WithTransactionProseTest extends DatabaseTestCase {
     private static final long START_TIME_MS = 1L;
     private static final long ERROR_GENERATING_INTERVAL = 121000L;
-    private MongoClient failPointClient;
 
     @Before
     @Override

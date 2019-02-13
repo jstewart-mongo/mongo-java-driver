@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.mongodb.client;
+package com.mongodb.client.internal;
 
 /**
  * A clock to wrap time operations.
  *
  * @since 3.11
  */
-public interface Clock {
+interface Clock {
     /**
      * Returns the current time in milliseconds.
      *

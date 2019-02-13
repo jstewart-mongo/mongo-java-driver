@@ -109,7 +109,7 @@ public interface ClientSession extends com.mongodb.session.ClientSession {
      * @param transactionBody the body of the transaction
      * @return the return value of the transaction body
      * @mongodb.server.release 4.0
-     * @since 3.10
+     * @since 3.11
      */
     <T> T withTransaction(TransactionBody<T> transactionBody);
 
@@ -121,7 +121,7 @@ public interface ClientSession extends com.mongodb.session.ClientSession {
      * @param transactionBody the body of the transaction
      * @return the return value of the transaction body
      * @mongodb.server.release 4.0
-     * @since 3.10
+     * @since 3.11
      */
     <T> T withTransaction(TransactionOptions options, TransactionBody<T> transactionBody);
 }

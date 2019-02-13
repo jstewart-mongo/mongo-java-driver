@@ -198,19 +198,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                         break;
                     } catch (MongoException e) {
                         if (ClientSessionClock.INSTANCE.now() - startTime < MAX_RETRY_TIME_LIMIT_MS) {
-                            // Apply majority write concern if the commit is to be retried.
-                            if (transactionOptions != null) {
-                                WriteConcern writeConcern = transactionOptions.getWriteConcern();
-                                if (writeConcern != null) {
-                                    transactionOptions = TransactionOptions.merge(TransactionOptions.builder()
-                                            .writeConcern(writeConcern.withW("majority")).build(), transactionOptions);
-                                } else {
-                                    transactionOptions = TransactionOptions.merge(TransactionOptions.builder()
-                                            .writeConcern(WriteConcern.MAJORITY).build(), transactionOptions);
-                                }
-                            } else {
-                                transactionOptions = TransactionOptions.builder().writeConcern(WriteConcern.MAJORITY).build();
-                            }
+                            applyMajorityWriteConcernToTransactionOptions();
 
                             if (e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
                                 if (e.getCode() == WRITE_CONCERN_ERROR_CODE) {
@@ -229,6 +217,22 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                 }
             }
             return retVal;
+        }
+    }
+
+    // Apply majority write concern if the commit is to be retried.
+    private void applyMajorityWriteConcernToTransactionOptions() {
+        if (transactionOptions != null) {
+            WriteConcern writeConcern = transactionOptions.getWriteConcern();
+            if (writeConcern != null) {
+                transactionOptions = TransactionOptions.merge(TransactionOptions.builder()
+                        .writeConcern(writeConcern.withW("majority")).build(), transactionOptions);
+            } else {
+                transactionOptions = TransactionOptions.merge(TransactionOptions.builder()
+                        .writeConcern(WriteConcern.MAJORITY).build(), transactionOptions);
+            }
+        } else {
+            transactionOptions = TransactionOptions.builder().writeConcern(WriteConcern.MAJORITY).build();
         }
     }
 

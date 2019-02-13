@@ -16,14 +16,12 @@
 
 package com.mongodb.client.internal;
 
-import com.mongodb.client.Clock;
-
-public class ClientSessionClock implements Clock {
+public final class ClientSessionClock implements Clock {
     public static final ClientSessionClock INSTANCE = new ClientSessionClock(0L);
 
-    private long currentTime = 0L;
+    private long currentTime;
 
-    ClientSessionClock(final long millis) {
+    private ClientSessionClock(final long millis) {
         currentTime = millis;
     }
 
