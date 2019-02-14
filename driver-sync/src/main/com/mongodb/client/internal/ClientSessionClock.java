@@ -16,7 +16,7 @@
 
 package com.mongodb.client.internal;
 
-public final class ClientSessionClock implements Clock {
+public final class ClientSessionClock {
     public static final ClientSessionClock INSTANCE = new ClientSessionClock(0L);
 
     private long currentTime;
@@ -25,7 +25,6 @@ public final class ClientSessionClock implements Clock {
         currentTime = millis;
     }
 
-    @Override
     public long now() {
         if (currentTime == 0L) {
             return System.currentTimeMillis();
@@ -33,7 +32,6 @@ public final class ClientSessionClock implements Clock {
         return currentTime;
     }
 
-    @Override
     public void setTime(final long millis) {
         currentTime = millis;
     }
