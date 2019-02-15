@@ -201,12 +201,6 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                             applyMajorityWriteConcernToTransactionOptions();
 
                             if (e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
-                                if (e.getCode() == WRITE_CONCERN_ERROR_CODE) {
-                                    BsonDocument details = ((MongoWriteConcernException) e).getWriteConcernError().getDetails();
-                                    if (details.containsKey("wtimeout") && details.getBoolean("wtimeout") == BsonBoolean.TRUE) {
-                                        throw e;
-                                    }
-                                }
                                 continue;
                             } else if (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
                                 continue outer;
