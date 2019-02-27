@@ -57,6 +57,27 @@ public interface ClientSession extends Closeable {
     void setPinnedMongosAddress(ServerAddress address);
 
     /**
+     * Get the recovery token from the latest outcome in a sharded transaction.
+     * For internal use only.
+     *
+     * @return the recovery token
+     * @mongodb.server.release 4.2
+     * @since 3.11
+     */
+    @Nullable
+    BsonDocument getRecoveryToken();
+
+    /**
+     * Set the recovery token.
+     * For internal use only.
+     *
+     * @param recoveryToken the recovery token
+     * @mongodb.server.release 4.2
+     * @since 3.11
+     */
+    void setRecoveryToken(BsonDocument recoveryToken);
+
+    /**
      * Get the options for this session.
      *
      * @return the options, which may not be null

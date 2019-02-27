@@ -31,20 +31,17 @@ import com.mongodb.WriteConcern;
 import com.mongodb.binding.ClusterBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.binding.ReadWriteBinding;
-import com.mongodb.binding.SingleServerBinding;
 import com.mongodb.binding.WriteBinding;
 import com.mongodb.client.ClientSession;
 import com.mongodb.connection.Cluster;
 import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ClusterType;
-import com.mongodb.connection.Server;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.ReadOperation;
 import com.mongodb.operation.WriteOperation;
-import com.mongodb.selector.ReadPreferenceServerSelector;
 import com.mongodb.selector.ServerSelector;
 
 import java.util.ArrayList;
@@ -183,6 +180,7 @@ public class MongoClientDelegate {
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
+                unpinMongosOnTransientTransactionError(session, e);
                 throw e;
             } finally {
                 binding.release();
@@ -199,6 +197,7 @@ public class MongoClientDelegate {
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
+                unpinMongosOnTransientTransactionError(session, e);
                 throw e;
             } finally {
                 binding.release();
@@ -216,23 +215,8 @@ public class MongoClientDelegate {
 
         ReadWriteBinding getReadWriteBinding(final ReadPreference readPreference, final ReadConcern readConcern,
                                              @Nullable final ClientSession session, final boolean ownsSession) {
-            ReadWriteBinding readWriteBinding;
-            if (session != null && session.hasActiveTransaction()
-                    && cluster.getDescription().getType() == ClusterType.SHARDED) {
-                if (session.getPinnedMongosAddress() == null) {
-                    Server server = getCluster().selectServer(
-                            new ReadPreferenceServerSelector(getReadPreferenceForBinding(readPreference, session)));
-                    readWriteBinding = new SingleServerBinding(cluster, server.getDescription().getAddress(),
-                            getReadPreferenceForBinding(readPreference, session));
-                    session.setPinnedMongosAddress(server.getDescription().getAddress());
-                } else {
-                    readWriteBinding = new SingleServerBinding(cluster, session.getPinnedMongosAddress(),
-                            getReadPreferenceForBinding(readPreference, session));
-                }
-            } else {
-                readWriteBinding = new ClusterBinding(cluster, getReadPreferenceForBinding(readPreference, session),
-                        readConcern);
-            }
+            ReadWriteBinding readWriteBinding = new ClusterBinding(cluster, getReadPreferenceForBinding(readPreference, session),
+                    readConcern);
             if (session != null) {
                 readWriteBinding = new ClientSessionBinding(session, ownsSession, readWriteBinding);
             }
@@ -243,6 +227,13 @@ public class MongoClientDelegate {
             if ((e instanceof MongoSocketException || e instanceof MongoTimeoutException)
                     && session != null && session.hasActiveTransaction() && !e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
                 e.addLabel(TRANSIENT_TRANSACTION_ERROR_LABEL);
+            }
+        }
+
+        private void unpinMongosOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
+            if (session != null && cluster.getDescription().getType() == ClusterType.SHARDED
+                    && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                session.setPinnedMongosAddress(null);
             }
         }
 

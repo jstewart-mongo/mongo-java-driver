@@ -481,6 +481,9 @@ final class CommandOperationHelper {
                     connection.release();
                 }
 
+                if (binding.getSessionContext().hasActiveTransaction()) {
+                    binding.getSessionContext().unpinMongos();
+                }
                 final BsonDocument originalCommand = command;
                 final MongoException originalException = exception;
                 return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<R>() {
@@ -495,8 +498,6 @@ final class CommandOperationHelper {
                             return transformer.apply(connection.command(database, retryCommand, fieldNameValidator,
                                     readPreference, commandResultDecoder, binding.getSessionContext()),
                                     connection.getDescription().getServerAddress());
-                        } catch (MongoException e) {
-                            throw originalException;
                         } finally {
                             connection.release();
                         }

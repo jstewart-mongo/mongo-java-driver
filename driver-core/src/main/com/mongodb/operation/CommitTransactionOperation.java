@@ -46,6 +46,7 @@ import static java.util.Arrays.asList;
 @Deprecated
 public class CommitTransactionOperation extends TransactionOperation {
     private final boolean alreadyCommitted;
+    private BsonDocument recoveryToken;
 
     /**
      * Construct an instance.
@@ -66,6 +67,16 @@ public class CommitTransactionOperation extends TransactionOperation {
     public CommitTransactionOperation(final WriteConcern writeConcern, final boolean alreadyCommitted) {
         super(writeConcern);
         this.alreadyCommitted = alreadyCommitted;
+    }
+
+    /**
+     * Set the recovery token.
+     *
+     * @param recoveryToken the recovery token
+     * @since 3.11
+     */
+    public void setRecoveryToken(final BsonDocument recoveryToken) {
+        this.recoveryToken = recoveryToken;
     }
 
     @Override
@@ -135,8 +146,17 @@ public class CommitTransactionOperation extends TransactionOperation {
                 }
             };
         } else {
-            return creator;
+            if (recoveryToken != null) {
+                return new CommandCreator() {
+                    @Override
+                    public BsonDocument create(final ServerDescription serverDescription,
+                                               final ConnectionDescription connectionDescription) {
+                        return creator.create(serverDescription, connectionDescription).append("recoveryToken", recoveryToken);
+                    }
+                };
+            }
         }
+        return creator;
     }
 
     @Override
@@ -149,6 +169,9 @@ public class CommitTransactionOperation extends TransactionOperation {
                     retryWriteConcern = retryWriteConcern.withWTimeout(10000, TimeUnit.MILLISECONDS);
                 }
                 command.put("writeConcern", retryWriteConcern.asDocument());
+                if (recoveryToken != null) {
+                    command.put("recoveryToken", recoveryToken);
+                }
                 return command;
             }
         };

@@ -36,6 +36,7 @@ public class BaseClientSessionImpl implements ClientSession {
     private BsonDocument clusterTime;
     private BsonTimestamp operationTime;
     private ServerAddress pinnedMongosAddress;
+    private BsonDocument recoveryToken;
     private volatile boolean closed;
 
     public BaseClientSessionImpl(final ServerSessionPool serverSessionPool, final Object originator, final ClientSessionOptions options) {
@@ -57,6 +58,16 @@ public class BaseClientSessionImpl implements ClientSession {
     public void setPinnedMongosAddress(@Nullable final ServerAddress address) {
         isTrue("pinned mongos null check", address == null || pinnedMongosAddress == null);
         pinnedMongosAddress = address;
+    }
+
+    @Override
+    public BsonDocument getRecoveryToken() {
+        return recoveryToken;
+    }
+
+    @Override
+    public void setRecoveryToken(final BsonDocument recoveryToken) {
+        this.recoveryToken = recoveryToken;
     }
 
     @Override
