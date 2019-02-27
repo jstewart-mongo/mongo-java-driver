@@ -183,6 +183,7 @@ public class MongoClientDelegate {
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
+                unpinMongosOnTransientTransactionError(session, e);
                 throw e;
             } finally {
                 binding.release();
@@ -199,6 +200,7 @@ public class MongoClientDelegate {
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
+                unpinMongosOnTransientTransactionError(session, e);
                 throw e;
             } finally {
                 binding.release();
@@ -243,6 +245,13 @@ public class MongoClientDelegate {
             if ((e instanceof MongoSocketException || e instanceof MongoTimeoutException)
                     && session != null && session.hasActiveTransaction() && !e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
                 e.addLabel(TRANSIENT_TRANSACTION_ERROR_LABEL);
+            }
+        }
+
+        private void unpinMongosOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
+            if (session != null && cluster.getDescription().getType() == ClusterType.SHARDED &&
+                    e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                session.setPinnedMongosAddress(null);
             }
         }
 

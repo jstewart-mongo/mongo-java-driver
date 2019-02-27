@@ -31,6 +31,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +47,7 @@ import static java.util.Arrays.asList;
 @Deprecated
 public class CommitTransactionOperation extends TransactionOperation {
     private final boolean alreadyCommitted;
+    private final BsonDocument recoveryToken;
 
     /**
      * Construct an instance.
@@ -53,7 +55,7 @@ public class CommitTransactionOperation extends TransactionOperation {
      * @param writeConcern the write concern
      */
     public CommitTransactionOperation(final WriteConcern writeConcern) {
-        this(writeConcern, false);
+        this(writeConcern, null, false);
     }
 
     /**
@@ -64,7 +66,20 @@ public class CommitTransactionOperation extends TransactionOperation {
      * @since 3.11
      */
     public CommitTransactionOperation(final WriteConcern writeConcern, final boolean alreadyCommitted) {
+        this(writeConcern, null, alreadyCommitted);
+    }
+
+    /**
+     * Construct an instance.
+     *
+     * @param writeConcern the write concern
+     * @param recoveryToken the recovery token
+     * @param alreadyCommitted if the transaction has already been committed.
+     * @since 3.11
+     */
+    public CommitTransactionOperation(final WriteConcern writeConcern, final BsonDocument recoveryToken, final boolean alreadyCommitted) {
         super(writeConcern);
+        this.recoveryToken = recoveryToken;
         this.alreadyCommitted = alreadyCommitted;
     }
 
@@ -126,8 +141,8 @@ public class CommitTransactionOperation extends TransactionOperation {
 
     @Override
     CommandCreator getCommandCreator() {
-        final CommandCreator creator = super.getCommandCreator();
         if (alreadyCommitted) {
+            final CommandCreator creator = super.getCommandCreator();
             return new CommandCreator() {
                 @Override
                 public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
@@ -135,8 +150,25 @@ public class CommitTransactionOperation extends TransactionOperation {
                 }
             };
         } else {
-            return creator;
+            return getCommitCommandCreator();
         }
+    }
+
+    CommandCreator getCommitCommandCreator() {
+        final WriteConcern writeConcern = super.getWriteConcern();
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                BsonDocument command = new BsonDocument(getCommandName(), new BsonInt32(1));
+                if (!writeConcern.isServerDefault()) {
+                    command.put("writeConcern", writeConcern.asDocument());
+                }
+                if (recoveryToken != null) {
+                    command.put("recoveryToken", recoveryToken);
+                }
+                return command;
+            }
+        };
     }
 
     @Override
@@ -149,6 +181,9 @@ public class CommitTransactionOperation extends TransactionOperation {
                     retryWriteConcern = retryWriteConcern.withWTimeout(10000, TimeUnit.MILLISECONDS);
                 }
                 command.put("writeConcern", retryWriteConcern.asDocument());
+                if (recoveryToken != null) {
+                    command.put("recoveryToken", recoveryToken);
+                }
                 return command;
             }
         };

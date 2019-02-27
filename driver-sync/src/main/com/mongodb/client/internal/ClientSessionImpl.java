@@ -25,6 +25,7 @@ import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.TransactionBody;
+import com.mongodb.connection.ClusterType;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.operation.AbortTransactionOperation;
@@ -116,6 +117,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
         if (transactionState == TransactionState.NONE) {
             throw new IllegalStateException("There is no transaction started");
         }
+
         try {
             if (messageSentInCurrentTransaction) {
                 ReadConcern readConcern = transactionOptions.getReadConcern();
@@ -124,12 +126,15 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                 }
                 commitInProgress = true;
                 delegate.getOperationExecutor().execute(
-                        new CommitTransactionOperation(transactionOptions.getWriteConcern(),
+                        new CommitTransactionOperation(transactionOptions.getWriteConcern(), getRecoveryToken(),
                                 transactionState == TransactionState.COMMITTED), readConcern, this);
             }
+        } catch (MongoException e) {
+            unpinMongosOnError(e);
+            throw e;
         } finally {
-            commitInProgress = false;
             transactionState = TransactionState.COMMITTED;
+            commitInProgress = false;
         }
     }
 
@@ -154,9 +159,18 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                         readConcern, this);
             }
         } catch (Exception e) {
-            // ignore errors
+            if (e instanceof MongoException) {
+                unpinMongosOnError((MongoException) e);
+            }
         } finally {
             cleanupTransaction(TransactionState.ABORTED);
+        }
+    }
+
+    private void unpinMongosOnError(MongoException e) {
+        if (delegate.getCluster().getDescription().getType() == ClusterType.SHARDED &&
+                (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
+            setPinnedMongosAddress(null);
         }
     }
 
@@ -193,6 +207,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                         commitTransaction();
                         break;
                     } catch (MongoException e) {
+                        unpinMongosOnError(e);
                         if (ClientSessionClock.INSTANCE.now() - startTime < MAX_RETRY_TIME_LIMIT_MS) {
                             applyMajorityWriteConcernToTransactionOptions();
 

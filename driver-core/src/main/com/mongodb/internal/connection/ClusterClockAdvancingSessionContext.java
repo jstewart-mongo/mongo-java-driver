@@ -96,4 +96,7 @@ public final class ClusterClockAdvancingSessionContext implements SessionContext
     public ReadConcern getReadConcern() {
         return wrapped.getReadConcern();
     }
+
+    @Override
+    public void setRecoveryToken(BsonDocument recoveryToken) { wrapped.setRecoveryToken(recoveryToken);}
 }

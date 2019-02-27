@@ -79,4 +79,7 @@ public abstract class ClientSessionContext implements SessionContext {
     public void advanceClusterTime(final BsonDocument clusterTime) {
         clientSession.advanceClusterTime(clusterTime);
     }
+
+    @Override
+    public void setRecoveryToken(BsonDocument recoveryToken) { clientSession.setRecoveryToken(recoveryToken);}
 }

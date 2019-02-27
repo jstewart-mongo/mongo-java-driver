@@ -93,4 +93,7 @@ class TestSessionContext implements SessionContext {
     public ReadConcern getReadConcern() {
         return ReadConcern.DEFAULT;
     }
+
+    @Override
+    public void setRecoveryToken(BsonDocument recoveryToken) { throw new UnsupportedOperationException(); }
 }

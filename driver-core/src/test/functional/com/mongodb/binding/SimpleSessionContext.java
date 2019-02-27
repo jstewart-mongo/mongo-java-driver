@@ -103,6 +103,9 @@ class SimpleSessionContext implements SessionContext {
         return ReadConcern.DEFAULT;
     }
 
+    @Override
+    public void setRecoveryToken(BsonDocument recoveryToken) { throw new UnsupportedOperationException(); }
+
     private static BsonDocument createNewServerSessionIdentifier() {
         UuidCodec uuidCodec = new UuidCodec(UuidRepresentation.STANDARD);
         BsonDocument holder = new BsonDocument();
