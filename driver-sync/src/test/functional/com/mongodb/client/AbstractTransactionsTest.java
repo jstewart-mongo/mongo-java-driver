@@ -88,7 +88,6 @@ public abstract class AbstractTransactionsTest {
     private CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
-    private int heartbeatFrequencyMS = 0;
 
     public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;
@@ -141,11 +140,10 @@ public abstract class AbstractTransactionsTest {
             });
         }
         if (clientOptions.containsKey("heartbeatFrequencyMS")) {
-            heartbeatFrequencyMS = clientOptions.getInt32("heartbeatFrequencyMS").intValue();
             builder.applyToServerSettings(new Block<ServerSettings.Builder>() {
                 @Override
                 public void apply(final ServerSettings.Builder builder) {
-                    builder.heartbeatFrequency(heartbeatFrequencyMS, TimeUnit.MILLISECONDS);
+                    builder.heartbeatFrequency(clientOptions.getInt32("heartbeatFrequencyMS").intValue(), TimeUnit.MILLISECONDS);
                 }
             });
         }
@@ -505,14 +503,6 @@ public abstract class AbstractTransactionsTest {
                                 builder.hosts(singletonList(clientSession.getPinnedMongosAddress()));
                             }
                         });
-                if (heartbeatFrequencyMS > 0) {
-                    builder.applyToServerSettings(new Block<ServerSettings.Builder>() {
-                        @Override
-                        public void apply(final ServerSettings.Builder builder) {
-                            builder.heartbeatFrequency(heartbeatFrequencyMS, TimeUnit.MILLISECONDS);
-                        }
-                    });
-                }
                 MongoClient mongoClient = MongoClients.create(MongoClientSettings.builder(builder.build())
                         .applyToSocketSettings(new Block<SocketSettings.Builder>() {
                             @Override
