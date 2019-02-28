@@ -98,5 +98,7 @@ public final class ClusterClockAdvancingSessionContext implements SessionContext
     }
 
     @Override
-    public void setRecoveryToken(BsonDocument recoveryToken) { wrapped.setRecoveryToken(recoveryToken);}
+    public void setRecoveryToken(final BsonDocument recoveryToken) {
+        wrapped.setRecoveryToken(recoveryToken);
+    }
 }

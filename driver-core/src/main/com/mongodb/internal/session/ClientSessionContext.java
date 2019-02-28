@@ -81,5 +81,7 @@ public abstract class ClientSessionContext implements SessionContext {
     }
 
     @Override
-    public void setRecoveryToken(BsonDocument recoveryToken) { clientSession.setRecoveryToken(recoveryToken);}
+    public void setRecoveryToken(final BsonDocument recoveryToken) {
+        clientSession.setRecoveryToken(recoveryToken);
+    }
 }

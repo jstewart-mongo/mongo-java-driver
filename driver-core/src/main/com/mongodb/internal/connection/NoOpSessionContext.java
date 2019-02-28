@@ -97,5 +97,7 @@ public class NoOpSessionContext implements SessionContext {
     }
 
     @Override
-    public void setRecoveryToken(BsonDocument recoveryToken) { throw new UnsupportedOperationException(); }
+    public void setRecoveryToken(final BsonDocument recoveryToken) {
+        throw new UnsupportedOperationException();
+    }
 }

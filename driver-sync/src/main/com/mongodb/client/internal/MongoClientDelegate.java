@@ -249,8 +249,8 @@ public class MongoClientDelegate {
         }
 
         private void unpinMongosOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
-            if (session != null && cluster.getDescription().getType() == ClusterType.SHARDED &&
-                    e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+            if (session != null && cluster.getDescription().getType() == ClusterType.SHARDED
+                    && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
                 session.setPinnedMongosAddress(null);
             }
         }

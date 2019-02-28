@@ -27,12 +27,12 @@ import com.mongodb.MongoWriteConcernException;
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadConcernLevel;
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerAddress;
 import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.connection.ClusterSettings;
+import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.SocketSettings;
 import com.mongodb.connection.SslSettings;
 import com.mongodb.event.CommandEvent;
@@ -88,6 +88,7 @@ public abstract class AbstractTransactionsTest {
     private CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
+    private int heartbeatFrequencyMS = 0;
 
     public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;
@@ -123,7 +124,7 @@ public abstract class AbstractTransactionsTest {
             collectionHelper.runAdminCommand(definition.getDocument("failPoint"));
         }
 
-        BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
+        final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
         ConnectionString connectionString = getConnectionString();
         if (definition.containsKey("useMultipleMongoses") && definition.getBoolean("useMultipleMongoses") == BsonBoolean.TRUE) {
@@ -136,6 +137,15 @@ public abstract class AbstractTransactionsTest {
                 @Override
                 public void apply(final SslSettings.Builder builder) {
                     builder.invalidHostNameAllowed(true);
+                }
+            });
+        }
+        if (clientOptions.containsKey("heartbeatFrequencyMS")) {
+            heartbeatFrequencyMS = clientOptions.getInt32("heartbeatFrequencyMS").intValue();
+            builder.applyToServerSettings(new Block<ServerSettings.Builder>() {
+                @Override
+                public void apply(final ServerSettings.Builder builder) {
+                    builder.heartbeatFrequency(heartbeatFrequencyMS, TimeUnit.MILLISECONDS);
                 }
             });
         }
@@ -483,21 +493,27 @@ public abstract class AbstractTransactionsTest {
         private final BsonDocument failPointDocument;
         private final MongoDatabase adminDB;
 
-        TargetedFailPoint(BsonDocument operation) {
+        TargetedFailPoint(final BsonDocument operation) {
             final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
-            ClientSession clientSession = sessionsMap.get(arguments.getString("session").getValue());
+            final ClientSession clientSession = sessionsMap.get(arguments.getString("session").getValue());
 
             if (clientSession.getPinnedMongosAddress() != null) {
-                final ServerAddress serverAddress = clientSession.getPinnedMongosAddress();
                 MongoClientSettings.Builder builder = MongoClientSettings.builder()
                         .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
                             @Override
                             public void apply(final ClusterSettings.Builder builder) {
-                                builder.hosts(singletonList(serverAddress));
+                                builder.hosts(singletonList(clientSession.getPinnedMongosAddress()));
                             }
                         });
+                if (heartbeatFrequencyMS > 0) {
+                    builder.applyToServerSettings(new Block<ServerSettings.Builder>() {
+                        @Override
+                        public void apply(final ServerSettings.Builder builder) {
+                            builder.heartbeatFrequency(heartbeatFrequencyMS, TimeUnit.MILLISECONDS);
+                        }
+                    });
+                }
                 MongoClient mongoClient = MongoClients.create(MongoClientSettings.builder(builder.build())
-                        .addCommandListener(commandListener)
                         .applyToSocketSettings(new Block<SocketSettings.Builder>() {
                             @Override
                             public void apply(final SocketSettings.Builder builder) {
@@ -522,7 +538,7 @@ public abstract class AbstractTransactionsTest {
             executeCommand(disableDoc);
         }
 
-        private void executeCommand(BsonDocument doc) {
+        private void executeCommand(final BsonDocument doc) {
             if (adminDB != null) {
                 adminDB.runCommand(doc);
             } else {

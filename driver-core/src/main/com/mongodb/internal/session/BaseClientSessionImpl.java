@@ -61,10 +61,12 @@ public class BaseClientSessionImpl implements ClientSession {
     }
 
     @Override
-    public BsonDocument getRecoveryToken() { return recoveryToken; }
+    public BsonDocument getRecoveryToken() {
+        return recoveryToken;
+    }
 
     @Override
-    public void setRecoveryToken(BsonDocument recoveryToken) {
+    public void setRecoveryToken(final BsonDocument recoveryToken) {
         this.recoveryToken = recoveryToken;
     }
 

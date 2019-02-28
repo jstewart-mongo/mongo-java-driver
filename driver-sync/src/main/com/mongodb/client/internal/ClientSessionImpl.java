@@ -167,9 +167,9 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
         }
     }
 
-    private void unpinMongosOnError(MongoException e) {
-        if (delegate.getCluster().getDescription().getType() == ClusterType.SHARDED &&
-                (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
+    private void unpinMongosOnError(final MongoException e) {
+        if (delegate.getCluster().getDescription().getType() == ClusterType.SHARDED
+                && (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
             setPinnedMongosAddress(null);
         }
     }
