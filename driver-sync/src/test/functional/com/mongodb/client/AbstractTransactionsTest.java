@@ -88,6 +88,7 @@ public abstract class AbstractTransactionsTest {
     private CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
+    private boolean useMultipleMongoses = false;
 
     public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;
@@ -126,7 +127,8 @@ public abstract class AbstractTransactionsTest {
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
         ConnectionString connectionString = getConnectionString();
-        if (definition.containsKey("useMultipleMongoses") && definition.getBoolean("useMultipleMongoses") == BsonBoolean.TRUE) {
+        useMultipleMongoses = definition.getBoolean("useMultipleMongoses", BsonBoolean.FALSE).getValue();
+        if (useMultipleMongoses) {
             connectionString = getMultiMongosConnectionString();
         }
         MongoClientSettings.Builder builder = MongoClientSettings.builder()
@@ -496,21 +498,13 @@ public abstract class AbstractTransactionsTest {
             final ClientSession clientSession = sessionsMap.get(arguments.getString("session").getValue());
 
             if (clientSession.getPinnedMongosAddress() != null) {
-                MongoClientSettings.Builder builder = MongoClientSettings.builder()
+                MongoClient mongoClient = MongoClients.create(MongoClientSettings.builder()
                         .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
                             @Override
                             public void apply(final ClusterSettings.Builder builder) {
                                 builder.hosts(singletonList(clientSession.getPinnedMongosAddress()));
                             }
-                        });
-                MongoClient mongoClient = MongoClients.create(MongoClientSettings.builder(builder.build())
-                        .applyToSocketSettings(new Block<SocketSettings.Builder>() {
-                            @Override
-                            public void apply(final SocketSettings.Builder builder) {
-                                builder.readTimeout(5, TimeUnit.SECONDS);
-                            }
-                        })
-                        .build());
+                        }).build());
 
                 adminDB = mongoClient.getDatabase("admin");
             } else {
@@ -524,14 +518,16 @@ public abstract class AbstractTransactionsTest {
         }
 
         public void disableFailPoint() {
-            BsonDocument disableDoc = failPointDocument.append("mode", new BsonString("off"));
-            executeCommand(disableDoc);
+            executeCommand(new BsonDocument("configureFailPoint",
+                    failPointDocument.getString("configureFailPoint"))
+                    .append("mode", new BsonString("off")));
         }
 
         private void executeCommand(final BsonDocument doc) {
             if (adminDB != null) {
                 adminDB.runCommand(doc);
             } else {
+                assertFalse(useMultipleMongoses);
                 collectionHelper.runAdminCommand(doc);
             }
         }
