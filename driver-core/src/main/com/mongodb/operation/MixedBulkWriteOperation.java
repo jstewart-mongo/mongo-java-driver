@@ -265,9 +265,6 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
                         throw new MongoWriteConcernWithResponseException(writeConcernBasedError, result);
                     }
                 }
-                if (binding.getSessionContext().hasActiveTransaction()) {
-                    binding.getSessionContext().setRecoveryToken(result.getDocument("recoveryToken"));
-                }
 
                 currentBatch.addResult(result);
                 currentBatch = currentBatch.getNextBatch();

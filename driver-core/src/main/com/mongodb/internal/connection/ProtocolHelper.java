@@ -141,6 +141,18 @@ public final class ProtocolHelper {
         return clusterTime.asDocument();
     }
 
+    static BsonDocument getRecoveryToken(final ResponseBuffers responseBuffers) {
+        try {
+            BsonValue recoveryToken = getField(createBsonReader(responseBuffers), "recoveryToken");
+            if (recoveryToken == null) {
+                return null;
+            }
+            return recoveryToken.asDocument();
+        } finally {
+            responseBuffers.reset();
+        }
+    }
+
     private static BsonBinaryReader createBsonReader(final ResponseBuffers responseBuffers) {
         return new BsonBinaryReader(new ByteBufferBsonInput(responseBuffers.getBodyByteBuffer()));
     }
