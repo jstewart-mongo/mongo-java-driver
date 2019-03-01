@@ -96,4 +96,9 @@ class TestSessionContext implements SessionContext {
 
     @Override
     public void setRecoveryToken(BsonDocument recoveryToken) { throw new UnsupportedOperationException(); }
+
+    @Override
+    public void unpinMongos() {
+        throw new UnsupportedOperationException();
+    }
 }

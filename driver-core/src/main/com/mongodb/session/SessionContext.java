@@ -131,4 +131,11 @@ public interface SessionContext {
      * @since 3.11
      */
     void setRecoveryToken(BsonDocument recoveryToken);
+
+    /**
+     * Unpin a mongos from a session.
+     *
+     * @since 3.11
+     */
+    void unpinMongos();
 }

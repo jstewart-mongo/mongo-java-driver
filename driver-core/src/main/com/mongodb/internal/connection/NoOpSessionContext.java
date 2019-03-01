@@ -100,4 +100,9 @@ public class NoOpSessionContext implements SessionContext {
     public void setRecoveryToken(final BsonDocument recoveryToken) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void unpinMongos() {
+        throw new UnsupportedOperationException();
+    }
 }

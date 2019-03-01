@@ -101,4 +101,9 @@ public final class ClusterClockAdvancingSessionContext implements SessionContext
     public void setRecoveryToken(final BsonDocument recoveryToken) {
         wrapped.setRecoveryToken(recoveryToken);
     }
+
+    @Override
+    public void unpinMongos() {
+        wrapped.unpinMongos();
+    }
 }

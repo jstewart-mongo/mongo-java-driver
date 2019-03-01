@@ -106,6 +106,11 @@ class SimpleSessionContext implements SessionContext {
     @Override
     public void setRecoveryToken(BsonDocument recoveryToken) { throw new UnsupportedOperationException(); }
 
+    @Override
+    public void unpinMongos() {
+        throw new UnsupportedOperationException();
+    }
+
     private static BsonDocument createNewServerSessionIdentifier() {
         UuidCodec uuidCodec = new UuidCodec(UuidRepresentation.STANDARD);
         BsonDocument holder = new BsonDocument();

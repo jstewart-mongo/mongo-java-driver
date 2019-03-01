@@ -84,4 +84,9 @@ public abstract class ClientSessionContext implements SessionContext {
     public void setRecoveryToken(final BsonDocument recoveryToken) {
         clientSession.setRecoveryToken(recoveryToken);
     }
+
+    @Override
+    public void unpinMongos() {
+        clientSession.setPinnedMongosAddress(null);
+    }
 }

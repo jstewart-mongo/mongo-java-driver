@@ -481,6 +481,9 @@ final class CommandOperationHelper {
                     connection.release();
                 }
 
+                if (binding.getSessionContext().hasActiveTransaction()) {
+                    binding.getSessionContext().unpinMongos();
+                }
                 final BsonDocument originalCommand = command;
                 final MongoException originalException = exception;
                 return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<R>() {
