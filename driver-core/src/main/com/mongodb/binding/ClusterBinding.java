@@ -66,6 +66,10 @@ public class ClusterBinding extends AbstractReferenceCounted implements ReadWrit
         this.readConcern = notNull("readConcern", readConcern);
     }
 
+    public Cluster getCluster() {
+        return cluster;
+    }
+
     @Override
     public ReadWriteBinding retain() {
         super.retain();

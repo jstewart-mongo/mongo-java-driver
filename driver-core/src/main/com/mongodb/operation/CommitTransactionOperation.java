@@ -31,8 +31,6 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import org.bson.BsonDocument;
-import org.bson.BsonInt32;
-import org.bson.conversions.Bson;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +69,12 @@ public class CommitTransactionOperation extends TransactionOperation {
         this.alreadyCommitted = alreadyCommitted;
     }
 
+    /**
+     * Set the recovery token.
+     *
+     * @param recoveryToken the recovery token
+     * @since 3.11
+     */
     public void setRecoveryToken(final BsonDocument recoveryToken) {
         this.recoveryToken = recoveryToken;
     }
@@ -145,7 +149,8 @@ public class CommitTransactionOperation extends TransactionOperation {
             if (recoveryToken != null) {
                 return new CommandCreator() {
                     @Override
-                    public BsonDocument create(ServerDescription serverDescription, ConnectionDescription connectionDescription) {
+                    public BsonDocument create(final ServerDescription serverDescription,
+                                               final ConnectionDescription connectionDescription) {
                         return creator.create(serverDescription, connectionDescription).append("recoveryToken", recoveryToken);
                     }
                 };

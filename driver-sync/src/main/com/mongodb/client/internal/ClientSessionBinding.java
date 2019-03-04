@@ -18,12 +18,18 @@ package com.mongodb.client.internal;
 
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
+import com.mongodb.binding.ClusterBinding;
 import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadWriteBinding;
+import com.mongodb.binding.SingleServerBinding;
 import com.mongodb.client.ClientSession;
+import com.mongodb.connection.Cluster;
+import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.Connection;
+import com.mongodb.connection.Server;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.session.ClientSessionContext;
+import com.mongodb.selector.ReadPreferenceServerSelector;
 import com.mongodb.session.SessionContext;
 
 import static org.bson.assertions.Assertions.notNull;
@@ -32,21 +38,46 @@ import static org.bson.assertions.Assertions.notNull;
  * This class is not part of the public API and may be removed or changed at any time.
  */
 public class ClientSessionBinding implements ReadWriteBinding {
-    private final ReadWriteBinding wrapped;
+    private ReadWriteBinding wrapped;
     private final ClientSession session;
     private final boolean ownsSession;
     private final ClientSessionContext sessionContext;
+    private final Cluster cluster;
+    private ReadPreference readPreference;
 
     public ClientSessionBinding(final ClientSession session, final boolean ownsSession, final ReadWriteBinding wrapped) {
-        this.wrapped = notNull("wrapped", wrapped);
-        this.ownsSession = ownsSession;
         this.session = notNull("session", session);
+        this.ownsSession = ownsSession;
         this.sessionContext = new SyncClientSessionContext(session);
+        this.cluster = wrapped instanceof ClusterBinding ? ((ClusterBinding) wrapped).getCluster() : null;
+        this.wrapped = notNull("wrapped", initShardedTxnWrapped(wrapped));
+    }
+
+    private ReadWriteBinding initShardedTxnWrapped(final ReadWriteBinding wrapped) {
+        if (isActiveShardedTxn()) {
+            this.readPreference = session.getTransactionOptions().getReadPreference();
+            setPinnedMongosAddress();
+            wrapped.release();
+            return new SingleServerBinding(cluster, session.getPinnedMongosAddress(), readPreference);
+        }
+        return wrapped;
+    }
+
+    private boolean isActiveShardedTxn() {
+        return session != null && session.hasActiveTransaction() && cluster != null
+                && cluster.getDescription().getType() == ClusterType.SHARDED;
+    }
+
+    private void setPinnedMongosAddress() {
+        if (session.getPinnedMongosAddress() == null) {
+            Server server = cluster.selectServer(new ReadPreferenceServerSelector(readPreference));
+            session.setPinnedMongosAddress(server.getDescription().getAddress());
+        }
     }
 
     @Override
     public ReadPreference getReadPreference() {
-        return wrapped.getReadPreference();
+        return readPreference != null ? readPreference : wrapped.getReadPreference();
     }
 
     @Override
@@ -74,6 +105,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getReadConnectionSource() {
+        setWrappedOnPinnedMongosReset();
         ConnectionSource readConnectionSource = wrapped.getReadConnectionSource();
         return new SessionBindingConnectionSource(readConnectionSource);
     }
@@ -85,8 +117,17 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getWriteConnectionSource() {
+        setWrappedOnPinnedMongosReset();
         ConnectionSource writeConnectionSource = wrapped.getWriteConnectionSource();
         return new SessionBindingConnectionSource(writeConnectionSource);
+    }
+
+    private void setWrappedOnPinnedMongosReset() {
+        if (isActiveShardedTxn() && session.getPinnedMongosAddress() == null) {
+            setPinnedMongosAddress();
+            wrapped.release();
+            wrapped = new SingleServerBinding(cluster, session.getPinnedMongosAddress(), readPreference);
+        }
     }
 
     private class SessionBindingConnectionSource implements ConnectionSource {
