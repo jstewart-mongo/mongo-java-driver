@@ -481,7 +481,7 @@ final class CommandOperationHelper {
                     connection.release();
                 }
 
-                if (binding.getSessionContext() != null && binding.getSessionContext().hasActiveTransaction()) {
+                if (binding.getSessionContext().hasActiveTransaction()) {
                     binding.getSessionContext().unpinMongos();
                 }
                 final BsonDocument originalCommand = command;

@@ -43,20 +43,19 @@ public class ClientSessionBinding implements ReadWriteBinding {
     private final boolean ownsSession;
     private final ClientSessionContext sessionContext;
     private final Cluster cluster;
-    private ReadPreference readPreference;
 
     public ClientSessionBinding(final ClientSession session, final boolean ownsSession, final ReadWriteBinding wrapped) {
         this.session = notNull("session", session);
         this.ownsSession = ownsSession;
         this.sessionContext = new SyncClientSessionContext(session);
-        this.cluster = wrapped instanceof ClusterBinding ? ((ClusterBinding) wrapped).getCluster() : null;
+        this.cluster = ((ClusterBinding) wrapped).getCluster();
         this.wrapped = notNull("wrapped", initShardedTxnWrapped(wrapped));
     }
 
     private ReadWriteBinding initShardedTxnWrapped(final ReadWriteBinding wrapped) {
         if (isActiveShardedTxn()) {
-            this.readPreference = session.getTransactionOptions().getReadPreference();
-            setPinnedMongosAddress();
+            setPinnedMongosAddress(wrapped);
+            ReadPreference readPreference = wrapped.getReadPreference();
             wrapped.release();
             return new SingleServerBinding(cluster, session.getPinnedMongosAddress(), readPreference);
         }
@@ -64,20 +63,19 @@ public class ClientSessionBinding implements ReadWriteBinding {
     }
 
     private boolean isActiveShardedTxn() {
-        return session != null && session.hasActiveTransaction() && cluster != null
-                && cluster.getDescription().getType() == ClusterType.SHARDED;
+        return session.hasActiveTransaction() && cluster.getDescription().getType() == ClusterType.SHARDED;
     }
 
-    private void setPinnedMongosAddress() {
+    private void setPinnedMongosAddress(final ReadWriteBinding wrapped) {
         if (session.getPinnedMongosAddress() == null) {
-            Server server = cluster.selectServer(new ReadPreferenceServerSelector(readPreference));
+            Server server = cluster.selectServer(new ReadPreferenceServerSelector(wrapped.getReadPreference()));
             session.setPinnedMongosAddress(server.getDescription().getAddress());
         }
     }
 
     @Override
     public ReadPreference getReadPreference() {
-        return readPreference != null ? readPreference : wrapped.getReadPreference();
+        return wrapped.getReadPreference();
     }
 
     @Override
@@ -124,9 +122,9 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     private void setWrappedOnPinnedMongosReset() {
         if (isActiveShardedTxn() && session.getPinnedMongosAddress() == null) {
-            setPinnedMongosAddress();
+            setPinnedMongosAddress(wrapped);
             wrapped.release();
-            wrapped = new SingleServerBinding(cluster, session.getPinnedMongosAddress(), readPreference);
+            wrapped = new SingleServerBinding(cluster, session.getPinnedMongosAddress(), wrapped.getReadPreference());
         }
     }
 
