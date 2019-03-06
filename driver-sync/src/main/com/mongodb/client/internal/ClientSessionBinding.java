@@ -23,7 +23,6 @@ import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadWriteBinding;
 import com.mongodb.binding.SingleServerBinding;
 import com.mongodb.client.ClientSession;
-import com.mongodb.connection.Cluster;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.Server;
@@ -38,39 +37,16 @@ import static org.bson.assertions.Assertions.notNull;
  * This class is not part of the public API and may be removed or changed at any time.
  */
 public class ClientSessionBinding implements ReadWriteBinding {
-    private ReadWriteBinding wrapped;
+    private final ClusterBinding wrapped;
     private final ClientSession session;
     private final boolean ownsSession;
     private final ClientSessionContext sessionContext;
-    private final Cluster cluster;
 
     public ClientSessionBinding(final ClientSession session, final boolean ownsSession, final ReadWriteBinding wrapped) {
+        this.wrapped = ((ClusterBinding) wrapped);
         this.session = notNull("session", session);
         this.ownsSession = ownsSession;
         this.sessionContext = new SyncClientSessionContext(session);
-        this.cluster = ((ClusterBinding) wrapped).getCluster();
-        this.wrapped = notNull("wrapped", initShardedTxnWrapped(wrapped));
-    }
-
-    private ReadWriteBinding initShardedTxnWrapped(final ReadWriteBinding wrapped) {
-        if (isActiveShardedTxn()) {
-            setPinnedMongosAddress(wrapped);
-            ReadPreference readPreference = wrapped.getReadPreference();
-            wrapped.release();
-            return new SingleServerBinding(cluster, session.getPinnedMongosAddress(), readPreference);
-        }
-        return wrapped;
-    }
-
-    private boolean isActiveShardedTxn() {
-        return session.hasActiveTransaction() && cluster.getDescription().getType() == ClusterType.SHARDED;
-    }
-
-    private void setPinnedMongosAddress(final ReadWriteBinding wrapped) {
-        if (session.getPinnedMongosAddress() == null) {
-            Server server = cluster.selectServer(new ReadPreferenceServerSelector(wrapped.getReadPreference()));
-            session.setPinnedMongosAddress(server.getDescription().getAddress());
-        }
     }
 
     @Override
@@ -103,8 +79,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getReadConnectionSource() {
-        setWrappedOnPinnedMongosReset();
-        ConnectionSource readConnectionSource = wrapped.getReadConnectionSource();
+        ConnectionSource readConnectionSource = getWrappedReadConnectionSource();
         return new SessionBindingConnectionSource(readConnectionSource);
     }
 
@@ -115,16 +90,42 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getWriteConnectionSource() {
-        setWrappedOnPinnedMongosReset();
-        ConnectionSource writeConnectionSource = wrapped.getWriteConnectionSource();
+        ConnectionSource writeConnectionSource = getWrappedWriteConnectionSource();
         return new SessionBindingConnectionSource(writeConnectionSource);
     }
 
-    private void setWrappedOnPinnedMongosReset() {
-        if (isActiveShardedTxn() && session.getPinnedMongosAddress() == null) {
-            setPinnedMongosAddress(wrapped);
-            wrapped.release();
-            wrapped = new SingleServerBinding(cluster, session.getPinnedMongosAddress(), wrapped.getReadPreference());
+    private ConnectionSource getWrappedWriteConnectionSource() {
+        ConnectionSource connectionSource = wrapped.getWriteConnectionSource();
+        if (isActiveShardedTxn()) {
+            setPinnedMongosAddress();
+            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(),
+                    wrapped.getReadPreference());
+            connectionSource = binding.getWriteConnectionSource();
+            binding.release();
+        }
+        return connectionSource;
+    }
+
+    private ConnectionSource getWrappedReadConnectionSource() {
+        ConnectionSource connectionSource = wrapped.getReadConnectionSource();
+        if (isActiveShardedTxn()) {
+            setPinnedMongosAddress();
+            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(),
+                    wrapped.getReadPreference());
+            connectionSource = binding.getReadConnectionSource();
+            binding.release();
+        }
+        return connectionSource;
+    }
+
+    private boolean isActiveShardedTxn() {
+        return session.hasActiveTransaction() && wrapped.getCluster().getDescription().getType() == ClusterType.SHARDED;
+    }
+
+    private void setPinnedMongosAddress() {
+        if (session.getPinnedMongosAddress() == null) {
+            Server server = wrapped.getCluster().selectServer(new ReadPreferenceServerSelector(wrapped.getReadPreference()));
+            session.setPinnedMongosAddress(server.getDescription().getAddress());
         }
     }
 
