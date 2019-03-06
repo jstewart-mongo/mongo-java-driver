@@ -67,9 +67,7 @@ public class BaseClientSessionImpl implements ClientSession {
 
     @Override
     public void setRecoveryToken(final BsonDocument recoveryToken) {
-        if (recoveryToken != null) {
-            this.recoveryToken = recoveryToken;
-        }
+        this.recoveryToken = recoveryToken;
     }
 
     @Override

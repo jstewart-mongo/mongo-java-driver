@@ -40,6 +40,7 @@ import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.event.CommandListener;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonBinaryReader;
+import org.bson.BsonDocument;
 import org.bson.ByteBuf;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
@@ -536,7 +537,10 @@ public class InternalStreamConnection implements InternalConnection {
         sessionContext.advanceOperationTime(getOperationTime(responseBuffers));
         sessionContext.advanceClusterTime(getClusterTime(responseBuffers));
         if (sessionContext.hasActiveTransaction()) {
-            sessionContext.setRecoveryToken(getRecoveryToken(responseBuffers));
+            BsonDocument recoveryToken = getRecoveryToken(responseBuffers);
+            if (recoveryToken != null) {
+                sessionContext.setRecoveryToken(recoveryToken);
+            }
         }
     }
 
