@@ -27,6 +27,7 @@ import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.Server;
 import com.mongodb.connection.ServerDescription;
+import com.mongodb.internal.connection.SingleServerCluster;
 import com.mongodb.internal.session.ClientSessionContext;
 import com.mongodb.selector.ReadPreferenceServerSelector;
 import com.mongodb.session.SessionContext;
@@ -97,9 +98,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
     private ConnectionSource getWrappedWriteConnectionSource() {
         ConnectionSource connectionSource = wrapped.getWriteConnectionSource();
         if (isActiveShardedTxn()) {
-            setPinnedMongosAddress();
-            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(),
-                    wrapped.getReadPreference());
+            SingleServerBinding binding = getSingleServerBinding();
             connectionSource = binding.getWriteConnectionSource();
             binding.release();
         }
@@ -109,9 +108,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
     private ConnectionSource getWrappedReadConnectionSource() {
         ConnectionSource connectionSource = wrapped.getReadConnectionSource();
         if (isActiveShardedTxn()) {
-            setPinnedMongosAddress();
-            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(),
-                    wrapped.getReadPreference());
+            SingleServerBinding binding = getSingleServerBinding();
             connectionSource = binding.getReadConnectionSource();
             binding.release();
         }
@@ -127,6 +124,11 @@ public class ClientSessionBinding implements ReadWriteBinding {
             Server server = wrapped.getCluster().selectServer(new ReadPreferenceServerSelector(wrapped.getReadPreference()));
             session.setPinnedMongosAddress(server.getDescription().getAddress());
         }
+    }
+
+    private SingleServerBinding getSingleServerBinding() {
+        setPinnedMongosAddress();
+        return new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(), wrapped.getReadPreference());
     }
 
     private class SessionBindingConnectionSource implements ConnectionSource {
