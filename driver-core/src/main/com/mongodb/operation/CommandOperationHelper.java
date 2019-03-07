@@ -499,10 +499,7 @@ final class CommandOperationHelper {
                                     readPreference, commandResultDecoder, binding.getSessionContext()),
                                     connection.getDescription().getServerAddress());
                         } catch (MongoException e) {
-                            if (binding.getSessionContext().hasActiveTransaction()) {
-                                throw e;
-                            }
-                            throw originalException;
+                            throw e;
                         } finally {
                             connection.release();
                         }
