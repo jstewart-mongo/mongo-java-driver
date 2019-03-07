@@ -80,39 +80,30 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getReadConnectionSource() {
-        ConnectionSource readConnectionSource = getWrappedReadConnectionSource();
+        ConnectionSource readConnectionSource = wrapConnectionSource(wrapped.getReadConnectionSource());
         return new SessionBindingConnectionSource(readConnectionSource);
+    }
+
+    public ConnectionSource getWriteConnectionSource() {
+        ConnectionSource writeConnectionSource = wrapConnectionSource(wrapped.getWriteConnectionSource());
+        return new SessionBindingConnectionSource(writeConnectionSource);
+    }
+
+    private ConnectionSource wrapConnectionSource(final ConnectionSource connectionSource) {
+        ConnectionSource retVal = connectionSource;
+        if (isActiveShardedTxn()) {
+            setPinnedMongosAddress();
+            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(),
+                    wrapped.getReadPreference());
+            retVal = binding.getWriteConnectionSource();
+            binding.release();
+        }
+        return retVal;
     }
 
     @Override
     public SessionContext getSessionContext() {
         return sessionContext;
-    }
-
-    @Override
-    public ConnectionSource getWriteConnectionSource() {
-        ConnectionSource writeConnectionSource = getWrappedWriteConnectionSource();
-        return new SessionBindingConnectionSource(writeConnectionSource);
-    }
-
-    private ConnectionSource getWrappedWriteConnectionSource() {
-        ConnectionSource connectionSource = wrapped.getWriteConnectionSource();
-        if (isActiveShardedTxn()) {
-            SingleServerBinding binding = getSingleServerBinding();
-            connectionSource = binding.getWriteConnectionSource();
-            binding.release();
-        }
-        return connectionSource;
-    }
-
-    private ConnectionSource getWrappedReadConnectionSource() {
-        ConnectionSource connectionSource = wrapped.getReadConnectionSource();
-        if (isActiveShardedTxn()) {
-            SingleServerBinding binding = getSingleServerBinding();
-            connectionSource = binding.getReadConnectionSource();
-            binding.release();
-        }
-        return connectionSource;
     }
 
     private boolean isActiveShardedTxn() {
@@ -124,11 +115,6 @@ public class ClientSessionBinding implements ReadWriteBinding {
             Server server = wrapped.getCluster().selectServer(new ReadPreferenceServerSelector(wrapped.getReadPreference()));
             session.setPinnedMongosAddress(server.getDescription().getAddress());
         }
-    }
-
-    private SingleServerBinding getSingleServerBinding() {
-        setPinnedMongosAddress();
-        return new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(), wrapped.getReadPreference());
     }
 
     private class SessionBindingConnectionSource implements ConnectionSource {
