@@ -498,8 +498,6 @@ final class CommandOperationHelper {
                             return transformer.apply(connection.command(database, retryCommand, fieldNameValidator,
                                     readPreference, commandResultDecoder, binding.getSessionContext()),
                                     connection.getDescription().getServerAddress());
-                        } catch (MongoException e) {
-                            throw e;
                         } finally {
                             connection.release();
                         }
