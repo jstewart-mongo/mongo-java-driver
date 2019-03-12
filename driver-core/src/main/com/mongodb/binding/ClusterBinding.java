@@ -66,6 +66,11 @@ public class ClusterBinding extends AbstractReferenceCounted implements ReadWrit
         this.readConcern = notNull("readConcern", readConcern);
     }
 
+    /**
+     * Return the cluster.
+     * @return the cluster
+     * @since 3.11
+     */
     public Cluster getCluster() {
         return cluster;
     }

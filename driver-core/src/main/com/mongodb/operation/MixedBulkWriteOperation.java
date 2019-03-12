@@ -284,14 +284,16 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
                 }
                 throw e;
             }
-        } else if (!(exception instanceof MongoWriteConcernWithResponseException)
-                && !shouldAttemptToRetry(originalBatch.getRetryWrites(), exception)) {
-            if (originalBatch.getRetryWrites()) {
-                logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), exception);
-            }
-            throw exception;
         } else {
-            return retryExecuteBatches(binding, currentBatch, exception);
+            if (!(exception instanceof MongoWriteConcernWithResponseException)
+                    && !shouldAttemptToRetry(originalBatch.getRetryWrites(), exception)) {
+                if (originalBatch.getRetryWrites()) {
+                    logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), exception);
+                }
+                throw exception;
+            } else {
+                return retryExecuteBatches(binding, currentBatch, exception);
+            }
         }
     }
 

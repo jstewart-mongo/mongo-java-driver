@@ -125,11 +125,9 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                     throw new MongoInternalException("Invariant violated.  Transaction options read concern can not be null");
                 }
                 commitInProgress = true;
-                CommitTransactionOperation commitTransactionOperation =
-                        new CommitTransactionOperation(transactionOptions.getWriteConcern(),
-                                transactionState == TransactionState.COMMITTED);
-                commitTransactionOperation.setRecoveryToken(getRecoveryToken());
-                delegate.getOperationExecutor().execute(commitTransactionOperation, readConcern, this);
+                delegate.getOperationExecutor().execute(new CommitTransactionOperation(transactionOptions.getWriteConcern(),
+                        transactionState == TransactionState.COMMITTED).recoveryToken(getRecoveryToken()),
+                        readConcern, this);
             }
         } catch (MongoException e) {
             unpinMongosOnError(e);
@@ -170,7 +168,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
     }
 
     private void unpinMongosOnError(final MongoException e) {
-        if (delegate.getCluster().getDescription().getType() == ClusterType.SHARDED
+        if (getPinnedMongosAddress() != null
                 && (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
             setPinnedMongosAddress(null);
         }

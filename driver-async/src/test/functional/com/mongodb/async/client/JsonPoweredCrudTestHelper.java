@@ -582,6 +582,9 @@ public class JsonPoweredCrudTestHelper {
             }
             return toResult(new BsonDocument("insertedIds", insertedIds));
         } catch (MongoBulkWriteException e) {
+            if (clientSession != null && clientSession.hasActiveTransaction()) {
+                throw e;
+            }
                 // Test results are expecting this to look just like bulkWrite error, so translate to InsertOneModel so the result
                 // translation code can be reused.
                 List<InsertOneModel<BsonDocument>> writeModels = new ArrayList<InsertOneModel<BsonDocument>>();

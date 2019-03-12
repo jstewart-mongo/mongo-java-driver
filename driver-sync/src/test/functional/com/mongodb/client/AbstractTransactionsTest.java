@@ -76,7 +76,6 @@ import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public abstract class AbstractTransactionsTest {
-
     private final String filename;
     private final String description;
     private final String databaseName;
@@ -89,6 +88,7 @@ public abstract class AbstractTransactionsTest {
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
     private boolean useMultipleMongoses = false;
+    private ConnectionString connectionString = null;
 
     public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;
@@ -126,13 +126,15 @@ public abstract class AbstractTransactionsTest {
 
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        ConnectionString connectionString = getConnectionString();
+        connectionString = getConnectionString();
         useMultipleMongoses = definition.getBoolean("useMultipleMongoses", BsonBoolean.FALSE).getValue();
         if (useMultipleMongoses) {
+            assumeTrue(isSharded());
             connectionString = getMultiMongosConnectionString();
+            assumeTrue("The system property org.mongodb.test.transaction.uri is not set.", connectionString != null);
         }
-        MongoClientSettings.Builder builder = MongoClientSettings.builder()
-                .applyConnectionString(connectionString);
+        MongoClientSettings.Builder builder = MongoClientSettings.builder().applyConnectionString(connectionString);
+
         if (System.getProperty("java.version").startsWith("1.6.")) {
             builder.applyToSslSettings(new Block<SslSettings.Builder>() {
                 @Override
@@ -328,6 +330,7 @@ public abstract class AbstractTransactionsTest {
                             });
                         }
                     } else if (operationName.equals("targetedFailPoint")) {
+                        assertTrue(failPoint == null);
                         failPoint = new TargetedFailPoint(operation);
                         failPoint.executeFailPoint();
                     } else if (operationName.equals("assertSessionPinned")) {
@@ -492,13 +495,15 @@ public abstract class AbstractTransactionsTest {
     private class TargetedFailPoint {
         private final BsonDocument failPointDocument;
         private final MongoDatabase adminDB;
+        private MongoClient mongoClient;
 
         TargetedFailPoint(final BsonDocument operation) {
             final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
             final ClientSession clientSession = sessionsMap.get(arguments.getString("session").getValue());
 
             if (clientSession.getPinnedMongosAddress() != null) {
-                MongoClient mongoClient = MongoClients.create(MongoClientSettings.builder()
+                mongoClient = MongoClients.create(MongoClientSettings.builder()
+                        .applyConnectionString(connectionString)
                         .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
                             @Override
                             public void apply(final ClusterSettings.Builder builder) {
@@ -521,13 +526,15 @@ public abstract class AbstractTransactionsTest {
             executeCommand(new BsonDocument("configureFailPoint",
                     failPointDocument.getString("configureFailPoint"))
                     .append("mode", new BsonString("off")));
+            if (mongoClient != null) {
+                mongoClient.close();
+            }
         }
 
         private void executeCommand(final BsonDocument doc) {
             if (adminDB != null) {
                 adminDB.runCommand(doc);
             } else {
-                assertFalse(useMultipleMongoses);
                 collectionHelper.runAdminCommand(doc);
             }
         }

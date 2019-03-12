@@ -18,6 +18,7 @@ package com.mongodb.async.client;
 
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
+import com.mongodb.MongoException;
 import com.mongodb.MongoInternalException;
 import com.mongodb.ReadConcern;
 import com.mongodb.TransactionOptions;
@@ -28,6 +29,8 @@ import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.operation.AbortTransactionOperation;
 import com.mongodb.operation.CommitTransactionOperation;
 
+import static com.mongodb.MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL;
+import static com.mongodb.MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL;
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -120,11 +123,15 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
             }
             boolean alreadyCommitted = commitInProgress || transactionState == TransactionState.COMMITTED;
             commitInProgress = true;
-            executor.execute(new CommitTransactionOperation(transactionOptions.getWriteConcern(), alreadyCommitted),
+            executor.execute(new CommitTransactionOperation(transactionOptions.getWriteConcern(), alreadyCommitted)
+                            .recoveryToken(getRecoveryToken()),
                     readConcern, this,
                     new SingleResultCallback<Void>() {
                         @Override
                         public void onResult(final Void result, final Throwable t) {
+                            if (t != null && t instanceof MongoException) {
+                                unpinMongosOnError((MongoException) t);
+                            }
                             commitInProgress = false;
                             transactionState = TransactionState.COMMITTED;
                             callback.onResult(result, t);
@@ -157,10 +164,20 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
                     new SingleResultCallback<Void>() {
                         @Override
                         public void onResult(final Void result, final Throwable t) {
+                            if (t != null && t instanceof MongoException) {
+                                unpinMongosOnError((MongoException) t);
+                            }
                             cleanupTransaction(TransactionState.ABORTED);
                             callback.onResult(null, null);
                         }
                     });
+        }
+    }
+
+    private void unpinMongosOnError(final MongoException e) {
+        if (getPinnedMongosAddress() != null
+                && (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
+            setPinnedMongosAddress(null);
         }
     }
 

@@ -21,6 +21,7 @@ import com.mongodb.MongoClientException;
 import com.mongodb.MongoCredential;
 import com.mongodb.MongoException;
 import com.mongodb.MongoInternalException;
+import com.mongodb.MongoQueryException;
 import com.mongodb.MongoSocketException;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ReadConcern;
@@ -38,6 +39,8 @@ import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerDescription;
+import com.mongodb.diagnostics.logging.Logger;
+import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.ReadOperation;
@@ -57,6 +60,8 @@ import static com.mongodb.assertions.Assertions.notNull;
  * This class is not part of the public API and may be removed or changed at any time.
  */
 public class MongoClientDelegate {
+    private static final Logger LOGGER = Loggers.getLogger("client");
+
     private final Cluster cluster;
     private final ServerSessionPool serverSessionPool;
     private final List<MongoCredential> credentialList;
@@ -194,6 +199,10 @@ public class MongoClientDelegate {
                     session == null && actualClientSession != null);
 
             try {
+                LOGGER.info("MongoClientDelegate#execute: session pin: " +
+                        (session != null ? session.getPinnedMongosAddress() : null));
+                LOGGER.info("--- operation: " + operation.toString());
+                LOGGER.info("session = " + session);
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
@@ -224,15 +233,16 @@ public class MongoClientDelegate {
         }
 
         private void labelException(final @Nullable ClientSession session, final MongoException e) {
-            if ((e instanceof MongoSocketException || e instanceof MongoTimeoutException)
-                    && session != null && session.hasActiveTransaction() && !e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+            if (session != null && session.hasActiveTransaction()
+                    && (e instanceof MongoSocketException || e instanceof MongoTimeoutException
+                    || (e instanceof MongoQueryException && e.getCode() == 91))
+                    && !e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
                 e.addLabel(TRANSIENT_TRANSACTION_ERROR_LABEL);
             }
         }
 
         private void unpinMongosOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
-            if (session != null && cluster.getDescription().getType() == ClusterType.SHARDED
-                    && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+            if (session != null && session.getPinnedMongosAddress() != null && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
                 session.setPinnedMongosAddress(null);
             }
         }

@@ -122,15 +122,7 @@ public final class ProtocolHelper {
     }
 
     static BsonDocument getClusterTime(final ResponseBuffers responseBuffers) {
-        try {
-            BsonValue clusterTime = getField(createBsonReader(responseBuffers), "$clusterTime");
-            if (clusterTime == null) {
-                return null;
-            }
-            return clusterTime.asDocument();
-        } finally {
-            responseBuffers.reset();
-        }
+        return getFieldDocument(responseBuffers, "$clusterTime");
     }
 
     static BsonDocument getClusterTime(final BsonDocument response) {
@@ -142,12 +134,16 @@ public final class ProtocolHelper {
     }
 
     static BsonDocument getRecoveryToken(final ResponseBuffers responseBuffers) {
+        return getFieldDocument(responseBuffers, "recoveryToken");
+    }
+
+    private static BsonDocument getFieldDocument(final ResponseBuffers responseBuffers, final String fieldName) {
         try {
-            BsonValue recoveryToken = getField(createBsonReader(responseBuffers), "recoveryToken");
-            if (recoveryToken == null) {
+            BsonValue fieldValue = getField(createBsonReader(responseBuffers), fieldName);
+            if (fieldValue == null) {
                 return null;
             }
-            return recoveryToken.asDocument();
+            return fieldValue.asDocument();
         } finally {
             responseBuffers.reset();
         }

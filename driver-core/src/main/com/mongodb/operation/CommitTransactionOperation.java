@@ -75,8 +75,9 @@ public class CommitTransactionOperation extends TransactionOperation {
      * @param recoveryToken the recovery token
      * @since 3.11
      */
-    public void setRecoveryToken(final BsonDocument recoveryToken) {
+    public CommitTransactionOperation recoveryToken(final BsonDocument recoveryToken) {
         this.recoveryToken = recoveryToken;
+        return this;
     }
 
     @Override
@@ -145,8 +146,7 @@ public class CommitTransactionOperation extends TransactionOperation {
                     return getRetryCommandModifier().apply(creator.create(serverDescription, connectionDescription));
                 }
             };
-        } else {
-            if (recoveryToken != null) {
+        } else if (recoveryToken != null) {
                 return new CommandCreator() {
                     @Override
                     public BsonDocument create(final ServerDescription serverDescription,
@@ -154,7 +154,6 @@ public class CommitTransactionOperation extends TransactionOperation {
                         return creator.create(serverDescription, connectionDescription).append("recoveryToken", recoveryToken);
                     }
                 };
-            }
         }
         return creator;
     }
