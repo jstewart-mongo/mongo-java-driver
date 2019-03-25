@@ -100,7 +100,7 @@ class TestSessionContext implements SessionContext {
     }
 
     @Override
-    public void unpinMongos() {
+    public void unpinServerAddress() {
         throw new UnsupportedOperationException();
     }
 }

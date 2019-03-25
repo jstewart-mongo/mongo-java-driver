@@ -467,9 +467,6 @@ final class CommandOperationHelper {
                 MongoException exception;
                 try {
                     command = commandCreator.create(source.getServerDescription(), connection.getDescription());
-                    LOGGER.info("CommandOperationHelper#executeRetryableCommand: server description: " +
-                            connection.getDescription().getServerAddress());
-                    LOGGER.info("--- command: " + command.toJson());
                     return transformer.apply(connection.command(database, command, fieldNameValidator, readPreference,
                             commandResultDecoder, binding.getSessionContext()), connection.getDescription().getServerAddress());
                 } catch (MongoException e) {
@@ -478,7 +475,6 @@ final class CommandOperationHelper {
                         if (isRetryWritesEnabled(command)) {
                             logUnableToRetry(command.getFirstKey(), e);
                         }
-                        LOGGER.info("--- not retrying command");
                         throw exception;
                     }
                 } finally {
@@ -486,7 +482,7 @@ final class CommandOperationHelper {
                 }
 
                 if (binding.getSessionContext().hasActiveTransaction()) {
-                    binding.getSessionContext().unpinMongos();
+                    binding.getSessionContext().unpinServerAddress();
                 }
                 final BsonDocument originalCommand = command;
                 final MongoException originalException = exception;
@@ -499,14 +495,9 @@ final class CommandOperationHelper {
                             }
                             BsonDocument retryCommand = retryCommandModifier.apply(originalCommand);
                             logRetryExecute(retryCommand.getFirstKey(), originalException);
-                            LOGGER.info("CommandOperationHelper#retryableCommand: server description: " +
-                                    connection.getDescription().getServerAddress());
                             return transformer.apply(connection.command(database, retryCommand, fieldNameValidator,
                                     readPreference, commandResultDecoder, binding.getSessionContext()),
                                     connection.getDescription().getServerAddress());
-                        } catch (MongoException e) {
-                            LOGGER.info("--- exception on retry: " + e.toString());
-                            throw e;
                         } finally {
                             connection.release();
                         }
@@ -545,9 +536,6 @@ final class CommandOperationHelper {
                                 try {
                                     BsonDocument command = commandCreator.create(source.getServerDescription(),
                                             connection.getDescription());
-                                    LOGGER.info("CommandOperationHelper#executeRetryableCommand: server description: " +
-                                            connection.getDescription().getServerAddress());
-                                    LOGGER.info("--- command: " + command.toJson());
                                     connection.commandAsync(database, command, fieldNameValidator, readPreference,
                                             commandResultDecoder, binding.getSessionContext(),
                                             createCommandCallback(binding, source, connection, database, readPreference, command,
@@ -580,7 +568,6 @@ final class CommandOperationHelper {
             public void onResult(final T result, final Throwable originalError) {
                 SingleResultCallback<R> releasingCallback = releasingCallback(callback, oldSource, oldConnection);
                 if (originalError != null) {
-                    LOGGER.info("--- originalError: " + originalError.toString());
                     checkRetryableException(originalError, releasingCallback);
                 } else {
                     try {
@@ -596,13 +583,12 @@ final class CommandOperationHelper {
                     if (isRetryWritesEnabled(command)) {
                         logUnableToRetry(command.getFirstKey(), originalError);
                     }
-                    LOGGER.info("--- not retrying command");
                     releasingCallback.onResult(null, originalError);
                 } else {
                     oldConnection.release();
                     oldSource.release();
                     if (binding.getSessionContext().hasActiveTransaction()) {
-                        binding.getSessionContext().unpinMongos();
+                        binding.getSessionContext().unpinServerAddress();
                     }
                     retryableCommand(originalError);
                 }
@@ -620,8 +606,6 @@ final class CommandOperationHelper {
                                 binding.getSessionContext())) {
                             releasingCallback(callback, source, connection).onResult(null, originalError);
                         } else {
-                            LOGGER.info("CommandOperationHelper#retryableCommand: server description: " +
-                                    connection.getDescription().getServerAddress());
                             connection.commandAsync(database, retryCommand, fieldNameValidator, readPreference,
                                     commandResultDecoder, binding.getSessionContext(),
                                     new TransformingResultCallback<T, R>(transformer,
@@ -649,14 +633,12 @@ final class CommandOperationHelper {
         @Override
         public void onResult(final T result, final Throwable t) {
             if (t != null) {
-                LOGGER.info("--- exception on retry: " + t.toString());
                 callback.onResult(null, t);
             } else {
                 try {
                     R transformedResult = transformer.apply(result, serverAddress);
                     callback.onResult(transformedResult, null);
                 } catch (Throwable transformError) {
-                    LOGGER.info("--- exception on retry (transformError): " + transformError.getMessage());
                     callback.onResult(null, transformError);
                 }
             }

@@ -335,12 +335,12 @@ public class TransactionsTest {
                     } else if (operationName.equals("assertSessionPinned")) {
                         if (isSharded()) {
                             final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
-                            assertNotNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedMongosAddress());
+                            assertNotNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedServerAddress());
                         }
                     } else if (operationName.equals("assertSessionUnpinned")) {
                         if (isSharded()) {
                             final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
-                            assertNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedMongosAddress());
+                            assertNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedServerAddress());
                         }
                     } else {
                         BsonDocument actualOutcome = helper.getOperationResults(operation, clientSession);
@@ -517,11 +517,11 @@ public class TransactionsTest {
             final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
             final ClientSession clientSession = sessionsMap.get(arguments.getString("session").getValue());
 
-            if (clientSession.getPinnedMongosAddress() != null) {
+            if (clientSession.getPinnedServerAddress() != null) {
                 mongoClient = MongoClients.create(MongoClientSettings.builder()
                         .applyConnectionString(connectionString)
                         .clusterSettings(ClusterSettings.builder()
-                        .hosts(singletonList(clientSession.getPinnedMongosAddress())).build()).build());
+                        .hosts(singletonList(clientSession.getPinnedServerAddress())).build()).build());
 
                 adminDB = mongoClient.getDatabase("admin");
             } else {

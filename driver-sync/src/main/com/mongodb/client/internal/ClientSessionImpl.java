@@ -25,7 +25,6 @@ import com.mongodb.TransactionOptions;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.TransactionBody;
-import com.mongodb.connection.ClusterType;
 import com.mongodb.internal.session.BaseClientSessionImpl;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.operation.AbortTransactionOperation;
@@ -106,7 +105,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
-        setPinnedMongosAddress(null);
+        setPinnedServerAddress(null);
     }
 
     @Override
@@ -130,7 +129,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                         readConcern, this);
             }
         } catch (MongoException e) {
-            unpinMongosOnError(e);
+            unpinServerAddressOnError(e);
             throw e;
         } finally {
             transactionState = TransactionState.COMMITTED;
@@ -160,17 +159,17 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
             }
         } catch (Exception e) {
             if (e instanceof MongoException) {
-                unpinMongosOnError((MongoException) e);
+                unpinServerAddressOnError((MongoException) e);
             }
         } finally {
             cleanupTransaction(TransactionState.ABORTED);
         }
     }
 
-    private void unpinMongosOnError(final MongoException e) {
-        if (getPinnedMongosAddress() != null
+    private void unpinServerAddressOnError(final MongoException e) {
+        if (getPinnedServerAddress() != null
                 && (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
-            setPinnedMongosAddress(null);
+            setPinnedServerAddress(null);
         }
     }
 
@@ -207,7 +206,7 @@ final class ClientSessionImpl extends BaseClientSessionImpl implements ClientSes
                         commitTransaction();
                         break;
                     } catch (MongoException e) {
-                        unpinMongosOnError(e);
+                        unpinServerAddressOnError(e);
                         if (ClientSessionClock.INSTANCE.now() - startTime < MAX_RETRY_TIME_LIMIT_MS) {
                             applyMajorityWriteConcernToTransactionOptions();
 

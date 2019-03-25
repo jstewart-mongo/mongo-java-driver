@@ -87,7 +87,7 @@ class OperationExecutorImpl implements OperationExecutor {
                                                 public void onResult(final T result, final Throwable t) {
                                                     try {
                                                         labelException(t, session);
-                                                        unpinMongosOnTransientTransactionError(session, t);
+                                                        unpinServerAddressOnTransientTransactionError(session, t);
                                                         errHandlingCallback.onResult(result, t);
                                                     } finally {
                                                         binding.release();
@@ -133,7 +133,7 @@ class OperationExecutorImpl implements OperationExecutor {
                                             public void onResult(final T result, final Throwable t) {
                                                 try {
                                                     labelException(t, session);
-                                                    unpinMongosOnTransientTransactionError(session, t);
+                                                    unpinServerAddressOnTransientTransactionError(session, t);
                                                     errHandlingCallback.onResult(result, t);
                                                 } finally {
                                                     binding.release();
@@ -157,10 +157,10 @@ class OperationExecutorImpl implements OperationExecutor {
         }
     }
 
-    private void unpinMongosOnTransientTransactionError(final @Nullable ClientSession session, final Throwable throwable) {
+    private void unpinServerAddressOnTransientTransactionError(final @Nullable ClientSession session, final Throwable throwable) {
         if (session != null && throwable != null && throwable instanceof MongoException
                 && ((MongoException) throwable).hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
-            session.setPinnedMongosAddress(null);
+            session.setPinnedServerAddress(null);
         }
     }
 

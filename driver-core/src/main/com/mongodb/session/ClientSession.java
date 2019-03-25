@@ -44,7 +44,7 @@ public interface ClientSession extends Closeable {
      * @since 3.11
      */
     @Nullable
-    ServerAddress getPinnedMongosAddress();
+    ServerAddress getPinnedServerAddress();
 
     /**
      * Set the server address of the pinned mongos.
@@ -54,7 +54,7 @@ public interface ClientSession extends Closeable {
      * @mongodb.server.release 4.2
      * @since 3.11
      */
-    void setPinnedMongosAddress(ServerAddress address);
+    void setPinnedServerAddress(ServerAddress address);
 
     /**
      * Get the recovery token from the latest outcome in a sharded transaction.

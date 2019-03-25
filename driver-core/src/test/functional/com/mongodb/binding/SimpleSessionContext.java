@@ -109,7 +109,7 @@ class SimpleSessionContext implements SessionContext {
     }
 
     @Override
-    public void unpinMongos() {
+    public void unpinServerAddress() {
         throw new UnsupportedOperationException();
     }
 

@@ -86,7 +86,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
     private void wrapConnectionSource(final AsyncConnectionSource connectionSource,
                                       final SingleResultCallback<AsyncConnectionSource> callback) {
         if (isActiveShardedTxn()) {
-            if (session.getPinnedMongosAddress() == null) {
+            if (session.getPinnedServerAddress() == null) {
                 wrapped.getCluster().selectServerAsync(
                         new ReadPreferenceServerSelector(wrapped.getReadPreference()),
                         new SingleResultCallback<Server>() {
@@ -95,7 +95,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
                                 if (t != null) {
                                     callback.onResult(null, t);
                                 } else {
-                                    session.setPinnedMongosAddress(server.getDescription().getAddress());
+                                    session.setPinnedServerAddress(server.getDescription().getAddress());
                                     setSingleServerBindingConnectionSource(callback);
                                 }
                             }
@@ -110,7 +110,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
 
     private void setSingleServerBindingConnectionSource(final SingleResultCallback<AsyncConnectionSource> callback) {
         final AsyncSingleServerBinding binding =
-                new AsyncSingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(), wrapped.getReadPreference());
+                new AsyncSingleServerBinding(wrapped.getCluster(), session.getPinnedServerAddress(), wrapped.getReadPreference());
         binding.getWriteConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
             @Override
             public void onResult(final AsyncConnectionSource result, final Throwable t) {

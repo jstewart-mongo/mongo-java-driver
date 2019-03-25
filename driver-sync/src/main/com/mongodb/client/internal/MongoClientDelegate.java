@@ -39,8 +39,6 @@ import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.ReadOperation;
@@ -60,8 +58,6 @@ import static com.mongodb.assertions.Assertions.notNull;
  * This class is not part of the public API and may be removed or changed at any time.
  */
 public class MongoClientDelegate {
-    private static final Logger LOGGER = Loggers.getLogger("client");
-
     private final Cluster cluster;
     private final ServerSessionPool serverSessionPool;
     private final List<MongoCredential> credentialList;
@@ -185,7 +181,7 @@ public class MongoClientDelegate {
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
-                unpinMongosOnTransientTransactionError(session, e);
+                unpinServerAddressOnTransientTransactionError(session, e);
                 throw e;
             } finally {
                 binding.release();
@@ -199,14 +195,10 @@ public class MongoClientDelegate {
                     session == null && actualClientSession != null);
 
             try {
-                LOGGER.info("MongoClientDelegate#execute: session pin: " +
-                        (session != null ? session.getPinnedMongosAddress() : null));
-                LOGGER.info("--- operation: " + operation.toString());
-                LOGGER.info("session = " + session);
                 return operation.execute(binding);
             } catch (MongoException e) {
                 labelException(session, e);
-                unpinMongosOnTransientTransactionError(session, e);
+                unpinServerAddressOnTransientTransactionError(session, e);
                 throw e;
             } finally {
                 binding.release();
@@ -241,9 +233,9 @@ public class MongoClientDelegate {
             }
         }
 
-        private void unpinMongosOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
-            if (session != null && session.getPinnedMongosAddress() != null && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
-                session.setPinnedMongosAddress(null);
+        private void unpinServerAddressOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
+            if (session != null && session.getPinnedServerAddress() != null && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                session.setPinnedServerAddress(null);
             }
         }
 

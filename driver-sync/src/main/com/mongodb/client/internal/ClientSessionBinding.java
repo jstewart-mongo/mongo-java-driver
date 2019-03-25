@@ -91,8 +91,8 @@ public class ClientSessionBinding implements ReadWriteBinding {
     private ConnectionSource wrapConnectionSource(final ConnectionSource connectionSource) {
         ConnectionSource retVal = connectionSource;
         if (isActiveShardedTxn()) {
-            setPinnedMongosAddress();
-            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedMongosAddress(),
+            setPinnedServerAddress();
+            SingleServerBinding binding = new SingleServerBinding(wrapped.getCluster(), session.getPinnedServerAddress(),
                     wrapped.getReadPreference());
             retVal = binding.getWriteConnectionSource();
             binding.release();
@@ -109,10 +109,10 @@ public class ClientSessionBinding implements ReadWriteBinding {
         return session.hasActiveTransaction() && wrapped.getCluster().getDescription().getType() == ClusterType.SHARDED;
     }
 
-    private void setPinnedMongosAddress() {
-        if (session.getPinnedMongosAddress() == null) {
+    private void setPinnedServerAddress() {
+        if (session.getPinnedServerAddress() == null) {
             Server server = wrapped.getCluster().selectServer(new ReadPreferenceServerSelector(wrapped.getReadPreference()));
-            session.setPinnedMongosAddress(server.getDescription().getAddress());
+            session.setPinnedServerAddress(server.getDescription().getAddress());
         }
     }
 

@@ -335,10 +335,10 @@ public abstract class AbstractTransactionsTest {
                         failPoint.executeFailPoint();
                     } else if (operationName.equals("assertSessionPinned")) {
                         final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
-                        assertNotNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedMongosAddress());
+                        assertNotNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedServerAddress());
                     } else if (operationName.equals("assertSessionUnpinned")) {
                         final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
-                        assertNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedMongosAddress());
+                        assertNull(sessionsMap.get(arguments.getString("session").getValue()).getPinnedServerAddress());
                     } else {
                         BsonDocument actualOutcome = helper.getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
@@ -501,13 +501,13 @@ public abstract class AbstractTransactionsTest {
             final BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
             final ClientSession clientSession = sessionsMap.get(arguments.getString("session").getValue());
 
-            if (clientSession.getPinnedMongosAddress() != null) {
+            if (clientSession.getPinnedServerAddress() != null) {
                 mongoClient = MongoClients.create(MongoClientSettings.builder()
                         .applyConnectionString(connectionString)
                         .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
                             @Override
                             public void apply(final ClusterSettings.Builder builder) {
-                                builder.hosts(singletonList(clientSession.getPinnedMongosAddress()));
+                                builder.hosts(singletonList(clientSession.getPinnedServerAddress()));
                             }
                         }).build());
 

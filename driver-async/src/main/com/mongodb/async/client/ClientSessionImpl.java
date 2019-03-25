@@ -102,7 +102,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
         if (!writeConcern.isAcknowledged()) {
             throw new MongoClientException("Transactions do not support unacknowledged write concern");
         }
-        setPinnedMongosAddress(null);
+        setPinnedServerAddress(null);
     }
 
     @Override
@@ -130,7 +130,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
                         @Override
                         public void onResult(final Void result, final Throwable t) {
                             if (t != null && t instanceof MongoException) {
-                                unpinMongosOnError((MongoException) t);
+                                unpinServerAddressOnError((MongoException) t);
                             }
                             commitInProgress = false;
                             transactionState = TransactionState.COMMITTED;
@@ -165,7 +165,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
                         @Override
                         public void onResult(final Void result, final Throwable t) {
                             if (t != null && t instanceof MongoException) {
-                                unpinMongosOnError((MongoException) t);
+                                unpinServerAddressOnError((MongoException) t);
                             }
                             cleanupTransaction(TransactionState.ABORTED);
                             callback.onResult(null, null);
@@ -174,10 +174,10 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
         }
     }
 
-    private void unpinMongosOnError(final MongoException e) {
-        if (getPinnedMongosAddress() != null
+    private void unpinServerAddressOnError(final MongoException e) {
+        if (getPinnedServerAddress() != null
                 && (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
-            setPinnedMongosAddress(null);
+            setPinnedServerAddress(null);
         }
     }
 

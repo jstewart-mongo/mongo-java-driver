@@ -86,7 +86,7 @@ public abstract class ClientSessionContext implements SessionContext {
     }
 
     @Override
-    public void unpinMongos() {
-        clientSession.setPinnedMongosAddress(null);
+    public void unpinServerAddress() {
+        clientSession.setPinnedServerAddress(null);
     }
 }

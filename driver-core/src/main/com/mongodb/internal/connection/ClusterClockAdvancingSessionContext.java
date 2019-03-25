@@ -103,7 +103,7 @@ public final class ClusterClockAdvancingSessionContext implements SessionContext
     }
 
     @Override
-    public void unpinMongos() {
-        wrapped.unpinMongos();
+    public void unpinServerAddress() {
+        wrapped.unpinServerAddress();
     }
 }

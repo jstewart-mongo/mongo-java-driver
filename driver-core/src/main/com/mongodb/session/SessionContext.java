@@ -137,5 +137,5 @@ public interface SessionContext {
      *
      * @since 3.11
      */
-    void unpinMongos();
+    void unpinServerAddress();
 }

@@ -73,6 +73,7 @@ public class CommitTransactionOperation extends TransactionOperation {
      * Set the recovery token.
      *
      * @param recoveryToken the recovery token
+     * @return the CommitTransactionOperation
      * @since 3.11
      */
     public CommitTransactionOperation recoveryToken(final BsonDocument recoveryToken) {
