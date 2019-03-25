@@ -142,8 +142,7 @@ public class TransactionsTest {
             assumeTrue("The system property org.mongodb.test.transaction.uri is not set.", connectionString != null);
         }
 
-        MongoClientSettings.Builder builder = MongoClientSettings.builder()
-                .applyConnectionString(connectionString);
+        MongoClientSettings.Builder builder = MongoClientSettings.builder().applyConnectionString(connectionString);
 
         if (System.getProperty("java.version").startsWith("1.6.")) {
             builder.applyToSslSettings(new Block<SslSettings.Builder>() {

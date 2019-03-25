@@ -79,13 +79,11 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
     @Override
     public ConnectionSource getReadConnectionSource() {
-        ConnectionSource readConnectionSource = wrapConnectionSource(wrapped.getReadConnectionSource());
-        return new SessionBindingConnectionSource(readConnectionSource);
+        return new SessionBindingConnectionSource(wrapConnectionSource(wrapped.getReadConnectionSource()));
     }
 
     public ConnectionSource getWriteConnectionSource() {
-        ConnectionSource writeConnectionSource = wrapConnectionSource(wrapped.getWriteConnectionSource());
-        return new SessionBindingConnectionSource(writeConnectionSource);
+        return new SessionBindingConnectionSource(wrapConnectionSource(wrapped.getWriteConnectionSource()));
     }
 
     private ConnectionSource wrapConnectionSource(final ConnectionSource connectionSource) {
