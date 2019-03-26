@@ -582,6 +582,7 @@ public class JsonPoweredCrudTestHelper {
             }
             return toResult(new BsonDocument("insertedIds", insertedIds));
         } catch (MongoBulkWriteException e) {
+            // For transaction tests, the exception is expected to be returned.
             if (clientSession != null && clientSession.hasActiveTransaction()) {
                 throw e;
             }
