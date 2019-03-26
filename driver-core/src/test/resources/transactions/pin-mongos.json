@@ -132,6 +132,18 @@
       "useMultipleMongoses": true,
       "operations": [
         {
+          "name": "distinct",
+          "object": "collection",
+          "arguments": {
+            "fieldName": "_id",
+            "session": "session0"
+          },
+          "result": [
+            1,
+            2
+          ]
+        },
+        {
           "name": "startTransaction",
           "object": "session0"
         },
