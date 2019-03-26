@@ -234,7 +234,7 @@ public class MongoClientDelegate {
         }
 
         private void unpinServerAddressOnTransientTransactionError(final @Nullable ClientSession session, final MongoException e) {
-            if (session != null && session.getPinnedServerAddress() != null && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+            if (session != null && e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL)) {
                 session.setPinnedServerAddress(null);
             }
         }

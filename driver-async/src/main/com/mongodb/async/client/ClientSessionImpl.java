@@ -175,8 +175,7 @@ class ClientSessionImpl extends BaseClientSessionImpl implements ClientSession {
     }
 
     private void unpinServerAddressOnError(final MongoException e) {
-        if (getPinnedServerAddress() != null
-                && (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL))) {
+        if (e.hasErrorLabel(TRANSIENT_TRANSACTION_ERROR_LABEL) || e.hasErrorLabel(UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
             setPinnedServerAddress(null);
         }
     }
