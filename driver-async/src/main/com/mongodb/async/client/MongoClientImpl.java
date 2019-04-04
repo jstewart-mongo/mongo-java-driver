@@ -99,7 +99,7 @@ class MongoClientImpl implements MongoClient {
     @Override
     public MongoDatabase getDatabase(final String name) {
         return new MongoDatabaseImpl(name, settings.getCodecRegistry(), settings.getReadPreference(), settings.getWriteConcern(),
-                settings.getRetryWrites(), settings.getReadConcern(), executor);
+                settings.getRetryWrites(), settings.getRetryReads(), settings.getReadConcern(), executor);
     }
 
     @Override

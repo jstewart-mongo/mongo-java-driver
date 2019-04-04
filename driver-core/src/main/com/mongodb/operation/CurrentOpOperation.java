@@ -42,7 +42,7 @@ public class CurrentOpOperation implements ReadOperation<BsonDocument> {
             @Override
             public BsonDocument call(final Connection connection) {
                 if (serverIsAtLeastVersionThreeDotTwo(connection.getDescription())) {
-                    return executeWrappedCommandProtocol(binding, "admin", new BsonDocument("currentOp", new BsonInt32(1)), connection);
+                    return CommandOperationHelper.executeCommand(binding, true, "admin", new BsonDocument("currentOp", new BsonInt32(1)), connection);
                 } else {
                     return connection.query(new MongoNamespace("admin", "$cmd.sys.inprog"), new BsonDocument(), null, 0, 1, 0,
                                            binding.getReadPreference().isSlaveOk(), false, false, false, false, false,

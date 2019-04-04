@@ -63,9 +63,9 @@ public final class MongoIterables {
                                  final Class<TDocument> documentClass, final Class<TResult> resultClass,
                                  final CodecRegistry codecRegistry,
                                  final ReadPreference readPreference, final ReadConcern readConcern,
-                                 final OperationExecutor executor, final Bson filter) {
+                                 final OperationExecutor executor, final Bson filter, final boolean retryReads) {
         return factory.findOf(clientSession, namespace, documentClass, resultClass, codecRegistry, readPreference, readConcern, executor,
-                filter);
+                filter, retryReads);
     }
 
     public static <TDocument, TResult>
@@ -113,16 +113,16 @@ public final class MongoIterables {
                                          final Class<TDocument> documentClass, final Class<TResult> resultClass,
                                          final CodecRegistry codecRegistry, final ReadPreference readPreference,
                                          final ReadConcern readConcern, final OperationExecutor executor,
-                                         final String fieldName, final Bson filter) {
+                                         final String fieldName, final Bson filter, final boolean retryReads) {
         return factory.distinctOf(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, fieldName, filter);
+                readPreference, readConcern, executor, fieldName, filter, retryReads);
     }
 
     public static <TResult>
     ListDatabasesIterable<TResult> listDatabasesOf(final @Nullable ClientSession clientSession, final Class<TResult> resultClass,
                                                    final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                                                   final OperationExecutor executor) {
-        return factory.listDatabasesOf(clientSession, resultClass, codecRegistry, readPreference, executor);
+                                                   final OperationExecutor executor, final boolean retryReads) {
+        return factory.listDatabasesOf(clientSession, resultClass, codecRegistry, readPreference, executor, retryReads);
     }
 
     public static <TResult>

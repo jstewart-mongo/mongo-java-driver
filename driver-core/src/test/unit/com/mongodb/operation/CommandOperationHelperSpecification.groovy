@@ -45,7 +45,7 @@ import spock.lang.Specification
 
 import static com.mongodb.ReadPreference.primary
 import static com.mongodb.operation.CommandOperationHelper.executeRetryableCommand
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol
+import static com.mongodb.operation.CommandOperationHelper.executeCommand
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError
@@ -251,7 +251,7 @@ class CommandOperationHelperSpecification extends Specification {
         def connectionDescription = Stub(ConnectionDescription)
 
         when:
-        executeWrappedCommandProtocol(readBinding, dbName, command, decoder, function)
+        executeCommand(readBinding, dbName, command, decoder, function)
 
         then:
         _ * connection.getDescription() >> connectionDescription

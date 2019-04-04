@@ -71,6 +71,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
     private final Decoder<T> decoder;
     private final AggregateTarget aggregateTarget;
     private final PipelineCreator pipelineCreator;
+    private final boolean retryReads;
 
     private Boolean allowDiskUse;
     private Integer batchSize;
@@ -83,17 +84,29 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
 
     AggregateOperationImpl(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
                            final AggregationLevel aggregationLevel) {
+        this(namespace, pipeline, decoder, aggregationLevel, true);
+    }
+
+    AggregateOperationImpl(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
+                           final AggregationLevel aggregationLevel, final boolean retryReads) {
         this(namespace, pipeline, decoder, defaultAggregateTarget(notNull("aggregationLevel", aggregationLevel),
-                notNull("namespace", namespace).getCollectionName()), defaultPipelineCreator(pipeline));
+                notNull("namespace", namespace).getCollectionName()), defaultPipelineCreator(pipeline), retryReads);
     }
 
     AggregateOperationImpl(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
                            final AggregateTarget aggregateTarget, final PipelineCreator pipelineCreator) {
+        this(namespace, pipeline, decoder, aggregateTarget, pipelineCreator, true);
+    }
+
+    AggregateOperationImpl(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
+                           final AggregateTarget aggregateTarget, final PipelineCreator pipelineCreator,
+                           final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.pipeline = notNull("pipeline", pipeline);
         this.decoder = notNull("decoder", decoder);
         this.aggregateTarget = notNull("aggregateTarget", aggregateTarget);
         this.pipelineCreator = notNull("pipelineCreator", pipelineCreator);
+        this.retryReads = retryReads;
     }
 
     MongoNamespace getNamespace() {
@@ -193,7 +206,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
             @Override
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(),
+                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
                         getCommand(connection.getDescription(), binding.getSessionContext()),
                         CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
                         connection, transformer(source, connection));

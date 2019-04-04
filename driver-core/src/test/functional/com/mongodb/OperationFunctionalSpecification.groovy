@@ -191,40 +191,42 @@ class OperationFunctionalSpecification extends Specification {
         params.checkCommand = params.checkCommand ?: true
         params.checkSlaveOk = params.checkSlaveOk ?: false
         params.readPreference = params.readPreference ?: ReadPreference.primary()
-        params.retryable = params.retryable ?: false
+        params.retryableWrites = params.retryableWrites ?: false
+        params.retryableReads = params.retryableReads ?: false
         params.serverType = params.serverType ?: ServerType.STANDALONE
         testOperation(params.operation, params.serverVersion, params.expectedCommand, params.async, params.result, params.checkCommand,
-                params.checkSlaveOk, params.readPreference, params.retryable, params.serverType)
+                params.checkSlaveOk, params.readPreference, params.retryableWrites, params.retryableReads, params.serverType)
     }
 
     void testOperationInTransaction(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
                                     boolean checkCommand = true, boolean checkSlaveOk = false,
-                                    ReadPreference readPreference = ReadPreference.primary(), boolean retryable = false,
-                                    ServerType serverType = ServerType.STANDALONE) {
+                                    ReadPreference readPreference = ReadPreference.primary(), boolean retryableWrites = false,
+                                    boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE) {
         testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSlaveOk,
-                readPreference, retryable, serverType, true)
+                readPreference, retryableWrites, retryableReads, serverType, true)
     }
 
     void testOperation(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
                        boolean checkCommand = true, boolean checkSlaveOk = false, ReadPreference readPreference = ReadPreference.primary(),
-                       boolean retryable = false, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+                       boolean retryableWrites = false, boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE,
+                       Boolean activeTransaction = false) {
         testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSlaveOk,
-        readPreference, retryable, serverType, activeTransaction)
+        readPreference, retryableWrites, retryableReads, serverType, activeTransaction)
     }
 
     void testOperation(operation, List<Integer> serverVersion, ReadConcern readConcern, BsonDocument expectedCommand, boolean async,
                        result = null, boolean checkCommand = true, boolean checkSlaveOk = false,
-                       ReadPreference readPreference = ReadPreference.primary(), boolean retryable = false,
-                       ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+                       ReadPreference readPreference = ReadPreference.primary(), boolean retryableWrites = false,
+                       boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
-        test(operation, serverVersion, readConcern, result, checkCommand, expectedCommand, checkSlaveOk, readPreference, retryable,
-                serverType, activeTransaction)
+        test(operation, serverVersion, readConcern, result, checkCommand, expectedCommand, checkSlaveOk, readPreference,
+                retryableWrites, retryableReads, serverType, activeTransaction)
     }
 
     void testOperationRetries(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
                               Boolean activeTransaction = false) {
         testOperation(operation, serverVersion, expectedCommand, async, result, true, false, ReadPreference.primary(), true,
-             ServerType.REPLICA_SET_PRIMARY, activeTransaction)
+             true, ServerType.REPLICA_SET_PRIMARY, activeTransaction)
     }
 
     void testRetryableOperationThrowsOriginalError(operation, List<List<Integer>> serverVersions, List<ServerType> serverTypes,
@@ -249,8 +251,9 @@ class OperationFunctionalSpecification extends Specification {
 
     def testSyncOperation(operation, List<Integer> serverVersion, ReadConcern readConcern, result, Boolean checkCommand=true,
                           BsonDocument expectedCommand=null, Boolean checkSlaveOk=false,
-                          ReadPreference readPreference=ReadPreference.primary(), Boolean retryable = false,
-                          ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+                          ReadPreference readPreference=ReadPreference.primary(), Boolean retryableWrites = false,
+                          Boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE,
+                          Boolean activeTransaction = false) {
         def connection = Mock(Connection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)
@@ -288,7 +291,7 @@ class OperationFunctionalSpecification extends Specification {
             }
         }
 
-        if (retryable) {
+        if (retryableWrites) {
             1 * connection.command(*_) >> { throw new MongoSocketException('Some socket error', Stub(ServerAddress)) }
         }
 
@@ -313,7 +316,7 @@ class OperationFunctionalSpecification extends Specification {
             result
         }
 
-        if (retryable) {
+        if (retryableWrites) {
             2 * connection.release()
         } else {
             1 * connection.release()
@@ -327,7 +330,8 @@ class OperationFunctionalSpecification extends Specification {
 
     def testAsyncOperation(operation = operation, List<Integer> serverVersion = serverVersion, ReadConcern readConcern, result = null,
                            Boolean checkCommand = true, BsonDocument expectedCommand = null, Boolean checkSlaveOk = false,
-                           ReadPreference readPreference = ReadPreference.primary(), Boolean retryable = false,
+                           ReadPreference readPreference = ReadPreference.primary(), Boolean retryableWrites = false,
+                           Boolean retryableReads = false,
                            ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
         def connection = Mock(AsyncConnection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
@@ -365,7 +369,7 @@ class OperationFunctionalSpecification extends Specification {
         }
         def callback = new FutureResultCallback()
 
-        if (retryable) {
+        if (retryableWrites) {
             1 * connection.commandAsync(*_) >> {
                 it.last().onResult(null, new MongoSocketException('Some socket error', Stub(ServerAddress)))
             }
@@ -392,7 +396,7 @@ class OperationFunctionalSpecification extends Specification {
             it[5].onResult(result, null)
         }
 
-        if (retryable) {
+        if (retryableWrites) {
             2 * connection.release()
         } else {
             1 * connection.release()

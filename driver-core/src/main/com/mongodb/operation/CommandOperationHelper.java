@@ -53,7 +53,9 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
+import static com.mongodb.operation.OperationHelper.canRetryRead;
 import static com.mongodb.operation.OperationHelper.canRetryWrite;
+import static com.mongodb.operation.OperationHelper.isRetryableRead;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
@@ -105,47 +107,108 @@ final class CommandOperationHelper {
 
     /* Read Binding Helpers */
 
-    static BsonDocument executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command) {
-        return executeWrappedCommandProtocol(binding, database, command, new BsonDocumentCodec());
+    static BsonDocument executeCommand(final ReadBinding binding, final boolean retryReads, final String database,
+                                       final BsonDocument command) {
+        return executeCommand(binding, retryReads, database, command, new BsonDocumentCodec());
     }
 
-    static <T> T executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command,
-                                               final CommandTransformer<BsonDocument, T> transformer) {
-        return executeWrappedCommandProtocol(binding, database, command, new BsonDocumentCodec(), transformer);
+    static <T> T executeCommand(final ReadBinding binding, final boolean retryReads, final String database, final BsonDocument command,
+                                final CommandTransformer<BsonDocument, T> transformer) {
+        return executeCommand(binding, retryReads, database, command, new BsonDocumentCodec(), transformer);
     }
 
-    static <T> T executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command,
-                                               final Decoder<T> decoder) {
-        return executeWrappedCommandProtocol(binding, database, command, decoder, new IdentityTransformer<T>());
+    static <T> T executeCommand(final ReadBinding binding, final boolean retryReads, final String database, final BsonDocument command,
+                                final Decoder<T> decoder) {
+        return executeCommand(binding, retryReads, database, command, decoder, new IdentityTransformer<T>());
     }
 
-    static <D, T> T executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command,
-                                                  final Decoder<D> decoder, final CommandTransformer<D, T> transformer) {
+    static <D, T> T executeCommand(final ReadBinding binding, final boolean retryReads, final String database, final BsonDocument command,
+                                   final Decoder<D> decoder, final CommandTransformer<D, T> transformer) {
         ConnectionSource source = binding.getReadConnectionSource();
+        MongoException exception;
+
         try {
             return transformer.apply(executeWrappedCommandProtocol(database, command, decoder, source,
-                                                                   binding.getReadPreference()),
-                                     source.getServerDescription().getAddress());
+                    binding.getReadPreference()),
+                    source.getServerDescription().getAddress());
+        } catch (MongoException e) {
+            exception = e;
+            if (!shouldAttemptToRetryRead(retryReads, e)) {
+                if (retryReads) {
+                    logUnableToRetry(command.getFirstKey(), e);
+                }
+                throw exception;
+            }
         } finally {
             source.release();
         }
+
+        final MongoException originalException = exception;
+        return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<T>() {
+            @Override
+            public T call(ConnectionSource source, Connection connection) {
+                try {
+                    if (!isRetryableRead(retryReads, source.getServerDescription(), connection.getDescription(),
+                            binding.getSessionContext())) {
+                        throw originalException;
+                    }
+                    logRetryExecute(command.getFirstKey(), originalException);
+                    return transformer.apply(executeWrappedCommandProtocol(database, command, decoder, source,
+                            binding.getReadPreference()),
+                            source.getServerDescription().getAddress());
+                } finally {
+                    connection.release();
+                }
+            }
+        });
     }
 
-    static BsonDocument executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command,
-                                               final Connection connection) {
-        return executeWrappedCommandProtocol(binding, database, command, connection, new IdentityTransformer<BsonDocument>());
+    static BsonDocument executeCommand(final ReadBinding binding, final boolean retryReads, final String database,
+                                       final BsonDocument command, final Connection connection) {
+        return executeCommand(binding, retryReads, database, command, connection, new IdentityTransformer<BsonDocument>());
     }
 
-    static <T> T executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command,
-                                               final Connection connection, final CommandTransformer<BsonDocument, T> transformer) {
-        return executeWrappedCommandProtocol(binding, database, command, new BsonDocumentCodec(), connection, transformer);
+    static <T> T executeCommand(final ReadBinding binding, final boolean retryReads, final String database, final BsonDocument command,
+                                final Connection connection, final CommandTransformer<BsonDocument, T> transformer) {
+        return executeCommand(binding, retryReads, database, command, new BsonDocumentCodec(), connection, transformer);
     }
 
-    static <T> T executeWrappedCommandProtocol(final ReadBinding binding, final String database, final BsonDocument command,
-                                               final Decoder<BsonDocument> decoder, final Connection connection,
-                                               final CommandTransformer<BsonDocument, T> transformer) {
-        return executeWrappedCommandProtocol(database, command, decoder, connection, binding.getReadPreference(), transformer,
-                binding.getSessionContext());
+    static <T> T executeCommand(final ReadBinding binding, final boolean retryReads, final String database, final BsonDocument command,
+                                final Decoder<BsonDocument> decoder, final Connection connection,
+                                final CommandTransformer<BsonDocument, T> transformer) {
+        MongoException exception;
+
+        try {
+            return executeWrappedCommandProtocol(database, command, decoder, connection, binding.getReadPreference(), transformer,
+                    binding.getSessionContext());
+        } catch (MongoException e) {
+            exception = e;
+
+            if (!shouldAttemptToRetryRead(retryReads, e)) {
+                if (retryReads) {
+                    logUnableToRetry(command.getFirstKey(), e);
+                }
+                throw exception;
+            }
+        }
+
+        final MongoException originalException = exception;
+        return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<T>() {
+            @Override
+            public T call(ConnectionSource source, Connection connection) {
+                try {
+                    if (!isRetryableRead(retryReads, source.getServerDescription(), connection.getDescription(),
+                            binding.getSessionContext())) {
+                        throw originalException;
+                    }
+                    logRetryExecute(command.getFirstKey(), originalException);
+                    return executeWrappedCommandProtocol(database, command, decoder, connection,
+                            binding.getReadPreference(), transformer, binding.getSessionContext());
+                } finally {
+                    connection.release();
+                }
+            }
+        });
     }
 
     /* Write Binding Helpers */
@@ -471,7 +534,7 @@ final class CommandOperationHelper {
                             commandResultDecoder, binding.getSessionContext()), connection.getDescription().getServerAddress());
                 } catch (MongoException e) {
                     exception = e;
-                    if (!shouldAttemptToRetry(command, e)) {
+                    if (!shouldAttemptToRetryWrite(command, e)) {
                         if (isRetryWritesEnabled(command)) {
                             logUnableToRetry(command.getFirstKey(), e);
                         }
@@ -579,7 +642,7 @@ final class CommandOperationHelper {
             }
 
             private void checkRetryableException(final Throwable originalError, final SingleResultCallback<R> releasingCallback) {
-                if (!shouldAttemptToRetry(command, originalError)) {
+                if (!shouldAttemptToRetryWrite(command, originalError)) {
                     if (isRetryWritesEnabled(command)) {
                         logUnableToRetry(command.getFirstKey(), originalError);
                     }
@@ -742,7 +805,11 @@ final class CommandOperationHelper {
         }
     }
 
-    private static boolean shouldAttemptToRetry(@Nullable final BsonDocument command, final Throwable exception) {
+    private static boolean shouldAttemptToRetryRead(final boolean retryReadsEnabled, final Throwable exception) {
+        return retryReadsEnabled && isRetryableException(exception);
+    }
+
+    private static boolean shouldAttemptToRetryWrite(@Nullable final BsonDocument command, final Throwable exception) {
         return isRetryWritesEnabled(command) && isRetryableException(exception);
     }
 
@@ -751,7 +818,7 @@ final class CommandOperationHelper {
                 || command.getFirstKey().equals("commitTransaction") || command.getFirstKey().equals("abortTransaction")));
     }
 
-    static boolean shouldAttemptToRetry(final boolean retryWritesEnabled, final Throwable exception) {
+    static boolean shouldAttemptToRetryWrite(final boolean retryWritesEnabled, final Throwable exception) {
         return retryWritesEnabled && isRetryableException(exception);
     }
 

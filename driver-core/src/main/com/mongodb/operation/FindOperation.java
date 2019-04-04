@@ -86,6 +86,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
 
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
+    private final boolean retryReads;
     private BsonDocument filter;
     private int batchSize;
     private int limit;
@@ -117,8 +118,20 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      * @param decoder the decoder for the result documents.
      */
     public FindOperation(final MongoNamespace namespace, final Decoder<T> decoder) {
+        this(namespace, decoder, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param decoder the decoder for the result documents.
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public FindOperation(final MongoNamespace namespace, final Decoder<T> decoder, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -699,7 +712,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                 if (serverIsAtLeastVersionThreeDotTwo(connection.getDescription())) {
                     try {
                         validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                        return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(),
+                        return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
                                                              wrapInExplainIfNecessary(getCommand(binding.getSessionContext())),
                                                              CommandResultDocumentCodec.create(decoder, FIRST_BATCH),
                                                              connection, transformer(source, connection));

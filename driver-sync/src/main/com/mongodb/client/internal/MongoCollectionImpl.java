@@ -33,6 +33,7 @@ import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.ListDatabasesIterable;
 import com.mongodb.client.ListIndexesIterable;
 import com.mongodb.client.MapReduceIterable;
 import com.mongodb.client.MongoCollection;
@@ -88,22 +89,25 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private final CodecRegistry codecRegistry;
     private final WriteConcern writeConcern;
     private final boolean retryWrites;
+    private final boolean retryReads;
     private final ReadConcern readConcern;
     private final SyncOperations<TDocument> operations;
     private final OperationExecutor executor;
 
     MongoCollectionImpl(final MongoNamespace namespace, final Class<TDocument> documentClass, final CodecRegistry codecRegistry,
                         final ReadPreference readPreference, final WriteConcern writeConcern, final boolean retryWrites,
-                        final ReadConcern readConcern, final OperationExecutor executor) {
+                        final boolean retryReads, final ReadConcern readConcern, final OperationExecutor executor) {
         this.namespace = notNull("namespace", namespace);
         this.documentClass = notNull("documentClass", documentClass);
         this.codecRegistry = notNull("codecRegistry", codecRegistry);
         this.readPreference = notNull("readPreference", readPreference);
         this.writeConcern = notNull("writeConcern", writeConcern);
         this.retryWrites = retryWrites;
+        this.retryReads = retryReads;
         this.readConcern = notNull("readConcern", readConcern);
         this.executor = notNull("executor", executor);
-        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern, retryWrites);
+        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern,
+                retryWrites, retryReads);
     }
 
     @Override
@@ -139,31 +143,31 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     @Override
     public <NewTDocument> MongoCollection<NewTDocument> withDocumentClass(final Class<NewTDocument> clazz) {
         return new MongoCollectionImpl<NewTDocument>(namespace, clazz, codecRegistry, readPreference, writeConcern, retryWrites,
-                readConcern, executor);
+                retryReads, readConcern, executor);
     }
 
     @Override
     public MongoCollection<TDocument> withCodecRegistry(final CodecRegistry codecRegistry) {
         return new MongoCollectionImpl<TDocument>(namespace, documentClass, codecRegistry, readPreference, writeConcern, retryWrites,
-                readConcern, executor);
+                retryReads, readConcern, executor);
     }
 
     @Override
     public MongoCollection<TDocument> withReadPreference(final ReadPreference readPreference) {
         return new MongoCollectionImpl<TDocument>(namespace, documentClass, codecRegistry, readPreference, writeConcern, retryWrites,
-                readConcern, executor);
+                retryReads, readConcern, executor);
     }
 
     @Override
     public MongoCollection<TDocument> withWriteConcern(final WriteConcern writeConcern) {
         return new MongoCollectionImpl<TDocument>(namespace, documentClass, codecRegistry, readPreference, writeConcern, retryWrites,
-                readConcern, executor);
+                retryReads, readConcern, executor);
     }
 
     @Override
     public MongoCollection<TDocument> withReadConcern(final ReadConcern readConcern) {
         return new MongoCollectionImpl<TDocument>(namespace, documentClass, codecRegistry, readPreference, writeConcern, retryWrites,
-                readConcern, executor);
+                retryReads, readConcern, executor);
     }
 
     @Override
@@ -275,7 +279,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> DistinctIterable<TResult> createDistinctIterable(@Nullable final ClientSession clientSession, final String fieldName,
                                                                        final Bson filter, final Class<TResult> resultClass) {
         return MongoIterables.distinctOf(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, fieldName, filter);
+                readPreference, readConcern, executor, fieldName, filter, retryReads);
     }
 
     @Override
@@ -326,7 +330,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> FindIterable<TResult> createFindIterable(@Nullable final ClientSession clientSession, final Bson filter,
                                                                final Class<TResult> resultClass) {
         return MongoIterables.findOf(clientSession, namespace, this.documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, filter);
+                readPreference, readConcern, executor, filter, retryReads);
     }
 
     @Override
@@ -832,6 +836,32 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
                                                                              final Class<TResult> resultClass) {
         return MongoIterables.listIndexesOf(clientSession, getNamespace(), resultClass, codecRegistry, ReadPreference.primary(),
                 executor);
+    }
+
+    @Override
+    public ListDatabasesIterable<Document> listDatabases() {
+        return listDatabases(Document.class);
+    }
+
+    @Override
+    public <TResult> ListDatabasesIterable<TResult> listDatabases(final Class<TResult> resultClass) {
+        return createListDatabasesIterable(null, resultClass);
+    }
+
+    @Override
+    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
+        return listDatabases(clientSession, Document.class);
+    }
+
+    @Override
+    public <TResult> ListDatabasesIterable<TResult> listDatabases(final ClientSession clientSession, final Class<TResult> resultClass) {
+        notNull("clientSession", clientSession);
+        return createListDatabasesIterable(clientSession, resultClass);
+    }
+
+    private <TResult> ListDatabasesIterable<TResult> createListDatabasesIterable(@Nullable final ClientSession clientSession,
+                                                                             final Class<TResult> resultClass) {
+        return MongoIterables.listDatabasesOf(clientSession, resultClass, codecRegistry, ReadPreference.primary(), executor, retryReads);
     }
 
     @Override

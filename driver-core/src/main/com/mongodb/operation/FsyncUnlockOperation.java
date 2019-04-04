@@ -68,7 +68,7 @@ public class FsyncUnlockOperation implements WriteOperation<BsonDocument>, ReadO
             @Override
             public BsonDocument call(final Connection connection) {
                 if (serverIsAtLeastVersionThreeDotTwo(connection.getDescription())) {
-                    return executeWrappedCommandProtocol(binding, "admin", FSYNC_UNLOCK_COMMAND, connection);
+                    return CommandOperationHelper.executeCommand(binding, false, "admin", FSYNC_UNLOCK_COMMAND, connection);
                 } else {
                     return queryUnlock(connection);
                 }

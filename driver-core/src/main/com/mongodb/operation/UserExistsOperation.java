@@ -47,6 +47,7 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOperation<Boolean> {
     private final String databaseName;
     private final String userName;
+    private final boolean retryReads;
 
     /**
      * Construct a new instance.
@@ -55,8 +56,20 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
      * @param userName the name of the user to check if they exist.
      */
     public UserExistsOperation(final String databaseName, final String userName) {
+        this(databaseName, userName, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param databaseName the name of the database for the operation.
+     * @param userName the name of the user to check if they exist.
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public UserExistsOperation(final String databaseName, final String userName, final boolean retryReads) {
         this.databaseName = notNull("databaseName", databaseName);
         this.userName = notNull("userName", userName);
+        this.retryReads = retryReads;
     }
 
     @Override
@@ -64,7 +77,7 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
         return withConnection(binding, new CallableWithConnection<Boolean>() {
             @Override
             public Boolean call(final Connection connection) {
-                return executeWrappedCommandProtocol(binding, databaseName, getCommand(), connection, transformer());
+                return CommandOperationHelper.executeCommand(binding, retryReads, databaseName, getCommand(), connection, transformer());
             }
         });
     }

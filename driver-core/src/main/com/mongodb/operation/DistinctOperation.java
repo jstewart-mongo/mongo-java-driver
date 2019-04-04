@@ -68,6 +68,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
     private final MongoNamespace namespace;
     private final String fieldName;
     private final Decoder<T> decoder;
+    private final boolean retryReads;
     private BsonDocument filter;
     private long maxTimeMS;
     private Collation collation;
@@ -80,9 +81,23 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
      * @param decoder   the decoder for the result documents.
      */
     public DistinctOperation(final MongoNamespace namespace, final String fieldName, final Decoder<T> decoder) {
+        this(namespace, fieldName, decoder, true);
+    }
+
+    /**
+     * Construct an instance.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param fieldName the name of the field to return distinct values.
+     * @param decoder   the decoder for the result documents.
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public DistinctOperation(final MongoNamespace namespace, final String fieldName, final Decoder<T> decoder,
+                             final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.fieldName = notNull("fieldName", fieldName);
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -162,8 +177,8 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
             @Override
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(binding.getSessionContext()),
-                        createCommandDecoder(), connection, transformer(source, connection));
+                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
+                        getCommand(binding.getSessionContext()), createCommandDecoder(), connection, transformer(source, connection));
             }
         });
     }

@@ -89,6 +89,7 @@ class MongoClientSpecification extends Specification {
                                           .readPreference(secondary())
                                           .writeConcern(WriteConcern.MAJORITY)
                                           .retryWrites(true)
+                                          .retryReads(true)
                                           .readConcern(ReadConcern.MAJORITY)
                                           .codecRegistry(codecRegistry)
                                           .build()
@@ -102,7 +103,7 @@ class MongoClientSpecification extends Specification {
 
         where:
         expectedDatabase << new MongoDatabaseImpl('name', fromProviders([new BsonValueCodecProvider()]), secondary(),
-                WriteConcern.MAJORITY, true, ReadConcern.MAJORITY, new TestOperationExecutor([]))
+                WriteConcern.MAJORITY, true, true, ReadConcern.MAJORITY, new TestOperationExecutor([]))
     }
 
 

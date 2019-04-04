@@ -83,6 +83,7 @@ import static java.util.Arrays.asList;
 public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
     private final String databaseName;
     private final Decoder<T> decoder;
+    private final boolean retryReads;
     private BsonDocument filter;
     private int batchSize;
     private long maxTimeMS;
@@ -95,8 +96,20 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
      * @param decoder the decoder to use for the results
      */
     public ListCollectionsOperation(final String databaseName, final Decoder<T> decoder) {
+        this(databaseName, decoder, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param databaseName the name of the database for the operation.
+     * @param decoder the decoder to use for the results
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public ListCollectionsOperation(final String databaseName, final Decoder<T> decoder, final boolean retryReads) {
         this.databaseName = notNull("databaseName", databaseName);
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -208,7 +221,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
-                        return executeWrappedCommandProtocol(binding, databaseName, getCommand(), createCommandDecoder(), connection,
+                        return CommandOperationHelper.executeCommand(binding, retryReads, databaseName, getCommand(), createCommandDecoder(), connection,
                                 commandTransformer(source));
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(createNamespace(), decoder,

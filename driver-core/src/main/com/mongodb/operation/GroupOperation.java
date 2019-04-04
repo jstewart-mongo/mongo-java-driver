@@ -59,6 +59,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
     private final Decoder<T> decoder;
     private final BsonJavaScript reduceFunction;
     private final BsonDocument initial;
+    private final boolean retryReads;
     private BsonDocument key;
     private BsonJavaScript keyFunction;
     private BsonDocument filter;
@@ -76,10 +77,26 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
      */
     public GroupOperation(final MongoNamespace namespace, final BsonJavaScript reduceFunction,
                           final BsonDocument initial, final Decoder<T> decoder) {
+        this(namespace, reduceFunction, initial, decoder, true);
+    }
+
+    /**
+     * Create an operation that will perform a Group on a given collection.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param reduceFunction The aggregation function that operates on the documents during the grouping operation.
+     * @param initial The initial the aggregation result document.
+     * @param decoder the decoder for the result documents.
+     * @mongodb.driver.manual reference/command/group Group Command
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public GroupOperation(final MongoNamespace namespace, final BsonJavaScript reduceFunction,
+                          final BsonDocument initial, final Decoder<T> decoder, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.reduceFunction = notNull("reduceFunction", reduceFunction);
         this.initial = notNull("initial", initial);
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -238,7 +255,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
             @Override
             public BatchCursor<T> call(final ConnectionSource connectionSource, final Connection connection) {
                 validateCollation(connection, collation);
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(),
+                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(),
                                                      CommandResultDocumentCodec.create(decoder, "retval"),
                                                      connection, transformer(connectionSource, connection));
             }

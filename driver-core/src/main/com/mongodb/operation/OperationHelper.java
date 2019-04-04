@@ -283,6 +283,34 @@ final class OperationHelper {
         return true;
     }
 
+    static boolean isRetryableRead(final boolean retryReads, final ServerDescription serverDescription,
+                                   final ConnectionDescription connectionDescription, final SessionContext sessionContext) {
+        if (!retryReads) {
+            return false;
+        } else if (sessionContext.hasActiveTransaction()) {
+            LOGGER.debug("retryReads set to true but in an active transaction.");
+            return false;
+        } else {
+            return canRetryRead(serverDescription, connectionDescription, sessionContext);
+        }
+    }
+
+    static boolean canRetryRead(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                                 final SessionContext sessionContext) {
+        if (serverIsLessThanVersionThreeDotSix(connectionDescription)) {
+            LOGGER.debug("retryReads set to true but the server does not support retryable reads.");
+            return false;
+        } else if (serverDescription.getLogicalSessionTimeoutMinutes() == null) {
+            LOGGER.debug("retryReads set to true but the server does not have 3.6 feature compatibility enabled.");
+            return false;
+        } else if (!sessionContext.hasSession()) {
+            LOGGER.debug("retryReads set to true but there is no implicit session, likely because the MongoClient was created with "
+                    + "multiple MongoCredential instances and sessions can only be used with a single MongoCredential");
+            return false;
+        }
+        return true;
+    }
+
     static <T> QueryBatchCursor<T> createEmptyBatchCursor(final MongoNamespace namespace, final Decoder<T> decoder,
                                                           final ServerAddress serverAddress, final int batchSize) {
         return new QueryBatchCursor<T>(new QueryResult<T>(namespace, Collections.<T>emptyList(), 0L,
@@ -404,6 +432,26 @@ final class OperationHelper {
         ConnectionSource source = binding.getReadConnectionSource();
         try {
             return withConnectionSource(source, callable);
+        } finally {
+            source.release();
+        }
+    }
+
+    static <T> T withReleasableConnection(final ReadBinding binding, final MongoException connectionException,
+                                          final CallableWithConnectionAndSource<T> callable) {
+        ConnectionSource source = null;
+        Connection connection;
+        try {
+            source = binding.getReadConnectionSource();
+            connection = source.getConnection();
+        } catch (Throwable t){
+            if (source != null) {
+                source.release();
+            }
+            throw connectionException;
+        }
+        try {
+            return callable.call(source, connection);
         } finally {
             source.release();
         }

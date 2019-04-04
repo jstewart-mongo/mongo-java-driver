@@ -344,6 +344,20 @@ public final class MongoClientSettings {
         }
 
         /**
+         * Sets whether reads should be retried if they fail due to a network error.
+         *
+         * @param retryReads sets if reads should be retried if they fail due to a network error.
+         * @return this
+         * @see #getRetryReads()
+         * @since 3.11
+         * @mongodb.server.release 3.6
+         */
+        public Builder retryReads(final boolean retryReads) {
+            wrappedBuilder.retryReads(retryReads);
+            return this;
+        }
+
+        /**
          * Sets the read concern.
          *
          * @param readConcern the read concern
@@ -524,6 +538,17 @@ public final class MongoClientSettings {
      */
     public boolean getRetryWrites() {
         return wrapped.getRetryWrites();
+    }
+
+    /**
+     * Returns true if reads should be retried if they fail due to a network error.
+     *
+     * @return the retryReads value
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     */
+    public boolean getRetryReads() {
+        return wrapped.getRetryReads();
     }
 
     /**

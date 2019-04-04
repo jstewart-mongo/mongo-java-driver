@@ -16,10 +16,12 @@
 
 package com.mongodb.client;
 
+import com.mongodb.Block;
 import com.mongodb.ClusterFixture;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.test.CollectionHelper;
+import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.ServerVersion;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -43,6 +45,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
@@ -79,14 +82,6 @@ public class RetryableWritesTest {
         this.definition = definition;
     }
 
-    @BeforeClass
-    public static void beforeClass() {
-    }
-
-    @AfterClass
-    public static void afterClass() {
-    }
-
     @Before
     public void setUp() {
         assumeTrue(canRunTests());
@@ -115,6 +110,7 @@ public class RetryableWritesTest {
         collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
         BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
         MongoClientSettings.Builder builder = getMongoClientSettingsBuilder();
+
         if (clientOptions.containsKey("retryWrites")) {
             builder.retryWrites(clientOptions.getBoolean("retryWrites").getValue());
         }

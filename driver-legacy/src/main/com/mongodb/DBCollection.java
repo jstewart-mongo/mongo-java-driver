@@ -130,6 +130,7 @@ public class DBCollection {
     private final OperationExecutor executor;
     private final Bytes.OptionHolder optionHolder;
     private final boolean retryWrites;
+    private final boolean retryReads;
     private volatile ReadPreference readPreference;
     private volatile WriteConcern writeConcern;
     private volatile ReadConcern readConcern;
@@ -154,6 +155,7 @@ public class DBCollection {
         this.objectFactory = new DBCollectionObjectFactory();
         this.objectCodec = new CompoundDBObjectCodec(getDefaultDBObjectCodec());
         this.retryWrites = database.getMongo().getMongoClientOptions().getRetryWrites();
+        this.retryReads = database.getMongo().getMongoClientOptions().getRetryReads();
     }
 
     /**
@@ -1009,7 +1011,7 @@ public class DBCollection {
      */
     public long getCount(@Nullable final DBObject query, final DBCollectionCountOptions options) {
         notNull("countOptions", options);
-        CountOperation operation = new CountOperation(getNamespace())
+        CountOperation operation = new CountOperation(getNamespace(), retryReads)
                                        .skip(options.getSkip())
                                        .limit(options.getLimit())
                                        .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
@@ -1146,7 +1148,8 @@ public class DBCollection {
      */
     @Deprecated
     public DBObject group(final GroupCommand cmd, final ReadPreference readPreference) {
-        return toDBList(executor.execute(cmd.toOperation(getNamespace(), getDefaultDBObjectCodec()), readPreference, getReadConcern()));
+        return toDBList(executor.execute(cmd.toOperation(getNamespace(), getDefaultDBObjectCodec(), retryReads), readPreference,
+                getReadConcern()));
     }
 
     /**
@@ -1214,7 +1217,7 @@ public class DBCollection {
                                                   options.getReadPreference() != null ? options.getReadPreference() : getReadPreference()) {
             @Override
             public ReadOperation<BatchCursor<BsonValue>> asReadOperation() {
-                return new DistinctOperation<BsonValue>(getNamespace(), fieldName, new BsonValueCodec())
+                return new DistinctOperation<BsonValue>(getNamespace(), fieldName, new BsonValueCodec(), retryReads)
                                .filter(wrapAllowNull(options.getFilter()))
                                .collation(options.getCollation());
             }
@@ -1493,7 +1496,8 @@ public class DBCollection {
                 throw createWriteConcernException(e);
             }
         } else {
-            AggregateOperation<DBObject> operation = new AggregateOperation<DBObject>(getNamespace(), stages, getDefaultDBObjectCodec())
+            AggregateOperation<DBObject> operation = new AggregateOperation<DBObject>(getNamespace(), stages, getDefaultDBObjectCodec(),
+                    retryReads)
                     .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
                     .allowDiskUse(options.getAllowDiskUse())
                     .batchSize(options.getBatchSize())
@@ -1516,7 +1520,7 @@ public class DBCollection {
      */
     public CommandResult explainAggregate(final List<? extends DBObject> pipeline, final AggregationOptions options) {
         AggregateOperation<BsonDocument> operation = new AggregateOperation<BsonDocument>(getNamespace(), preparePipeline(pipeline),
-                                                                                          new BsonDocumentCodec())
+                                                                                          new BsonDocumentCodec(), retryReads)
                                                          .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
                                                          .allowDiskUse(options.getAllowDiskUse())
                                                          .collation(options.getCollation());
@@ -1551,7 +1555,7 @@ public class DBCollection {
         List<Cursor> cursors = new ArrayList<Cursor>();
         ParallelCollectionScanOperation<DBObject> operation = new ParallelCollectionScanOperation<DBObject>(getNamespace(),
                                                                                                             options.getNumCursors(),
-                                                                                                            objectCodec)
+                                                                                                            objectCodec, retryReads)
                                                                   .batchSize(options.getBatchSize());
         ReadPreference readPreferenceFromOptions = options.getReadPreference();
         List<BatchCursor<DBObject>> mongoCursors = executor.execute(operation,
@@ -2217,7 +2221,7 @@ public class DBCollection {
         return new MongoIterableImpl<DBObject>(null, executor, ReadConcern.DEFAULT, primary()) {
             @Override
             public ReadOperation<BatchCursor<DBObject>> asReadOperation() {
-                return new ListIndexesOperation<DBObject>(getNamespace(), getDefaultDBObjectCodec());
+                return new ListIndexesOperation<DBObject>(getNamespace(), getDefaultDBObjectCodec(), retryReads);
             }
         }.into(new ArrayList<DBObject>());
     }

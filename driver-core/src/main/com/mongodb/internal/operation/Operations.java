@@ -94,19 +94,21 @@ final class Operations<TDocument> {
     private final CodecRegistry codecRegistry;
     private final WriteConcern writeConcern;
     private final boolean retryWrites;
+    private final boolean retryReads;
 
     Operations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
-               final CodecRegistry codecRegistry, final WriteConcern writeConcern, final boolean retryWrites) {
+               final CodecRegistry codecRegistry, final WriteConcern writeConcern, final boolean retryWrites, final boolean retryReads) {
         this.namespace = namespace;
         this.documentClass = documentClass;
         this.readPreference = readPreference;
         this.codecRegistry = codecRegistry;
         this.writeConcern = writeConcern;
         this.retryWrites = retryWrites;
+        this.retryReads = retryReads;
     }
 
     CountOperation count(final Bson filter, final CountOptions options, final CountStrategy countStrategy) {
-        CountOperation operation = new CountOperation(namespace, countStrategy)
+        CountOperation operation = new CountOperation(namespace, countStrategy, retryReads)
                 .filter(toBsonDocument(filter))
                 .skip(options.getSkip())
                 .limit(options.getLimit())
@@ -138,7 +140,7 @@ final class Operations<TDocument> {
     @SuppressWarnings("deprecation")
     private <TResult> FindOperation<TResult> createFindOperation(final MongoNamespace findNamespace, final Bson filter,
                                                                  final Class<TResult> resultClass, final FindOptions options) {
-        return new FindOperation<TResult>(findNamespace, codecRegistry.get(resultClass))
+        return new FindOperation<TResult>(findNamespace, codecRegistry.get(resultClass), retryReads)
                 .filter(filter == null ? new BsonDocument() : filter.toBsonDocument(documentClass, codecRegistry))
                 .batchSize(options.getBatchSize())
                 .skip(options.getSkip())
@@ -167,7 +169,7 @@ final class Operations<TDocument> {
     <TResult> DistinctOperation<TResult> distinct(final String fieldName, final Bson filter,
                                                          final Class<TResult> resultClass, final long maxTimeMS,
                                                          final Collation collation) {
-        return new DistinctOperation<TResult>(namespace, fieldName, codecRegistry.get(resultClass))
+        return new DistinctOperation<TResult>(namespace, fieldName, codecRegistry.get(resultClass), retryReads)
                 .filter(filter == null ? null : filter.toBsonDocument(documentClass, codecRegistry))
                 .maxTime(maxTimeMS, MILLISECONDS)
                 .collation(collation);
@@ -468,7 +470,7 @@ final class Operations<TDocument> {
 
     <TResult> ListDatabasesOperation<TResult> listDatabases(final Class<TResult> resultClass, final Bson filter,
                                                                    final Boolean nameOnly, final long maxTimeMS) {
-        return new ListDatabasesOperation<TResult>(codecRegistry.get(resultClass)).maxTime(maxTimeMS, MILLISECONDS)
+        return new ListDatabasesOperation<TResult>(namespace, codecRegistry.get(resultClass), retryReads).maxTime(maxTimeMS, MILLISECONDS)
                 .filter(toBsonDocumentOrNull(filter))
                 .nameOnly(nameOnly);
     }

@@ -26,11 +26,14 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.async.FutureResultCallback;
 import com.mongodb.connection.AsynchronousSocketChannelStreamFactoryFactory;
+import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.SslSettings;
 import com.mongodb.connection.StreamFactoryFactory;
 import com.mongodb.connection.TlsChannelStreamFactoryFactory;
 import com.mongodb.connection.netty.NettyStreamFactoryFactory;
 import org.bson.Document;
+
+import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.getSslSettings;
 import static com.mongodb.ClusterFixture.isNotAtLeastJava7;
@@ -44,6 +47,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public final class Fixture {
     private static final String DEFAULT_DATABASE_NAME = "JavaDriverTest";
+    private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
     private static MongoClientImpl mongoClient;
 
@@ -65,7 +69,14 @@ public final class Fixture {
 
     public static com.mongodb.MongoClientSettings.Builder getMongoClientBuilderFromConnectionString() {
         com.mongodb.MongoClientSettings.Builder builder = com.mongodb.MongoClientSettings.builder()
-                .applyConnectionString(getConnectionString());
+                .applyConnectionString(getConnectionString())
+                .applyToServerSettings(new Block<ServerSettings.Builder>() {
+                    @Override
+                    public void apply(final ServerSettings.Builder builder) {
+                        builder.minHeartbeatFrequency(MIN_HEARTBEAT_FREQUENCY_MS, TimeUnit.MILLISECONDS);
+                    }
+                });
+
         if (System.getProperty("java.version").startsWith("1.6.")) {
             builder.applyToSslSettings(new Block<SslSettings.Builder>() {
                 @Override

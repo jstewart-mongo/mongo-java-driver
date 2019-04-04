@@ -16,6 +16,7 @@
 
 package com.mongodb.operation;
 
+import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
@@ -54,7 +55,9 @@ import static com.mongodb.operation.OperationHelper.withConnection;
  */
 @Deprecated
 public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
+    private final MongoNamespace namespace;
     private final Decoder<T> decoder;
+    private final boolean retryReads;
 
     private long maxTimeMS;
     private BsonDocument filter;
@@ -66,7 +69,40 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      * @param decoder the decoder to use for the results
      */
     public ListDatabasesOperation(final Decoder<T> decoder) {
+        this(null, decoder, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param decoder the decoder to use for the results
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public ListDatabasesOperation(final Decoder<T> decoder, final boolean retryReads) {
+        this(null, decoder, retryReads);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param decoder the decoder to use for the results
+     */
+    public ListDatabasesOperation(final MongoNamespace namespace, final Decoder<T> decoder) {
+        this(namespace, decoder, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param decoder the decoder to use for the results
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public ListDatabasesOperation(final MongoNamespace namespace, final Decoder<T> decoder, final boolean retryReads) {
+        this.namespace = namespace;
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -156,7 +192,8 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
         return withConnection(binding, new OperationHelper.CallableWithConnectionAndSource<BatchCursor<T>>() {
             @Override
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
-                return executeWrappedCommandProtocol(binding, "admin", getCommand(),
+                return CommandOperationHelper.executeCommand(binding, retryReads,
+                        (namespace != null ? namespace.getDatabaseName() : "admin"), getCommand(),
                         CommandResultDocumentCodec.create(decoder, "databases"), connection, transformer(source, connection));
             }
         });

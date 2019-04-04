@@ -71,6 +71,7 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
     private final DBObject filter;
     private final DBCollectionFindOptions findOptions;
     private final OperationExecutor executor;
+    private final boolean retryReads;
     private int options;
     private DBDecoderFactory decoderFactory;
     private Decoder<DBObject> decoder;
@@ -94,7 +95,20 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
      */
     public DBCursor(final DBCollection collection, final DBObject query, @Nullable final DBObject fields,
                     @Nullable final ReadPreference readPreference) {
-        this(collection, query, new DBCollectionFindOptions().projection(fields).readPreference(readPreference));
+        this(collection, query, fields, readPreference, true);
+    }
+
+    /**
+     * Initializes a new database cursor.
+     *
+     * @param collection     collection to use
+     * @param query          the query filter to apply
+     * @param fields         keys to return from the query
+     * @param readPreference the read preference for this query
+     */
+    public DBCursor(final DBCollection collection, final DBObject query, @Nullable final DBObject fields,
+                    @Nullable final ReadPreference readPreference, final boolean retryReads) {
+        this(collection, query, new DBCollectionFindOptions().projection(fields).readPreference(readPreference), retryReads);
 
         addOption(collection.getOptions());
         DBObject indexKeys = lookupSuitableHints(query, collection.getHintFields());
@@ -104,17 +118,25 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
     }
 
     DBCursor(final DBCollection collection, @Nullable final DBObject filter, final DBCollectionFindOptions findOptions) {
-        this(collection, filter, findOptions, collection.getExecutor(), collection.getDBDecoderFactory(), collection.getObjectCodec());
+        this(collection, filter, findOptions, true);
+    }
+
+    DBCursor(final DBCollection collection, @Nullable final DBObject filter, final DBCollectionFindOptions findOptions,
+             final boolean retryReads) {
+        this(collection, filter, findOptions, collection.getExecutor(), collection.getDBDecoderFactory(),
+                collection.getObjectCodec(), retryReads);
     }
 
     private DBCursor(final DBCollection collection, @Nullable final DBObject filter, final DBCollectionFindOptions findOptions,
-                     final OperationExecutor executor, final DBDecoderFactory decoderFactory, final Decoder<DBObject> decoder) {
+                     final OperationExecutor executor, final DBDecoderFactory decoderFactory, final Decoder<DBObject> decoder,
+                     final boolean retryReads) {
         this.collection = notNull("collection", collection);
         this.filter = filter;
         this.executor = notNull("executor", executor);
         this.findOptions = notNull("findOptions", findOptions.copy());
         this.decoderFactory = decoderFactory;
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -123,7 +145,7 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
      * @return the new cursor
      */
     public DBCursor copy() {
-        return new DBCursor(collection, filter, findOptions, executor, decoderFactory, decoder);
+        return new DBCursor(collection, filter, findOptions, executor, decoderFactory, decoder, retryReads);
     }
 
     /**
@@ -553,7 +575,7 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
 
     @SuppressWarnings("deprecation")
     private FindOperation<DBObject> getQueryOperation(final Decoder<DBObject> decoder) {
-        FindOperation<DBObject> operation = new FindOperation<DBObject>(collection.getNamespace(), decoder)
+        FindOperation<DBObject> operation = new FindOperation<DBObject>(collection.getNamespace(), decoder, retryReads)
                                                 .filter(collection.wrapAllowNull(filter))
                                                 .batchSize(findOptions.getBatchSize())
                                                 .skip(findOptions.getSkip())

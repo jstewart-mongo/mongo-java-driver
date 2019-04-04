@@ -69,6 +69,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
                                                            ReadOperation<List<BatchCursor<T>>> {
     private final MongoNamespace namespace;
     private final int numCursors;
+    private final boolean retryReads;
     private int batchSize = 0;
     private final Decoder<T> decoder;
 
@@ -78,13 +79,26 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
      * @param namespace the database and collection namespace for the operation.
      * @param numCursors The maximum number of cursors to return. Must be between 1 and 10000, inclusive.
      * @param decoder the decoder for the result documents.
-
      */
     public ParallelCollectionScanOperation(final MongoNamespace namespace, final int numCursors, final Decoder<T> decoder) {
+        this(namespace, numCursors, decoder, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param numCursors The maximum number of cursors to return. Must be between 1 and 10000, inclusive.
+     * @param decoder the decoder for the result documents.
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public ParallelCollectionScanOperation(final MongoNamespace namespace, final int numCursors, final Decoder<T> decoder,
+                                           final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         isTrue("numCursors >= 1", numCursors >= 1);
         this.numCursors = numCursors;
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -125,7 +139,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
             @Override
             public List<BatchCursor<T>> call(final ConnectionSource source, final Connection connection) {
                 validateReadConcern(connection, binding.getSessionContext().getReadConcern());
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(binding.getSessionContext()),
+                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(binding.getSessionContext()),
                                                      CommandResultDocumentCodec.create(decoder, "firstBatch"), connection,
                                                      transformer(source));
             }

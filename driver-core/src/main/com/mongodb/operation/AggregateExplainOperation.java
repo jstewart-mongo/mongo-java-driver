@@ -51,14 +51,20 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, ReadOperation<BsonDocument> {
     private final MongoNamespace namespace;
     private final List<BsonDocument> pipeline;
+    private final boolean retryReads;
     private Boolean allowDiskUse;
     private long maxTimeMS;
     private Collation collation;
     private BsonValue hint;
 
     AggregateExplainOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline) {
+        this(namespace, pipeline, true);
+    }
+
+    AggregateExplainOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.pipeline = notNull("pipeline", pipeline);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -153,7 +159,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
             @Override
             public BsonDocument call(final Connection connection) {
                 validateCollation(connection, collation);
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(), connection);
+                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(), connection);
             }
         });
     }

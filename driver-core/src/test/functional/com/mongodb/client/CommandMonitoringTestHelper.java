@@ -75,12 +75,14 @@ public final class CommandMonitoringTestHelper {
             String eventType = curExpectedEventDocument.keySet().iterator().next();
             BsonDocument eventDescriptionDocument = curExpectedEventDocument.getDocument(eventType);
             CommandEvent commandEvent;
-            String commandName = eventDescriptionDocument.getString("command_name").getValue();
+            String commandName = eventDescriptionDocument.getString("command_name", new BsonString("")).getValue();
             if (eventType.equals("command_started_event")) {
                 BsonDocument commandDocument = eventDescriptionDocument.getDocument("command");
                 String actualDatabaseName = databaseName;
                 if (commandName.equals("commitTransaction") || commandName.equals("abortTransaction")) {
                     actualDatabaseName = "admin";
+                } else if (commandName.equals("")) {
+                    commandName = commandDocument.keySet().iterator().next();
                 }
                 // Not clear whether these global fields should be included, but also not clear how to efficiently exclude them
                 if (ClusterFixture.serverVersionAtLeast(3, 6)) {
@@ -226,6 +228,12 @@ public final class CommandMonitoringTestHelper {
         if (command.containsKey("recoveryToken")) {
             command.remove("recoveryToken");
         }
+        if (command.containsKey("query")) {
+            command.remove("query");
+        }
+        if (command.containsKey("cursor") && command.getDocument("cursor").isEmpty()) {
+            command.remove("cursor");
+        }
 
         return new CommandStartedEvent(event.getRequestId(), event.getConnectionDescription(), event.getDatabaseName(),
                 event.getCommandName(), command);
@@ -265,6 +273,12 @@ public final class CommandMonitoringTestHelper {
         }
         if (command.containsKey("recoveryToken")) {
             command.remove("recoveryToken");
+        }
+        if (command.containsKey("query")) {
+            command.remove("query");
+        }
+        if (command.containsKey("filter") && command.getDocument("filter").isEmpty()) {
+            command.remove("filter");
         }
 
         return new CommandStartedEvent(event.getRequestId(), event.getConnectionDescription(), event.getDatabaseName(),

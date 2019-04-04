@@ -70,6 +70,7 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
+    private final boolean retryReads;
     private int batchSize;
     private long maxTimeMS;
 
@@ -80,8 +81,20 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
      * @param decoder   the decoder for the result documents.
      */
     public ListIndexesOperation(final MongoNamespace namespace, final Decoder<T> decoder) {
+        this(namespace, decoder, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace the database and collection namespace for the operation.
+     * @param decoder   the decoder for the result documents.
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public ListIndexesOperation(final MongoNamespace namespace, final Decoder<T> decoder, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.decoder = notNull("decoder", decoder);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -141,7 +154,7 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
-                        return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(), createCommandDecoder(),
+                        return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(), createCommandDecoder(),
                                 connection, transformer(source));
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(namespace, decoder,

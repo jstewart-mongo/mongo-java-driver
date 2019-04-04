@@ -68,6 +68,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     private static final Decoder<BsonDocument> DECODER = new BsonDocumentCodec();
     private final MongoNamespace namespace;
     private final CountStrategy countStrategy;
+    private final boolean retryReads;
     private BsonDocument filter;
     private BsonValue hint;
     private long skip;
@@ -87,12 +88,34 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     /**
      * Construct a new instance.
      *
+     * @param namespace the database and collection namespace for the operation.
+     * @param retryReads if reads should be retried if they fail due to a network error.
+     */
+    public CountOperation(final MongoNamespace namespace, final boolean retryReads) {
+        this(namespace, CountStrategy.COMMAND, retryReads);
+    }
+
+    /**
+     * Construct a new instance.
+     *
      * @param namespace     the database and collection namespace for the operation.
      * @param countStrategy the strategy to use for calculating the count.
      */
     public CountOperation(final MongoNamespace namespace, final CountStrategy countStrategy) {
+        this(namespace, countStrategy, true);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace     the database and collection namespace for the operation.
+     * @param countStrategy the strategy to use for calculating the count.
+     * @param retryReads    if reads should be retried if they fail due to a network error.
+     */
+    public CountOperation(final MongoNamespace namespace, final CountStrategy countStrategy, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.countStrategy = notNull("countStrategy", countStrategy);
+        this.retryReads = retryReads;
     }
 
     /**
@@ -235,8 +258,8 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
                 @Override
                 public Long call(final Connection connection) {
                     validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                    return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(binding.getSessionContext()),
-                            DECODER, connection, transformer());
+                    return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
+                            getCommand(binding.getSessionContext()), DECODER, connection, transformer());
                 }
             });
         } else {
