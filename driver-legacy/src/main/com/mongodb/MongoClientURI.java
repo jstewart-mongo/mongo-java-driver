@@ -349,7 +349,9 @@ public class MongoClientURI {
         if (proxied.getRetryWritesValue() != null) {
             builder.retryWrites(proxied.getRetryWritesValue());
         }
-        builder.retryReads(proxied.getRetryReads());
+        if (proxied.getRetryReads() != null) {
+            builder.retryReads(proxied.getRetryReads());
+        }
 
         Integer maxConnectionPoolSize = proxied.getMaxConnectionPoolSize();
         if (maxConnectionPoolSize != null) {

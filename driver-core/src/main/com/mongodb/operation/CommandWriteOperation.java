@@ -23,7 +23,7 @@ import org.bson.BsonDocument;
 import org.bson.codecs.Decoder;
 
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 
 /**
@@ -53,7 +53,7 @@ public class CommandWriteOperation<T> implements AsyncWriteOperation<T>, WriteOp
 
     @Override
     public T execute(final WriteBinding binding) {
-        return executeWrappedCommandProtocol(binding, databaseName, command, decoder);
+        return executeCommand(binding, databaseName, command, decoder);
     }
 
     @Override

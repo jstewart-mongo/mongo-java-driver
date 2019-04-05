@@ -31,6 +31,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -54,7 +55,8 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotZero;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
@@ -83,7 +85,7 @@ import static java.util.Arrays.asList;
 public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
     private final String databaseName;
     private final Decoder<T> decoder;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private BsonDocument filter;
     private int batchSize;
     private long maxTimeMS;
@@ -96,20 +98,8 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
      * @param decoder the decoder to use for the results
      */
     public ListCollectionsOperation(final String databaseName, final Decoder<T> decoder) {
-        this(databaseName, decoder, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param databaseName the name of the database for the operation.
-     * @param decoder the decoder to use for the results
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public ListCollectionsOperation(final String databaseName, final Decoder<T> decoder, final boolean retryReads) {
         this.databaseName = notNull("databaseName", databaseName);
         this.decoder = notNull("decoder", decoder);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -212,7 +202,17 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
         return this;
     }
 
-
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     */
+    public ListCollectionsOperation<T> retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
+        return this;
+    }
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
@@ -221,8 +221,8 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
-                        return CommandOperationHelper.executeCommand(binding, retryReads, databaseName, getCommand(), createCommandDecoder(), connection,
-                                commandTransformer(source));
+                        return executeCommand(binding, databaseName, getCommandCreator(), createCommandDecoder(),
+                                commandTransformer(source), retryReads);
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(createNamespace(), decoder,
                                 source.getServerDescription().getAddress(), batchSize));
@@ -312,6 +312,15 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
 
     private MongoNamespace getNamespace() {
         return new MongoNamespace(databaseName, "system.namespaces");
+    }
+
+    private CommandCreator getCommandCreator() {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand();
+            }
+        };
     }
 
     private BsonDocument getCommand() {

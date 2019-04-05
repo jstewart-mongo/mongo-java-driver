@@ -37,6 +37,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonBoolean;
@@ -63,7 +64,7 @@ import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
@@ -86,7 +87,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
 
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private BsonDocument filter;
     private int batchSize;
     private int limit;
@@ -118,20 +119,8 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      * @param decoder the decoder for the result documents.
      */
     public FindOperation(final MongoNamespace namespace, final Decoder<T> decoder) {
-        this(namespace, decoder, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param decoder the decoder for the result documents.
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public FindOperation(final MongoNamespace namespace, final Decoder<T> decoder, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.decoder = notNull("decoder", decoder);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -704,6 +693,18 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         return this;
     }
 
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     */
+    public FindOperation<T> retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
+        return this;
+    }
+
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return withConnection(binding, new CallableWithConnectionAndSource<BatchCursor<T>>() {
@@ -712,10 +713,8 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                 if (serverIsAtLeastVersionThreeDotTwo(connection.getDescription())) {
                     try {
                         validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                        return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
-                                                             wrapInExplainIfNecessary(getCommand(binding.getSessionContext())),
-                                                             CommandResultDocumentCodec.create(decoder, FIRST_BATCH),
-                                                             connection, transformer(source, connection));
+                        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(source, connection), retryReads);
                     } catch (MongoCommandException e) {
                         throw new MongoQueryException(e);
                     }
@@ -1084,6 +1083,15 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         } else {
             return commandDocument;
         }
+    }
+
+    private CommandOperationHelper.CommandCreator getCommandCreator(final SessionContext sessionContext) {
+        return new CommandOperationHelper.CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return wrapInExplainIfNecessary(getCommand(sessionContext));
+            }
+        };
     }
 
     private boolean isExplain() {

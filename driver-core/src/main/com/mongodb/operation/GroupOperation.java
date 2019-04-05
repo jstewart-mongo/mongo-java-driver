@@ -28,6 +28,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import org.bson.BsonDocument;
 import org.bson.BsonJavaScript;
@@ -36,7 +37,8 @@ import org.bson.codecs.Decoder;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
@@ -59,7 +61,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
     private final Decoder<T> decoder;
     private final BsonJavaScript reduceFunction;
     private final BsonDocument initial;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private BsonDocument key;
     private BsonJavaScript keyFunction;
     private BsonDocument filter;
@@ -77,26 +79,10 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
      */
     public GroupOperation(final MongoNamespace namespace, final BsonJavaScript reduceFunction,
                           final BsonDocument initial, final Decoder<T> decoder) {
-        this(namespace, reduceFunction, initial, decoder, true);
-    }
-
-    /**
-     * Create an operation that will perform a Group on a given collection.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param reduceFunction The aggregation function that operates on the documents during the grouping operation.
-     * @param initial The initial the aggregation result document.
-     * @param decoder the decoder for the result documents.
-     * @mongodb.driver.manual reference/command/group Group Command
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public GroupOperation(final MongoNamespace namespace, final BsonJavaScript reduceFunction,
-                          final BsonDocument initial, final Decoder<T> decoder, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.reduceFunction = notNull("reduceFunction", reduceFunction);
         this.initial = notNull("initial", initial);
         this.decoder = notNull("decoder", decoder);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -244,6 +230,18 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
     }
 
     /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     */
+    public GroupOperation<T> retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
+        return this;
+    }
+
+    /**
      * Will return a cursor of Documents containing the results of the group operation.
      *
      * @param binding the binding
@@ -255,9 +253,9 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
             @Override
             public BatchCursor<T> call(final ConnectionSource connectionSource, final Connection connection) {
                 validateCollation(connection, collation);
-                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(),
-                                                     CommandResultDocumentCodec.create(decoder, "retval"),
-                                                     connection, transformer(connectionSource, connection));
+                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(),
+                        CommandResultDocumentCodec.create(decoder, "retval"),
+                        transformer(connectionSource, connection), retryReads);
             }
         });
     }
@@ -289,6 +287,14 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
         });
     }
 
+    private CommandCreator getCommandCreator() {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand();
+            }
+        };
+    }
     private BsonDocument getCommand() {
         BsonDocument commandDocument = new BsonDocument("ns", new BsonString(namespace.getCollectionName()));
 

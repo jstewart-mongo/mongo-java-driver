@@ -205,7 +205,7 @@ public final class MongoClientImpl implements MongoClient {
 
     private <T> ListDatabasesIterable<T> createListDatabasesIterable(@Nullable final ClientSession clientSession, final Class<T> clazz) {
         return MongoIterables.listDatabasesOf(clientSession, clazz, settings.getCodecRegistry(),
-                ReadPreference.primary(), delegate.getOperationExecutor(), settings.getRetryReads());
+                ReadPreference.primary(), delegate.getOperationExecutor()).retryReads(settings.getRetryReads());
     }
 
     private MongoIterable<String> createListDatabaseNamesIterable(final @Nullable ClientSession clientSession) {

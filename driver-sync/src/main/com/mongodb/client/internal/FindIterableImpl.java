@@ -47,9 +47,9 @@ class FindIterableImpl<TDocument, TResult> extends MongoIterableImpl<TResult> im
 
     FindIterableImpl(@Nullable final ClientSession clientSession, final MongoNamespace namespace, final Class<TDocument> documentClass,
                      final Class<TResult> resultClass, final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                     final ReadConcern readConcern, final OperationExecutor executor, final Bson filter, final boolean retryReads) {
+                     final ReadConcern readConcern, final OperationExecutor executor, final Bson filter) {
         super(clientSession, executor, readConcern, readPreference);
-        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, retryReads);
+        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry);
         this.resultClass = notNull("resultClass", resultClass);
         this.filter = notNull("filter", filter);
         this.findOptions = new FindOptions();
@@ -190,6 +190,12 @@ class FindIterableImpl<TDocument, TResult> extends MongoIterableImpl<TResult> im
     @SuppressWarnings("deprecation")
     public FindIterable<TResult> snapshot(final boolean snapshot) {
         findOptions.snapshot(snapshot);
+        return this;
+    }
+
+    @Override
+    public FindIterable<TResult> retryReads(final Boolean retryReads) {
+        operations.retryReads(retryReads);
         return this;
     }
 

@@ -249,4 +249,14 @@ public interface FindIterable<TResult> extends MongoIterable<TResult> {
      */
     @Deprecated
     FindIterable<TResult> snapshot(boolean snapshot);
+
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     */
+    FindIterable<TResult> retryReads(@Nullable Boolean retryReads);
 }

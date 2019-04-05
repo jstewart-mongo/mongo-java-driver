@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.DocumentHelper.putIfTrue;
@@ -511,7 +511,7 @@ MapReduceToCollectionOperation implements AsyncWriteOperation<MapReduceStatistic
             @Override
             public MapReduceStatistics call(final Connection connection) {
                 validateCollation(connection, collation);
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
+                return executeCommand(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
                         connection, transformer());
             }
         });

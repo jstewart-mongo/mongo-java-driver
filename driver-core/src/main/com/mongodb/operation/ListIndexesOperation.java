@@ -30,6 +30,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
@@ -43,7 +44,8 @@ import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
@@ -70,7 +72,7 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private int batchSize;
     private long maxTimeMS;
 
@@ -81,20 +83,8 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
      * @param decoder   the decoder for the result documents.
      */
     public ListIndexesOperation(final MongoNamespace namespace, final Decoder<T> decoder) {
-        this(namespace, decoder, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param decoder   the decoder for the result documents.
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public ListIndexesOperation(final MongoNamespace namespace, final Decoder<T> decoder, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.decoder = notNull("decoder", decoder);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -147,6 +137,18 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         return this;
     }
 
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     */
+    public ListIndexesOperation<T> retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
+        return this;
+    }
+
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return withConnection(binding, new OperationHelper.CallableWithConnectionAndSource<BatchCursor<T>>() {
@@ -154,8 +156,8 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
-                        return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(), createCommandDecoder(),
-                                connection, transformer(source));
+                        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), createCommandDecoder(),
+                                transformer(source), retryReads);
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(namespace, decoder,
                                                                                     source.getServerDescription().getAddress(), batchSize));
@@ -236,6 +238,15 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
 
     private MongoNamespace getIndexNamespace() {
         return new MongoNamespace(namespace.getDatabaseName(), "system.indexes");
+    }
+
+    private CommandCreator getCommandCreator() {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand();
+            }
+        };
     }
 
     private BsonDocument getCommand() {

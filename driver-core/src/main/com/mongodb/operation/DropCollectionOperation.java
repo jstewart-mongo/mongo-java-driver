@@ -32,7 +32,7 @@ import org.bson.BsonString;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
@@ -92,7 +92,7 @@ public class DropCollectionOperation implements AsyncWriteOperation<Void>, Write
             @Override
             public Void call(final Connection connection) {
                 try {
-                    executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
+                    executeCommand(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
                             connection, writeConcernErrorTransformer());
                 } catch (MongoCommandException e) {
                     rethrowIfNotNamespaceError(e);

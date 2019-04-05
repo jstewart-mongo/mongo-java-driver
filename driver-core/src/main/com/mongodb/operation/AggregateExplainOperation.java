@@ -23,6 +23,8 @@ import com.mongodb.binding.ReadBinding;
 import com.mongodb.client.model.Collation;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
+import com.mongodb.connection.ConnectionDescription;
+import com.mongodb.connection.ServerDescription;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -36,8 +38,9 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.IdentityTransformer;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
@@ -51,20 +54,15 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, ReadOperation<BsonDocument> {
     private final MongoNamespace namespace;
     private final List<BsonDocument> pipeline;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private Boolean allowDiskUse;
     private long maxTimeMS;
     private Collation collation;
     private BsonValue hint;
 
     AggregateExplainOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline) {
-        this(namespace, pipeline, true);
-    }
-
-    AggregateExplainOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.pipeline = notNull("pipeline", pipeline);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -91,6 +89,20 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
     public AggregateExplainOperation maxTime(final long maxTime, final TimeUnit timeUnit) {
         notNull("timeUnit", timeUnit);
         this.maxTimeMS = TimeUnit.MILLISECONDS.convert(maxTime, timeUnit);
+        return this;
+    }
+
+    /**
+     * Enables retryable reads if a read fails due to a network error. A null value indicates that it's unspecified.
+     *
+     * @param retryReads true if retryable reads is enabled
+     * @return this
+     * @mongodb.driver.manual reference/command/aggregate/ Aggregation
+     * @mongodb.server.release 3.6
+     * @since 3.11
+     */
+    public AggregateExplainOperation retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
         return this;
     }
 
@@ -159,7 +171,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
             @Override
             public BsonDocument call(final Connection connection) {
                 validateCollation(connection, collation);
-                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(), connection);
+                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), retryReads);
             }
         });
     }
@@ -188,6 +200,15 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
                 }
             }
         });
+    }
+
+    private CommandCreator getCommandCreator() {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand();
+            }
+        };
     }
 
     private BsonDocument getCommand() {

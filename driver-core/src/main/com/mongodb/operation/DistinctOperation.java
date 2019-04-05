@@ -29,6 +29,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
@@ -42,7 +43,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
@@ -68,7 +70,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
     private final MongoNamespace namespace;
     private final String fieldName;
     private final Decoder<T> decoder;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private BsonDocument filter;
     private long maxTimeMS;
     private Collation collation;
@@ -81,23 +83,9 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
      * @param decoder   the decoder for the result documents.
      */
     public DistinctOperation(final MongoNamespace namespace, final String fieldName, final Decoder<T> decoder) {
-        this(namespace, fieldName, decoder, true);
-    }
-
-    /**
-     * Construct an instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param fieldName the name of the field to return distinct values.
-     * @param decoder   the decoder for the result documents.
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public DistinctOperation(final MongoNamespace namespace, final String fieldName, final Decoder<T> decoder,
-                             final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.fieldName = notNull("fieldName", fieldName);
         this.decoder = notNull("decoder", decoder);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -119,6 +107,19 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
      */
     public DistinctOperation<T> filter(final BsonDocument filter) {
         this.filter = filter;
+        return this;
+    }
+
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @mongodb.driver.manual reference/method/db.collection.find/ Filter
+     * @since 3.11
+     */
+    public DistinctOperation<T> retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
         return this;
     }
 
@@ -177,8 +178,8 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
             @Override
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
-                        getCommand(binding.getSessionContext()), createCommandDecoder(), connection, transformer(source, connection));
+                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                        createCommandDecoder(), transformer(source, connection), retryReads);
             }
         });
     }
@@ -237,6 +238,15 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
             public AsyncBatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
                 QueryResult<T> queryResult = createQueryResult(result, connectionDescription);
                 return new AsyncSingleBatchQueryCursor<T>(queryResult);
+            }
+        };
+    }
+
+    private CommandCreator getCommandCreator(final SessionContext sessionContext) {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand(sessionContext);
             }
         };
     }

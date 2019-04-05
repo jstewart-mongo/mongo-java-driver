@@ -67,4 +67,14 @@ public interface DistinctIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.server.release 3.4
      */
     DistinctIterable<TResult> collation(@Nullable Collation collation);
+
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     */
+    DistinctIterable<TResult> retryReads(@Nullable Boolean retryReads);
 }

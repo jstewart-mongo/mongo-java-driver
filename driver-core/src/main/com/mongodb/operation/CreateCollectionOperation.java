@@ -34,7 +34,7 @@ import org.bson.BsonString;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.DocumentHelper.putIfFalse;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
@@ -379,7 +379,7 @@ public class CreateCollectionOperation implements AsyncWriteOperation<Void>, Wri
             @Override
             public Void call(final Connection connection) {
                 validateCollation(connection, collation);
-                executeWrappedCommandProtocol(binding, databaseName, getCommand(connection.getDescription()), connection,
+                executeCommand(binding, databaseName, getCommand(connection.getDescription()), connection,
                         writeConcernErrorTransformer());
                 return null;
             }

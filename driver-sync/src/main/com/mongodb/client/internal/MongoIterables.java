@@ -63,9 +63,9 @@ public final class MongoIterables {
                                  final Class<TDocument> documentClass, final Class<TResult> resultClass,
                                  final CodecRegistry codecRegistry,
                                  final ReadPreference readPreference, final ReadConcern readConcern,
-                                 final OperationExecutor executor, final Bson filter, final boolean retryReads) {
+                                 final OperationExecutor executor, final Bson filter) {
         return factory.findOf(clientSession, namespace, documentClass, resultClass, codecRegistry, readPreference, readConcern, executor,
-                filter, retryReads);
+                filter);
     }
 
     public static <TDocument, TResult>
@@ -113,16 +113,16 @@ public final class MongoIterables {
                                          final Class<TDocument> documentClass, final Class<TResult> resultClass,
                                          final CodecRegistry codecRegistry, final ReadPreference readPreference,
                                          final ReadConcern readConcern, final OperationExecutor executor,
-                                         final String fieldName, final Bson filter, final boolean retryReads) {
+                                         final String fieldName, final Bson filter) {
         return factory.distinctOf(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, fieldName, filter, retryReads);
+                readPreference, readConcern, executor, fieldName, filter);
     }
 
     public static <TResult>
     ListDatabasesIterable<TResult> listDatabasesOf(final @Nullable ClientSession clientSession, final Class<TResult> resultClass,
                                                    final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                                                   final OperationExecutor executor, final boolean retryReads) {
-        return factory.listDatabasesOf(clientSession, resultClass, codecRegistry, readPreference, executor, retryReads);
+                                                   final OperationExecutor executor) {
+        return factory.listDatabasesOf(clientSession, resultClass, codecRegistry, readPreference, executor);
     }
 
     public static <TResult>

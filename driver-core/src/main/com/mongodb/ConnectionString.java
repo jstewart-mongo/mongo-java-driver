@@ -1181,12 +1181,12 @@ public class ConnectionString {
     /**
      * <p>Gets whether reads should be retried if they fail due to a network error</p>
      *
-     * @return the retryWrites value, or true if unset
+     * @return the retryWrites value
      * @since 3.11
      * @mongodb.server.release 3.6
      */
     public Boolean getRetryReads() {
-        return retryReads == null ? true : retryReads;
+        return retryReads;
     }
 
     /**

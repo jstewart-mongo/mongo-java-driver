@@ -26,6 +26,8 @@ import com.mongodb.binding.ReadBinding;
 import com.mongodb.client.model.Collation;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
+import com.mongodb.connection.ConnectionDescription;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.client.model.CountStrategy;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
@@ -47,7 +49,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
@@ -68,7 +71,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     private static final Decoder<BsonDocument> DECODER = new BsonDocumentCodec();
     private final MongoNamespace namespace;
     private final CountStrategy countStrategy;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private BsonDocument filter;
     private BsonValue hint;
     private long skip;
@@ -88,34 +91,12 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     /**
      * Construct a new instance.
      *
-     * @param namespace the database and collection namespace for the operation.
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public CountOperation(final MongoNamespace namespace, final boolean retryReads) {
-        this(namespace, CountStrategy.COMMAND, retryReads);
-    }
-
-    /**
-     * Construct a new instance.
-     *
      * @param namespace     the database and collection namespace for the operation.
      * @param countStrategy the strategy to use for calculating the count.
      */
     public CountOperation(final MongoNamespace namespace, final CountStrategy countStrategy) {
-        this(namespace, countStrategy, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace     the database and collection namespace for the operation.
-     * @param countStrategy the strategy to use for calculating the count.
-     * @param retryReads    if reads should be retried if they fail due to a network error.
-     */
-    public CountOperation(final MongoNamespace namespace, final CountStrategy countStrategy, final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         this.countStrategy = notNull("countStrategy", countStrategy);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -137,6 +118,18 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
      */
     public CountOperation filter(final BsonDocument filter) {
         this.filter = filter;
+        return this;
+    }
+
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     */
+    public CountOperation retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
         return this;
     }
 
@@ -258,8 +251,9 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
                 @Override
                 public Long call(final Connection connection) {
                     validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                    return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(),
-                            getCommand(binding.getSessionContext()), DECODER, connection, transformer());
+                    return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()), DECODER,
+                            transformer(), retryReads
+                    );
                 }
             });
         } else {
@@ -357,6 +351,15 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
             @Override
             public Long apply(final BsonDocument result, final ServerAddress serverAddress) {
                 return (result.getNumber("n")).longValue();
+            }
+        };
+    }
+
+    private CommandCreator getCommandCreator(final SessionContext sessionContext) {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand(sessionContext);
             }
         };
     }

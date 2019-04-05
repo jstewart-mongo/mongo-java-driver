@@ -29,7 +29,7 @@ import org.bson.BsonDocument;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
@@ -103,7 +103,7 @@ public class CreateUserOperation implements AsyncWriteOperation<Void>, WriteOper
             @Override
             public Void call(final Connection connection) {
                 try {
-                    executeWrappedCommandProtocol(binding, getCredential().getSource(), getCommand(connection.getDescription()),
+                    executeCommand(binding, getCredential().getSource(), getCommand(connection.getDescription()),
                             connection, writeConcernErrorTransformer());
                 } catch (MongoCommandException e) {
                     translateUserCommandException(e);

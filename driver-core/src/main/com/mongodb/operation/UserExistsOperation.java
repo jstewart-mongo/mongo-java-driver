@@ -22,6 +22,8 @@ import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
+import com.mongodb.connection.ConnectionDescription;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
@@ -29,7 +31,8 @@ import org.bson.codecs.BsonDocumentCodec;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
@@ -47,7 +50,7 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOperation<Boolean> {
     private final String databaseName;
     private final String userName;
-    private final boolean retryReads;
+    private Boolean retryReads;
 
     /**
      * Construct a new instance.
@@ -56,20 +59,20 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
      * @param userName the name of the user to check if they exist.
      */
     public UserExistsOperation(final String databaseName, final String userName) {
-        this(databaseName, userName, true);
+        this.databaseName = notNull("databaseName", databaseName);
+        this.userName = notNull("userName", userName);
     }
 
     /**
-     * Construct a new instance.
+     * Enables retryable reads if a read fails due to a network error.
      *
-     * @param databaseName the name of the database for the operation.
-     * @param userName the name of the user to check if they exist.
-     * @param retryReads if reads should be retried if they fail due to a network error.
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
      */
-    public UserExistsOperation(final String databaseName, final String userName, final boolean retryReads) {
-        this.databaseName = notNull("databaseName", databaseName);
-        this.userName = notNull("userName", userName);
+    public UserExistsOperation retryReads(final Boolean retryReads) {
         this.retryReads = retryReads;
+        return this;
     }
 
     @Override
@@ -77,7 +80,7 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
         return withConnection(binding, new CallableWithConnection<Boolean>() {
             @Override
             public Boolean call(final Connection connection) {
-                return CommandOperationHelper.executeCommand(binding, retryReads, databaseName, getCommand(), connection, transformer());
+                return executeCommand(binding, databaseName, getCommandCreator(), transformer(), retryReads);
             }
         });
     }
@@ -104,6 +107,15 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
             @Override
             public Boolean apply(final BsonDocument result, final ServerAddress serverAddress) {
                 return result.get("users").isArray() && !result.getArray("users").isEmpty();
+            }
+        };
+    }
+
+    private CommandCreator getCommandCreator() {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand();
             }
         };
     }

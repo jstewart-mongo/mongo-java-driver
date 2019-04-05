@@ -41,7 +41,7 @@ interface MongoIterableFactory {
     <TDocument, TResult>
     FindIterable<TResult> findOf(@Nullable ClientSession clientSession, MongoNamespace namespace, Class<TDocument> documentClass,
                                  Class<TResult> resultClass, CodecRegistry codecRegistry, ReadPreference readPreference,
-                                 ReadConcern readConcern, OperationExecutor executor, Bson filter, final boolean retryReads);
+                                 ReadConcern readConcern, OperationExecutor executor, Bson filter);
 
     <TDocument, TResult>
     AggregateIterable<TResult> aggregateOf(@Nullable ClientSession clientSession, MongoNamespace namespace, Class<TDocument> documentClass,
@@ -70,13 +70,12 @@ interface MongoIterableFactory {
     <TDocument, TResult>
     DistinctIterable<TResult> distinctOf(@Nullable ClientSession clientSession, MongoNamespace namespace, Class<TDocument> documentClass,
                                          Class<TResult> resultClass, CodecRegistry codecRegistry, ReadPreference readPreference,
-                                         ReadConcern readConcern, OperationExecutor executor, String fieldName, Bson filter,
-                                         boolean retryReads);
+                                         ReadConcern readConcern, OperationExecutor executor, String fieldName, Bson filter);
 
     <TResult>
     ListDatabasesIterable<TResult> listDatabasesOf(@Nullable ClientSession clientSession, Class<TResult> resultClass,
                                                    CodecRegistry codecRegistry, ReadPreference readPreference,
-                                                   OperationExecutor executor, boolean retryReads);
+                                                   OperationExecutor executor);
     <TResult>
     ListCollectionsIterable<TResult> listCollectionsOf(@Nullable ClientSession clientSession, String databaseName,
                                                        boolean collectionNamesOnly, Class<TResult> resultClass, CodecRegistry codecRegistry,

@@ -50,20 +50,7 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
      * @param decoder the decoder for the result documents.
      */
     public AggregateOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder) {
-        this(namespace, pipeline, decoder, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param pipeline the aggregation pipeline.
-     * @param decoder the decoder for the result documents.
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public AggregateOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
-                              final boolean retryReads) {
-        this(namespace, pipeline, decoder, AggregationLevel.COLLECTION, retryReads);
+        this(namespace, pipeline, decoder, AggregationLevel.COLLECTION);
     }
 
     /**
@@ -77,22 +64,7 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
      */
     public AggregateOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
                               final AggregationLevel aggregationLevel) {
-        this(namespace, pipeline, decoder, aggregationLevel, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param pipeline the aggregation pipeline.
-     * @param decoder the decoder for the result documents.
-     * @param aggregationLevel the aggregation level
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     * @since 3.10
-     */
-    public AggregateOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final Decoder<T> decoder,
-                              final AggregationLevel aggregationLevel, final boolean retryReads) {
-        this.wrapped = new AggregateOperationImpl<T>(namespace, pipeline, decoder, aggregationLevel, retryReads);
+        this.wrapped = new AggregateOperationImpl<T>(namespace, pipeline, decoder, aggregationLevel);
     }
 
     /**
@@ -286,6 +258,19 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
      */
     public AggregateOperation<T> comment(final String comment) {
         wrapped.comment(comment);
+        return this;
+    }
+
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     */
+    public AggregateOperation<T> retryReads(final Boolean retryReads) {
+        wrapped.retryReads(retryReads);
         return this;
     }
 

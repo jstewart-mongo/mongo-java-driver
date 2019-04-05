@@ -396,7 +396,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
                                                                          final List<? extends Bson> pipeline,
                                                                          final Class<TResult> resultClass) {
         return MongoIterables.aggregateOf(clientSession, name, Document.class, resultClass, codecRegistry,
-                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.DATABASE);
+                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.DATABASE)
+                .retryReads(retryReads);
     }
 
     private <TResult> ChangeStreamIterable<TResult> createChangeStreamIterable(@Nullable final ClientSession clientSession,

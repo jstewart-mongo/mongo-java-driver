@@ -43,9 +43,9 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
     FindIterable<TResult> findOf(final @Nullable ClientSession clientSession, final MongoNamespace namespace,
                                  final Class<TDocument> documentClass, final Class<TResult> resultClass, final CodecRegistry codecRegistry,
                                  final ReadPreference readPreference, final ReadConcern readConcern, final OperationExecutor executor,
-                                 final Bson filter, final boolean retryReads) {
+                                 final Bson filter) {
         return new FindIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, filter, retryReads);
+                readPreference, readConcern, executor, filter);
     }
 
     @Override
@@ -101,17 +101,17 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
                                          final Class<TDocument> documentClass, final Class<TResult> resultClass,
                                          final CodecRegistry codecRegistry, final ReadPreference readPreference,
                                          final ReadConcern readConcern, final OperationExecutor executor, final String fieldName,
-                                         final Bson filter, final boolean retryReads) {
+                                         final Bson filter) {
         return new DistinctIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, fieldName, filter, retryReads);
+                readPreference, readConcern, executor, fieldName, filter);
     }
 
     @Override
     public <TResult>
     ListDatabasesIterable<TResult> listDatabasesOf(final @Nullable ClientSession clientSession, final Class<TResult> resultClass,
                                                    final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                                                   final OperationExecutor executor, final boolean retryReads) {
-        return new ListDatabasesIterableImpl<TResult>(clientSession, resultClass, codecRegistry, readPreference, executor, retryReads);
+                                                   final OperationExecutor executor) {
+        return new ListDatabasesIterableImpl<TResult>(clientSession, resultClass, codecRegistry, readPreference, executor);
     }
 
     @Override

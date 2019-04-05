@@ -71,8 +71,7 @@ class AggregateIterableImpl<TDocument, TResult> extends MongoIterableImpl<TResul
                           final ReadConcern readConcern, final WriteConcern writeConcern, final OperationExecutor executor,
                           final List<? extends Bson> pipeline, final AggregationLevel aggregationLevel) {
         super(clientSession, executor, readConcern, readPreference);
-        this.operations = new AsyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern,
-                true, true);
+        this.operations = new AsyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern, false);
         this.namespace = notNull("namespace", namespace);
         this.documentClass = notNull("documentClass", documentClass);
         this.resultClass = notNull("resultClass", resultClass);

@@ -44,7 +44,7 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotSix;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
@@ -311,7 +311,7 @@ public class AggregateToCollectionOperation implements AsyncWriteOperation<Void>
             @Override
             public Void call(final Connection connection) {
                 validateCollation(connection, collation);
-                return executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
+                return executeCommand(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
                         connection, writeConcernErrorTransformer());
             }
         });

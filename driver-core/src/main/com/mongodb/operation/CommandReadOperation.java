@@ -19,11 +19,15 @@ package com.mongodb.operation;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
+import com.mongodb.connection.ConnectionDescription;
+import com.mongodb.connection.ServerDescription;
+import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.codecs.Decoder;
 
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 
 /**
@@ -53,7 +57,16 @@ public class CommandReadOperation<T> implements AsyncReadOperation<T>, ReadOpera
 
     @Override
     public T execute(final ReadBinding binding) {
-        return CommandOperationHelper.executeCommand(binding, false, databaseName, command, decoder);
+        return executeCommand(binding, databaseName, getCommandCreator(binding.getSessionContext()), decoder, false);
+    }
+
+    private CommandCreator getCommandCreator(final SessionContext sessionContext) {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return command;
+            }
+        };
     }
 
     @Override

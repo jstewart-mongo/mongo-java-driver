@@ -26,7 +26,9 @@ import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
+import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
@@ -42,7 +44,8 @@ import java.util.List;
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
@@ -69,7 +72,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
                                                            ReadOperation<List<BatchCursor<T>>> {
     private final MongoNamespace namespace;
     private final int numCursors;
-    private final boolean retryReads;
+    private Boolean retryReads;
     private int batchSize = 0;
     private final Decoder<T> decoder;
 
@@ -81,24 +84,10 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
      * @param decoder the decoder for the result documents.
      */
     public ParallelCollectionScanOperation(final MongoNamespace namespace, final int numCursors, final Decoder<T> decoder) {
-        this(namespace, numCursors, decoder, true);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param numCursors The maximum number of cursors to return. Must be between 1 and 10000, inclusive.
-     * @param decoder the decoder for the result documents.
-     * @param retryReads if reads should be retried if they fail due to a network error.
-     */
-    public ParallelCollectionScanOperation(final MongoNamespace namespace, final int numCursors, final Decoder<T> decoder,
-                                           final boolean retryReads) {
         this.namespace = notNull("namespace", namespace);
         isTrue("numCursors >= 1", numCursors >= 1);
         this.numCursors = numCursors;
         this.decoder = notNull("decoder", decoder);
-        this.retryReads = retryReads;
     }
 
     /**
@@ -133,15 +122,27 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
         return this;
     }
 
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     */
+    public ParallelCollectionScanOperation<T> retryReads(final Boolean retryReads) {
+        this.retryReads = retryReads;
+        return this;
+    }
+
     @Override
     public List<BatchCursor<T>> execute(final ReadBinding binding) {
         return withConnection(binding, new CallableWithConnectionAndSource<List<BatchCursor<T>>>() {
             @Override
             public List<BatchCursor<T>> call(final ConnectionSource source, final Connection connection) {
                 validateReadConcern(connection, binding.getSessionContext().getReadConcern());
-                return CommandOperationHelper.executeCommand(binding, retryReads, namespace.getDatabaseName(), getCommand(binding.getSessionContext()),
-                                                     CommandResultDocumentCodec.create(decoder, "firstBatch"), connection,
-                                                     transformer(source));
+                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                        CommandResultDocumentCodec.create(decoder, "firstBatch"),
+                        transformer(source), retryReads);
             }
         });
     }
@@ -219,6 +220,15 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
     @SuppressWarnings("unchecked")
     private QueryResult<T> createQueryResult(final BsonDocument cursorDocument, final ServerAddress serverAddress) {
         return cursorDocumentToQueryResult(cursorDocument, serverAddress);
+    }
+
+    private CommandCreator getCommandCreator(final SessionContext sessionContext) {
+        return new CommandCreator() {
+            @Override
+            public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                return getCommand(sessionContext);
+            }
+        };
     }
 
     private BsonDocument getCommand(final SessionContext sessionContext) {

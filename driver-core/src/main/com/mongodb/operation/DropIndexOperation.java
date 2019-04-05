@@ -36,9 +36,10 @@ import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocol;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
+import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -156,10 +157,10 @@ public class DropIndexOperation implements AsyncWriteOperation<Void>, WriteOpera
             @Override
             public Void call(final Connection connection) {
                 try {
-                    executeWrappedCommandProtocol(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()), connection,
+                    executeCommand(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()), connection,
                             writeConcernErrorTransformer());
                 } catch (MongoCommandException e) {
-                    CommandOperationHelper.rethrowIfNotNamespaceError(e);
+                    rethrowIfNotNamespaceError(e);
                 }
                 return null;
             }

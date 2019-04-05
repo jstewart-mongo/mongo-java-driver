@@ -16,7 +16,6 @@
 
 package com.mongodb.client.internal;
 
-import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
 import com.mongodb.client.ClientSession;
 import com.mongodb.lang.Nullable;
@@ -27,8 +26,8 @@ import java.util.function.Consumer;
 class Java8ListDatabasesIterableImpl<TResult> extends ListDatabasesIterableImpl<TResult> {
     Java8ListDatabasesIterableImpl(final @Nullable ClientSession clientSession, final Class<TResult> resultClass,
                                    final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                                   final OperationExecutor executor, final boolean retryReads) {
-        super(clientSession, resultClass, codecRegistry, readPreference, executor, retryReads);
+                                   final OperationExecutor executor) {
+        super(clientSession, resultClass, codecRegistry, readPreference, executor);
     }
 
 

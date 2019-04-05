@@ -139,4 +139,14 @@ public interface AggregateIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.server.release 3.6
      */
     AggregateIterable<TResult> hint(@Nullable Bson hint);
+
+    /**
+     * Enables retryable reads if a read fails due to a network error.
+     *
+     * @param retryReads true if reads should be retried
+     * @return this
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     */
+    AggregateIterable<TResult> retryReads(@Nullable Boolean retryReads);
 }
