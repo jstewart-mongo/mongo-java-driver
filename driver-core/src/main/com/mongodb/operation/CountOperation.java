@@ -134,6 +134,16 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     }
 
     /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
+    /**
      * Gets the hint to apply.
      *
      * @return the hint, which should describe an existing
@@ -252,8 +262,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
                 public Long call(final Connection connection) {
                     validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
                     return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()), DECODER,
-                            transformer(), retryReads
-                    );
+                            transformer(), getRetryReads());
                 }
             });
         } else {
@@ -383,6 +392,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
 
     private AggregateOperation<BsonDocument> getAggregateOperation() {
         return new AggregateOperation<BsonDocument>(namespace, getPipeline(), DECODER)
+                .retryReads(retryReads)
                 .collation(collation)
                 .hint(hint)
                 .maxTime(maxTimeMS, TimeUnit.MILLISECONDS);
@@ -397,7 +407,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
         if (limit > 0) {
             pipeline.add(new BsonDocument("$limit", new BsonInt64(limit)));
         }
-        pipeline.add(new BsonDocument("$group", new BsonDocument("_id", new BsonNull())
+        pipeline.add(new BsonDocument("$group", new BsonDocument("_id", new BsonInt32(1))
                 .append("n", new BsonDocument("$sum", new BsonInt32(1)))));
         return pipeline;
     }
