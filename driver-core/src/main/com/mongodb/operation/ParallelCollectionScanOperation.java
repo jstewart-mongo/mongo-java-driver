@@ -134,6 +134,16 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
         return this;
     }
 
+    /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
     @Override
     public List<BatchCursor<T>> execute(final ReadBinding binding) {
         return withConnection(binding, new CallableWithConnectionAndSource<List<BatchCursor<T>>>() {
@@ -142,7 +152,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
                 validateReadConcern(connection, binding.getSessionContext().getReadConcern());
                 return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
                         CommandResultDocumentCodec.create(decoder, "firstBatch"),
-                        transformer(source), retryReads);
+                        transformer(source), getRetryReads());
             }
         });
     }

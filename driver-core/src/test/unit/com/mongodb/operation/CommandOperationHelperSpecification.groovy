@@ -130,7 +130,7 @@ class CommandOperationHelperSpecification extends Specification {
         def connectionDescription = Stub(ConnectionDescription)
 
         when:
-        executeWrappedCommandProtocol(writeBinding, dbName, command, decoder, function)
+        executeCommand(writeBinding, dbName, command, decoder, function)
 
         then:
         _ * connection.getDescription() >> connectionDescription
@@ -238,6 +238,7 @@ class CommandOperationHelperSpecification extends Specification {
         given:
         def dbName = 'db'
         def command = new BsonDocument()
+        def commandCreator = { serverDescription, connectionDescription -> command }
         def decoder = Stub(Decoder)
         def function = Stub(CommandOperationHelper.CommandTransformer)
         def connection = Mock(Connection)
@@ -251,7 +252,7 @@ class CommandOperationHelperSpecification extends Specification {
         def connectionDescription = Stub(ConnectionDescription)
 
         when:
-        executeCommand(readBinding, dbName, command, decoder, function)
+        executeCommand(readBinding, dbName, commandCreator, decoder, function, false)
 
         then:
         _ * connection.getDescription() >> connectionDescription

@@ -124,6 +124,16 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
     }
 
     /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
+    /**
      * Gets the maximum execution time on the server for this operation.  The default is 0, which places no limit on the execution time.
      *
      * @param timeUnit the time unit to return the result in
@@ -179,7 +189,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
                 return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
-                        createCommandDecoder(), transformer(source, connection), retryReads);
+                        createCommandDecoder(), transformer(source, connection), getRetryReads());
             }
         });
     }

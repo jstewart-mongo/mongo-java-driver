@@ -97,18 +97,15 @@ final class Operations<TDocument> {
     private boolean retryReads;
 
     Operations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
-               final CodecRegistry codecRegistry, final WriteConcern writeConcern, final boolean retryWrites) {
+               final CodecRegistry codecRegistry, final WriteConcern writeConcern, final boolean retryWrites,
+               final boolean retryReads) {
         this.namespace = namespace;
         this.documentClass = documentClass;
         this.readPreference = readPreference;
         this.codecRegistry = codecRegistry;
         this.writeConcern = writeConcern;
         this.retryWrites = retryWrites;
-    }
-
-    Operations<TDocument> retryReads(final Boolean retryReads) {
         this.retryReads = retryReads;
-        return this;
     }
 
     CountOperation count(final Bson filter, final CountOptions options, final CountStrategy countStrategy) {

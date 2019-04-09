@@ -39,6 +39,7 @@ import com.mongodb.connection.ServerId
 import com.mongodb.connection.ServerVersion
 import com.mongodb.session.SessionContext
 import org.bson.BsonArray
+import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64
@@ -239,7 +240,9 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should use the ReadBindings readPreference to set slaveOK'() {
         when:
-        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND).filter(BsonDocument.parse('{a: 1}'))
+        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND)
+                .filter(BsonDocument.parse('{a: 1}'))
+                .retryReads(false)
 
         then:
         testOperationSlaveOk(operation, [3, 4, 0], readPreference, async, helper.commandResult)
@@ -252,7 +255,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         when:
         def filter = new BsonDocument('filter', new BsonInt32(1))
         def hint = new BsonDocument('hint', new BsonInt32(1))
-        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND)
+        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND).retryReads(false)
         def expectedCommand = new BsonDocument('count', new BsonString(helper.namespace.getCollectionName()))
 
         then:
@@ -265,6 +268,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .hint(hint)
                 .maxTime(10, MILLISECONDS)
                 .collation(defaultCollation)
+                .retryReads(false)
 
          expectedCommand.append('query', filter)
                 .append('limit', new BsonInt64(20))
@@ -272,6 +276,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .append('hint', hint)
                 .append('maxTimeMS', new BsonInt64(10))
                 .append('collation', defaultCollation.asDocument())
+                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.commandResult)
@@ -283,11 +288,12 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
     def 'should create the expected aggregation command'() {
         when:
         def filter = new BsonDocument('filter', new BsonInt32(1))
-        def operation = new CountOperation(helper.namespace, CountStrategy.AGGREGATE)
+        def operation = new CountOperation(helper.namespace, CountStrategy.AGGREGATE).retryReads(false)
         def pipeline = [BsonDocument.parse('{ $match: {}}'), BsonDocument.parse('{$group: {_id: null, n: {$sum: 1}}}')]
         def expectedCommand = new BsonDocument('aggregate', new BsonString(helper.namespace.getCollectionName()))
                 .append('pipeline', new BsonArray(pipeline))
                 .append('cursor', new BsonDocument())
+                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.cursorResult)
@@ -299,6 +305,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .hint(hint)
                 .maxTime(10, MILLISECONDS)
                 .collation(defaultCollation)
+                .retryReads(false)
 
         expectedCommand = expectedCommand
                 .append('pipeline', new BsonArray([new BsonDocument('$match', filter),
@@ -308,6 +315,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .append('maxTimeMS', new BsonInt64(10))
                 .append('collation', defaultCollation.asDocument())
                 .append('hint', hint)
+                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.cursorResult)
@@ -377,7 +385,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         def commandDocument = new BsonDocument('count', new BsonString(getCollectionName()))
         appendReadConcernToCommand(sessionContext, commandDocument)
 
-        def operation = new CountOperation(getNamespace())
+        def operation = new CountOperation(getNamespace()).retryReads(false)
 
         when:
         operation.execute(binding)

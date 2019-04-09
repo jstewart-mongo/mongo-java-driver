@@ -20,10 +20,8 @@ import com.mongodb.Block;
 import com.mongodb.ClusterFixture;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
-import com.mongodb.MongoWriteConcernException;
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadConcernLevel;
 import com.mongodb.ReadPreference;
@@ -74,7 +72,6 @@ import static com.mongodb.client.Fixture.getDefaultDatabaseName;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
@@ -119,23 +116,30 @@ public class RetryableReadsTest {
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
-        ServerVersion serverVersion = ClusterFixture.getServerVersion();
-        if (definition.containsKey("minServerVersion")) {
-            assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion")) < 0);
-        }
-        if (definition.containsKey("maxServerVersion")) {
-            assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion")) > 0);
-        }
-        if (definition.containsKey("topology")) {
-            BsonArray topologyTypes = definition.getArray("topology");
-            for (BsonValue type : topologyTypes) {
-                String typeString = type.asString().getValue();
-                if (typeString.equals("sharded")) {
-                    assumeTrue(isSharded());
-                } else if (typeString.equals("replicaset")) {
-                    assumeTrue(isDiscoverableReplicaSet());
-                } else if (typeString.equals("single")) {
-                    assumeTrue(isStandalone());
+        if (definition.containsKey("runOn")) {
+            BsonArray runOnDocuments = definition.getArray("runOn");
+            for (BsonValue info : runOnDocuments) {
+                final BsonDocument document = info.asDocument();
+                ServerVersion serverVersion = ClusterFixture.getServerVersion();
+
+                if (document.containsKey("minServerVersion")) {
+                    assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion", document)) < 0);
+                }
+                if (document.containsKey("maxServerVersion")) {
+                    assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion", document)) > 0);
+                }
+                if (document.containsKey("topology")) {
+                    BsonArray topologyTypes = definition.getArray("topology");
+                    for (BsonValue type : topologyTypes) {
+                        String typeString = type.asString().getValue();
+                        if (typeString.equals("sharded")) {
+                            assumeTrue(isSharded());
+                        } else if (typeString.equals("replicaset")) {
+                            assumeTrue(isDiscoverableReplicaSet());
+                        } else if (typeString.equals("single")) {
+                            assumeTrue(isStandalone());
+                        }
+                    }
                 }
             }
         }
@@ -183,9 +187,10 @@ public class RetryableReadsTest {
         MongoDatabase database = mongoClient.getDatabase(databaseName);
         if (gridFSBucketName != null) {
             setupGridFSBuckets(database);
+            commandListener.reset();
         }
         collection = database.getCollection(collectionName, BsonDocument.class);
-        helper = new JsonPoweredCrudTestHelper(description, database, collection, gridFSBucket);
+        helper = new JsonPoweredCrudTestHelper(description, database, collection, gridFSBucket, mongoClient);
         if (definition.containsKey("failPoint")) {
             collectionHelper.runAdminCommand(definition.getDocument("failPoint"));
         }
@@ -219,7 +224,7 @@ public class RetryableReadsTest {
         }
     }
 
-    private void setupGridFSBuckets(MongoDatabase database) {
+    private void setupGridFSBuckets(final MongoDatabase database) {
         gridFSBucket = GridFSBuckets.create(database);
         filesCollection = database.getCollection("fs.files", BsonDocument.class);
         chunksCollection = database.getCollection("fs.chunks", BsonDocument.class);
@@ -293,6 +298,7 @@ public class RetryableReadsTest {
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
         List<Object[]> data = new ArrayList<Object[]>();
         for (File file : JsonPoweredTestHelper.getTestFiles("/retryable-reads")) {
+            String baseName = file.getName();
             BsonDocument testDocument = JsonPoweredTestHelper.getTestDocument(file);
             if (testDocument.containsKey("minServerVersion")
                     && serverVersionLessThan(testDocument.getString("minServerVersion").getValue())) {
@@ -315,8 +321,8 @@ public class RetryableReadsTest {
         return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
     }
 
-    private ServerVersion getServerVersion(final String fieldName) {
-        String[] versionStringArray = definition.getString(fieldName).getValue().split("\\.");
+    private ServerVersion getServerVersion(final String fieldName, final BsonDocument document) {
+        String[] versionStringArray = document.getString(fieldName).getValue().split("\\.");
         return new ServerVersion(Integer.parseInt(versionStringArray[0]), Integer.parseInt(versionStringArray[1]));
     }
 

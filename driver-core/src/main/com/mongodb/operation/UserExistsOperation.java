@@ -75,12 +75,22 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
         return this;
     }
 
+    /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
     @Override
     public Boolean execute(final ReadBinding binding) {
         return withConnection(binding, new CallableWithConnection<Boolean>() {
             @Override
             public Boolean call(final Connection connection) {
-                return executeCommand(binding, databaseName, getCommandCreator(), transformer(), retryReads);
+                return executeCommand(binding, databaseName, getCommandCreator(), transformer(), getRetryReads());
             }
         });
     }

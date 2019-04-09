@@ -214,6 +214,16 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
         return this;
     }
 
+    /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return withConnection(binding, new CallableWithConnectionAndSource<BatchCursor<T>>() {
@@ -222,7 +232,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
                         return executeCommand(binding, databaseName, getCommandCreator(), createCommandDecoder(),
-                                commandTransformer(source), retryReads);
+                                commandTransformer(source), getRetryReads());
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(createNamespace(), decoder,
                                 source.getServerDescription().getAddress(), batchSize));

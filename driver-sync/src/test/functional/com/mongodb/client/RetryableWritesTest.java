@@ -16,12 +16,10 @@
 
 package com.mongodb.client;
 
-import com.mongodb.Block;
 import com.mongodb.ClusterFixture;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.test.CollectionHelper;
-import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.ServerVersion;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -31,9 +29,7 @@ import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,7 +41,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;

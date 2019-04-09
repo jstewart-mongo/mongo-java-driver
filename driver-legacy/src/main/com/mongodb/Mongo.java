@@ -466,7 +466,8 @@ public class Mongo {
      */
     @Deprecated
     public List<String> getDatabaseNames() {
-        return new MongoIterableImpl<DBObject>(null, createOperationExecutor(), ReadConcern.DEFAULT, primary()) {
+        return new MongoIterableImpl<DBObject>(null, createOperationExecutor(), ReadConcern.DEFAULT, primary(),
+                options.getRetryReads()) {
             @Override
             public ReadOperation<BatchCursor<DBObject>> asReadOperation() {
                 return new ListDatabasesOperation<DBObject>(MongoClient.getCommandCodec());
@@ -504,7 +505,7 @@ public class Mongo {
             return db;
         }
 
-        db = new DB(this, dbName, createOperationExecutor());
+        db = new DB(this, dbName, createOperationExecutor(), options.getRetryReads());
         DB temp = dbCache.putIfAbsent(dbName, db);
         if (temp != null) {
             return temp;

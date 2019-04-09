@@ -185,6 +185,10 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         return this;
     }
 
+    Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
     BsonValue getHint() {
         return hint;
     }
@@ -204,7 +208,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
                 return executeCommand(binding, namespace.getDatabaseName(),
                         getCommandCreator(binding.getSessionContext()),
                         CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                        transformer(source, connection), retryReads);
+                        transformer(source, connection), getRetryReads());
             }
         });
     }

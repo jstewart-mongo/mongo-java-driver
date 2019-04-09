@@ -162,6 +162,16 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
     }
 
     /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
+    /**
      * Gets the nameOnly flag that indicates whether the command should return just the database names or return the database names and
      * size information.
      *
@@ -186,7 +196,7 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 return executeCommand(binding, (namespace != null ? namespace.getDatabaseName() : "admin"),
                         getCommandCreator(), CommandResultDocumentCodec.create(decoder, "databases"),
-                        transformer(source, connection), retryReads);
+                        transformer(source, connection), getRetryReads());
             }
         });
     }

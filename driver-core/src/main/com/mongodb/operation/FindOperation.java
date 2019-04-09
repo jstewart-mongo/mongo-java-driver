@@ -705,6 +705,16 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         return this;
     }
 
+    /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return withConnection(binding, new CallableWithConnectionAndSource<BatchCursor<T>>() {
@@ -714,7 +724,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                     try {
                         validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
                         return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
-                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(source, connection), retryReads);
+                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(source, connection), getRetryReads());
                     } catch (MongoCommandException e) {
                         throw new MongoQueryException(e);
                     }

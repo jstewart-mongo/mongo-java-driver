@@ -52,6 +52,7 @@ import com.mongodb.client.model.UpdateManyModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
@@ -88,18 +89,21 @@ public class JsonPoweredCrudTestHelper {
     private final MongoDatabase database;
     private final MongoCollection<BsonDocument> baseCollection;
     private final GridFSBucket gridFSBucket;
+    private final MongoClient mongoClient;
 
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
                                      final MongoCollection<BsonDocument> collection) {
-        this(description, database, collection, null);
+        this(description, database, collection, null, null);
     }
 
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
-                                     final MongoCollection<BsonDocument> collection, final GridFSBucket gridFSBucket) {
+                                     final MongoCollection<BsonDocument> collection, final GridFSBucket gridFSBucket,
+                                     final MongoClient mongoClient) {
         this.description = description;
         this.database = database;
         this.baseCollection = collection;
         this.gridFSBucket = gridFSBucket;
+        this.mongoClient = mongoClient;
     }
 
     public BsonDocument getOperationResults(final BsonDocument operation) {
@@ -148,7 +152,7 @@ public class JsonPoweredCrudTestHelper {
         return builder.toString();
     }
 
-    private void appendInitCapToBuilder(StringBuilder builder, String object) {
+    private void appendInitCapToBuilder(final StringBuilder builder, final String object) {
         builder.append(object.substring(0, 1).toUpperCase());
         builder.append(object.substring(1));
     }
@@ -348,16 +352,53 @@ public class JsonPoweredCrudTestHelper {
 
     BsonDocument getClientListDatabasesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
                                               @Nullable final ClientSession clientSession) {
-        return getClientListDatabaseNamesResult(collectionOptions, arguments, clientSession);
-    }
-
-    BsonDocument getClientListDatabaseNamesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
-                                                  @Nullable final ClientSession clientSession) {
         ListDatabasesIterable<BsonDocument> iterable;
         if (clientSession == null) {
             iterable = getCollection(collectionOptions).listDatabases(BsonDocument.class);
         } else {
             iterable = getCollection(collectionOptions).listDatabases(clientSession, BsonDocument.class);
+        }
+        return toResult(iterable);
+    }
+
+    BsonDocument getClientListDatabaseObjectsResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                                    @Nullable final ClientSession clientSession) {
+        return getClientListDatabasesResult(collectionOptions, arguments, clientSession);
+    }
+
+    BsonDocument getClientListDatabaseNamesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                                  @Nullable final ClientSession clientSession) {
+        return getClientListDatabasesResult(collectionOptions, arguments, clientSession);
+    }
+
+    BsonDocument getDatabaseListCollectionObjectsResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                                         @Nullable final ClientSession clientSession) {
+        return getDatabaseListCollectionsResult(collectionOptions, arguments, clientSession);
+    }
+
+    BsonDocument getDatabaseListCollectionNamesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                                      @Nullable final ClientSession clientSession) {
+        return getDatabaseListCollectionsResult(collectionOptions, arguments, clientSession);
+    }
+
+    BsonDocument getDatabaseListCollectionsResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+        @Nullable final ClientSession clientSession) {
+        ListCollectionsIterable<BsonDocument> iterable;
+        if (clientSession == null) {
+            iterable = getCollection(collectionOptions).listCollections(BsonDocument.class);
+        } else {
+            iterable = getCollection(collectionOptions).listCollections(clientSession, BsonDocument.class);
+        }
+        return toResult(iterable);
+    }
+
+    BsonDocument getListIndexesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                      @Nullable final ClientSession clientSession) {
+        ListIndexesIterable<BsonDocument> iterable;
+        if (clientSession == null) {
+            iterable = getCollection(collectionOptions).listIndexes(BsonDocument.class);
+        } else {
+            iterable = getCollection(collectionOptions).listIndexes(clientSession, BsonDocument.class);
         }
         return toResult(iterable);
     }
@@ -403,6 +444,7 @@ public class JsonPoweredCrudTestHelper {
         return toResult(iterable.into(new BsonArray()));
     }
 
+    @SuppressWarnings("deprecation")
     BsonDocument getFindOneResult(final BsonDocument collectionOptions, final BsonDocument arguments,
                                   @Nullable final ClientSession clientSession) {
         return getFindResult(collectionOptions, arguments, clientSession);
@@ -437,6 +479,26 @@ public class JsonPoweredCrudTestHelper {
             iterable.collation(getCollation(arguments.getDocument("collation")));
         }
         return toResult(iterable);
+    }
+
+    BsonDocument getMapReduceResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                    @Nullable final ClientSession clientSession) {
+        MapReduceIterable<BsonDocument> iterable;
+        if (clientSession == null) {
+            iterable = getCollection(collectionOptions).mapReduce(arguments.get("map").asJavaScript().getCode(),
+                    arguments.get("reduce").asJavaScript().getCode());
+        } else {
+            iterable = getCollection(collectionOptions).mapReduce(clientSession, arguments.get("map").asJavaScript().getCode(),
+                    arguments.get("reduce").asJavaScript().getCode());
+        }
+
+        if (arguments.containsKey("filter")) {
+            iterable.filter(arguments.getDocument("filter"));
+        }
+        if (arguments.containsKey("collation")) {
+            iterable.collation(getCollation(arguments.getDocument("collation")));
+        }
+        return toResult(iterable.into(new BsonArray()));
     }
 
     BsonDocument getDeleteManyResult(final BsonDocument collectionOptions, final BsonDocument arguments,
@@ -786,8 +848,8 @@ public class JsonPoweredCrudTestHelper {
         return toResult("result", new BsonString(Hex.encode(outputStream.toByteArray()).toLowerCase()));
     }
 
-    BsonDocument getDelete(final BsonDocument collectionOptions, final BsonDocument arguments,
-                           @Nullable final ClientSession clientSession) {
+    BsonDocument getDeleteResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                 @Nullable final ClientSession clientSession) {
         try {
             gridFSBucket.delete(arguments.getObjectId("id").getValue());
             return new BsonDocument("ok", new BsonInt32(1));
@@ -798,8 +860,8 @@ public class JsonPoweredCrudTestHelper {
         }
     }
 
-    BsonDocument getDownload(final BsonDocument collectionOptions, final BsonDocument arguments,
-                             @Nullable final ClientSession clientSession) throws IOException {
+    BsonDocument getDownloadResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+                                   @Nullable final ClientSession clientSession) throws IOException {
         ByteArrayOutputStream outputStream = null;
 
         try {
@@ -811,8 +873,8 @@ public class JsonPoweredCrudTestHelper {
         return toResult("result", new BsonString(Hex.encode(outputStream.toByteArray()).toLowerCase()));
     }
 
-    BsonDocument getUpload(final BsonDocument collectionOptions, final BsonDocument rawArguments,
-                           @Nullable final ClientSession clientSession) {
+    BsonDocument getUploadResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
+                                 @Nullable final ClientSession clientSession) {
         ObjectId objectId = null;
         BsonDocument arguments = parseHexDocument(rawArguments, "source");
 
@@ -832,6 +894,26 @@ public class JsonPoweredCrudTestHelper {
         }
 
         return new BsonDocument("objectId", new BsonObjectId(gridFSUploadBucket.uploadFromStream(filename, input, options)));
+    }
+
+    // Change streams operations
+
+    BsonDocument getClientWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
+                                      @Nullable final ClientSession clientSession) {
+        MongoCursor<ChangeStreamDocument<Document>> cursor = mongoClient.watch().iterator();
+        return null;
+    }
+
+    BsonDocument getWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
+                                      @Nullable final ClientSession clientSession) {
+        MongoCursor<ChangeStreamDocument<BsonDocument>> cursor = baseCollection.watch().iterator();
+        return null;
+    }
+
+    BsonDocument getDatabaseWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
+                                        @Nullable final ClientSession clientSession) {
+        MongoCursor<ChangeStreamDocument<Document>> cursor = database.watch().iterator();
+        return null;
     }
 
     Collation getCollation(final BsonDocument bsonCollation) {

@@ -242,6 +242,16 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
     }
 
     /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
+    /**
      * Will return a cursor of Documents containing the results of the group operation.
      *
      * @param binding the binding
@@ -255,7 +265,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
                 validateCollation(connection, collation);
                 return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(),
                         CommandResultDocumentCodec.create(decoder, "retval"),
-                        transformer(connectionSource, connection), retryReads);
+                        transformer(connectionSource, connection), getRetryReads());
             }
         });
     }

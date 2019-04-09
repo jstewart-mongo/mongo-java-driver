@@ -33,6 +33,7 @@ import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.ListCollectionsIterable;
 import com.mongodb.client.ListDatabasesIterable;
 import com.mongodb.client.ListIndexesIterable;
 import com.mongodb.client.MapReduceIterable;
@@ -106,8 +107,8 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
         this.retryReads = retryReads;
         this.readConcern = notNull("readConcern", readConcern);
         this.executor = notNull("executor", executor);
-        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern, retryWrites)
-                .retryReads(retryReads);
+        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern, retryWrites,
+                retryReads);
     }
 
     @Override
@@ -279,8 +280,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> DistinctIterable<TResult> createDistinctIterable(@Nullable final ClientSession clientSession, final String fieldName,
                                                                        final Bson filter, final Class<TResult> resultClass) {
         return MongoIterables.distinctOf(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, fieldName, filter)
-                .retryReads(retryReads);
+                readPreference, readConcern, executor, fieldName, filter, retryReads);
     }
 
     @Override
@@ -331,8 +331,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> FindIterable<TResult> createFindIterable(@Nullable final ClientSession clientSession, final Bson filter,
                                                                final Class<TResult> resultClass) {
         return MongoIterables.findOf(clientSession, namespace, this.documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, filter)
-                .retryReads(retryReads);
+                readPreference, readConcern, executor, filter, retryReads);
     }
 
     @Override
@@ -361,8 +360,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
                                                                          final List<? extends Bson> pipeline,
                                                                          final Class<TResult> resultClass) {
         return MongoIterables.aggregateOf(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.COLLECTION)
-                .retryReads(retryReads);
+                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.COLLECTION, retryReads);
     }
 
     @Override
@@ -411,7 +409,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
                                                                                final List<? extends Bson> pipeline,
                                                                                final Class<TResult> resultClass) {
         return MongoIterables.changeStreamOf(clientSession, namespace, codecRegistry, readPreference, readConcern, executor,
-                pipeline, resultClass, ChangeStreamLevel.COLLECTION);
+                pipeline, resultClass, ChangeStreamLevel.COLLECTION, retryReads);
     }
 
     @Override
@@ -838,7 +836,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> ListIndexesIterable<TResult> createListIndexesIterable(@Nullable final ClientSession clientSession,
                                                                              final Class<TResult> resultClass) {
         return MongoIterables.listIndexesOf(clientSession, getNamespace(), resultClass, codecRegistry, ReadPreference.primary(),
-                executor);
+                executor, retryReads);
     }
 
     @Override
@@ -864,8 +862,34 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
 
     private <TResult> ListDatabasesIterable<TResult> createListDatabasesIterable(@Nullable final ClientSession clientSession,
                                                                              final Class<TResult> resultClass) {
-        return MongoIterables.listDatabasesOf(clientSession, resultClass, codecRegistry, ReadPreference.primary(), executor)
-                .retryReads(retryReads);
+        return MongoIterables.listDatabasesOf(clientSession, resultClass, codecRegistry, ReadPreference.primary(), executor, retryReads);
+    }
+
+    @Override
+    public ListCollectionsIterable<Document> listCollections() {
+        return listCollections(Document.class);
+    }
+
+    @Override
+    public <TResult> ListCollectionsIterable<TResult> listCollections(final Class<TResult> resultClass) {
+        return createListCollectionsIterable(null, resultClass);
+    }
+
+    @Override
+    public ListCollectionsIterable<Document> listCollections(final ClientSession clientSession) {
+        return listCollections(clientSession, Document.class);
+    }
+
+    @Override
+    public <TResult> ListCollectionsIterable<TResult> listCollections(final ClientSession clientSession, final Class<TResult> resultClass) {
+        notNull("clientSession", clientSession);
+        return createListCollectionsIterable(clientSession, resultClass);
+    }
+
+    private <TResult> ListCollectionsIterable<TResult> createListCollectionsIterable(@Nullable final ClientSession clientSession,
+                                                                                     final Class<TResult> resultClass) {
+        return MongoIterables.listCollectionsOf(clientSession, namespace.getDatabaseName(), false, resultClass,
+                codecRegistry, ReadPreference.primary(), executor, retryReads);
     }
 
     @Override

@@ -37,7 +37,6 @@ import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
-import org.bson.BsonNull;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.codecs.BsonDocumentCodec;

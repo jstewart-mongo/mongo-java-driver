@@ -149,6 +149,16 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         return this;
     }
 
+    /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return withConnection(binding, new OperationHelper.CallableWithConnectionAndSource<BatchCursor<T>>() {
@@ -157,7 +167,7 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
                         return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), createCommandDecoder(),
-                                transformer(source), retryReads);
+                                transformer(source), getRetryReads());
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(namespace, decoder,
                                                                                     source.getServerDescription().getAddress(), batchSize));

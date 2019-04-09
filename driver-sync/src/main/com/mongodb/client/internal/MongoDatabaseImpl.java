@@ -248,7 +248,7 @@ public class MongoDatabaseImpl implements MongoDatabase {
                                                                                      final Class<TResult> resultClass,
                                                                                      final boolean collectionNamesOnly) {
         return MongoIterables.listCollectionsOf(clientSession, name, collectionNamesOnly, resultClass, codecRegistry,
-                ReadPreference.primary(), executor);
+                ReadPreference.primary(), executor, retryReads);
     }
 
     @Override
@@ -396,15 +396,14 @@ public class MongoDatabaseImpl implements MongoDatabase {
                                                                          final List<? extends Bson> pipeline,
                                                                          final Class<TResult> resultClass) {
         return MongoIterables.aggregateOf(clientSession, name, Document.class, resultClass, codecRegistry,
-                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.DATABASE)
-                .retryReads(retryReads);
+                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.DATABASE, retryReads);
     }
 
     private <TResult> ChangeStreamIterable<TResult> createChangeStreamIterable(@Nullable final ClientSession clientSession,
                                                                                final List<? extends Bson> pipeline,
                                                                                final Class<TResult> resultClass) {
         return MongoIterables.changeStreamOf(clientSession, name, codecRegistry, readPreference,
-                readConcern, executor, pipeline, resultClass, ChangeStreamLevel.DATABASE);
+                readConcern, executor, pipeline, resultClass, ChangeStreamLevel.DATABASE, retryReads);
     }
 
     private void executeCreateView(@Nullable final ClientSession clientSession, final String viewName, final String viewOn,

@@ -538,7 +538,7 @@ public class MongoClient extends Mongo implements Closeable {
 
     private <T> ListDatabasesIterable<T> createListDatabasesIterable(@Nullable final ClientSession clientSession, final Class<T> clazz) {
         return MongoIterables.listDatabasesOf(clientSession, clazz, getMongoClientOptions().getCodecRegistry(),
-                ReadPreference.primary(), createOperationExecutor());
+                ReadPreference.primary(), createOperationExecutor(), getMongoClientOptions().getRetryReads());
     }
 
     /**
@@ -711,7 +711,7 @@ public class MongoClient extends Mongo implements Closeable {
         MongoClientOptions clientOptions = getMongoClientOptions();
         return MongoIterables.changeStreamOf(clientSession, "admin",
                 clientOptions.getCodecRegistry(), clientOptions.getReadPreference(), clientOptions.getReadConcern(),
-                createOperationExecutor(), pipeline, resultClass, ChangeStreamLevel.CLIENT);
+                createOperationExecutor(), pipeline, resultClass, ChangeStreamLevel.CLIENT, clientOptions.getRetryReads());
     }
 
 

@@ -1,7 +1,21 @@
 {
+  "runOn": [
+    {
+      "minServerVersion": "4.0",
+      "topology": [
+        "single",
+        "replicaset"
+      ]
+    },
+    {
+      "minServerVersion": "4.1.7",
+      "topology": [
+        "sharded"
+      ]
+    }
+  ],
   "database_name": "retryable-reads-tests",
   "bucket_name": "fs",
-  "minServerVersion": "4.0",
   "data": {
     "fs.files": [
       {
@@ -19,8 +33,7 @@
     ],
     "fs.chunks": [
       {
-          "_id": {
-              
+        "_id": {
           "$oid": "000000000000000000000002"
         },
         "files_id": {

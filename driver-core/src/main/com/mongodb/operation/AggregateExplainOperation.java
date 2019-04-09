@@ -107,6 +107,16 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
     }
 
     /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return (this.retryReads == null ? true : retryReads);
+    }
+
+    /**
      * Sets the collation options
      *
      * <p>A null value represents the server default.</p>
@@ -171,7 +181,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
             @Override
             public BsonDocument call(final Connection connection) {
                 validateCollation(connection, collation);
-                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), retryReads);
+                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), getRetryReads());
             }
         });
     }

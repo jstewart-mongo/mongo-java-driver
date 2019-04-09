@@ -159,7 +159,7 @@ public class GroupCommand {
         }
 
         GroupOperation<DBObject> operation = new GroupOperation<DBObject>(namespace, new BsonJavaScript(reduce),
-                new BsonDocumentWrapper<DBObject>(initial, codec), codec, retryReads);
+                new BsonDocumentWrapper<DBObject>(initial, codec), codec).retryReads(retryReads);
 
         if (keys != null) {
             operation.key(new BsonDocumentWrapper<DBObject>(keys, codec));

@@ -206,7 +206,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should use the ReadBindings readPreference to set slaveOK'() {
         when:
-        def operation = new DistinctOperation(helper.namespace, 'name', helper.decoder)
+        def operation = new DistinctOperation(helper.namespace, 'name', helper.decoder).retryReads(false)
 
         then:
         testOperationSlaveOk(operation, [3, 4, 0], readPreference, async, helper.commandResult)
@@ -221,12 +221,14 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
                 .filter(new BsonDocument('a', BsonBoolean.TRUE))
                 .maxTime(10, MILLISECONDS)
                 .collation(defaultCollation)
+                .retryReads(false)
 
         def expectedCommand = new BsonDocument('distinct', new BsonString(helper.namespace.getCollectionName()))
                 .append('key', new BsonString('name'))
                 .append('query', operation.getFilter())
                 .append('maxTimeMS', new BsonInt64(operation.getMaxTime(MILLISECONDS)))
                 .append('collation', defaultCollation.asDocument())
+                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.commandResult)
@@ -296,9 +298,11 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
         source.retain() >> source
         def commandDocument = new BsonDocument('distinct', new BsonString(getCollectionName()))
                 .append('key', new BsonString('str'))
+                .append('retryReads', new BsonBoolean(false))
         appendReadConcernToCommand(sessionContext, commandDocument)
 
         def operation = new DistinctOperation<String>(getNamespace(), 'str', new StringCodec())
+                .retryReads(false)
 
         when:
         operation.execute(binding)

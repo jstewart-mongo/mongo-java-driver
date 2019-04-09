@@ -69,14 +69,4 @@ public interface ListDatabasesIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.server.release 3.4.3
      */
     ListDatabasesIterable<TResult> nameOnly(@Nullable Boolean nameOnly);
-
-    /**
-     * Enables retryable reads if a read fails due to a network error.
-     *
-     * @param retryReads true if reads should be retried
-     * @return this
-     * @since 3.11
-     * @mongodb.server.release 3.6
-     */
-    ListDatabasesIterable<TResult> retryReads(@Nullable Boolean retryReads);
 }

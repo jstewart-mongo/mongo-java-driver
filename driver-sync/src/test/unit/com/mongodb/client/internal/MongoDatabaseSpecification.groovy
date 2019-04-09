@@ -227,14 +227,14 @@ class MongoDatabaseSpecification extends Specification {
 
         then:
         expect listCollectionIterable, isTheSameAs(MongoIterables.listCollectionsOf(session, name, false, Document, codecRegistry,
-                primary(), executor))
+                primary(), executor, false))
 
         when:
         listCollectionIterable = TestHelper.execute(listCollectionsMethod, session, BsonDocument)
 
         then:
         expect listCollectionIterable, isTheSameAs(MongoIterables.listCollectionsOf(session, name, false, BsonDocument,
-                codecRegistry, primary(), executor))
+                codecRegistry, primary(), executor, false))
 
         when:
         def listCollectionNamesIterable = TestHelper.execute(listCollectionNamesMethod, session)
@@ -242,7 +242,7 @@ class MongoDatabaseSpecification extends Specification {
         then:
         // listCollectionNamesIterable is an instance of a MappingIterable, so have to get the mapped iterable inside it
         expect listCollectionNamesIterable.getMapped(), isTheSameAs(MongoIterables.listCollectionsOf(session, name, true,
-                BsonDocument, codecRegistry, primary(), executor))
+                BsonDocument, codecRegistry, primary(), executor, false))
 
         where:
         session << [null, Stub(ClientSession)]
@@ -362,21 +362,21 @@ class MongoDatabaseSpecification extends Specification {
 
         then:
         expect changeStreamIterable, isTheSameAs(MongoIterables.changeStreamOf(session, namespace, codecRegistry, readPreference,
-                readConcern, executor, [], Document, ChangeStreamLevel.DATABASE), ['codec'])
+                readConcern, executor, [], Document, ChangeStreamLevel.DATABASE, false), ['codec'])
 
         when:
         changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)])
 
         then:
         expect changeStreamIterable, isTheSameAs(MongoIterables.changeStreamOf(session, namespace, codecRegistry, readPreference,
-                readConcern, executor, [new Document('$match', 1)], Document, ChangeStreamLevel.DATABASE), ['codec'])
+                readConcern, executor, [new Document('$match', 1)], Document, ChangeStreamLevel.DATABASE, false), ['codec'])
 
         when:
         changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)], BsonDocument)
 
         then:
         expect changeStreamIterable, isTheSameAs(MongoIterables.changeStreamOf(session, namespace, codecRegistry, readPreference,
-                readConcern, executor, [new Document('$match', 1)], BsonDocument, ChangeStreamLevel.DATABASE), ['codec'])
+                readConcern, executor, [new Document('$match', 1)], BsonDocument, ChangeStreamLevel.DATABASE, false), ['codec'])
 
         where:
         session << [null, Stub(ClientSession)]
@@ -411,21 +411,21 @@ class MongoDatabaseSpecification extends Specification {
 
         then:
         expect aggregateIterable, isTheSameAs(MongoIterables.aggregateOf(session, name, Document, Document, codecRegistry, readPreference,
-                readConcern, writeConcern, executor, [], AggregationLevel.DATABASE), ['codec'])
+                readConcern, writeConcern, executor, [], AggregationLevel.DATABASE, false), ['codec'])
 
         when:
         aggregateIterable = execute(aggregateMethod, session, [new Document('$match', 1)])
 
         then:
         expect aggregateIterable, isTheSameAs(MongoIterables.aggregateOf(session, name, Document, Document, codecRegistry, readPreference,
-                readConcern, writeConcern, executor, [new Document('$match', 1)], AggregationLevel.DATABASE), ['codec'])
+                readConcern, writeConcern, executor, [new Document('$match', 1)], AggregationLevel.DATABASE, false), ['codec'])
 
         when:
         aggregateIterable = execute(aggregateMethod, session, [new Document('$match', 1)], BsonDocument)
 
         then:
         expect aggregateIterable, isTheSameAs(MongoIterables.aggregateOf(session, name, Document, BsonDocument, codecRegistry,
-                readPreference, readConcern, writeConcern, executor, [new Document('$match', 1)], AggregationLevel.DATABASE), ['codec'])
+                readPreference, readConcern, writeConcern, executor, [new Document('$match', 1)], AggregationLevel.DATABASE, false), ['codec'])
 
         where:
         session << [null, Stub(ClientSession)]

@@ -575,7 +575,7 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
 
     @SuppressWarnings("deprecation")
     private FindOperation<DBObject> getQueryOperation(final Decoder<DBObject> decoder) {
-        FindOperation<DBObject> operation = new FindOperation<DBObject>(collection.getNamespace(), decoder, retryReads)
+        FindOperation<DBObject> operation = new FindOperation<DBObject>(collection.getNamespace(), decoder)
                                                 .filter(collection.wrapAllowNull(filter))
                                                 .batchSize(findOptions.getBatchSize())
                                                 .skip(findOptions.getSkip())
@@ -591,7 +591,8 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
                                                 .min(collection.wrapAllowNull(findOptions.getMin()))
                                                 .max(collection.wrapAllowNull(findOptions.getMax()))
                                                 .returnKey(findOptions.isReturnKey())
-                                                .showRecordId(findOptions.isShowRecordId());
+                                                .showRecordId(findOptions.isShowRecordId())
+                                                .retryReads(retryReads);
 
         if ((this.options & Bytes.QUERYOPTION_TAILABLE) != 0) {
             if ((this.options & Bytes.QUERYOPTION_AWAITDATA) != 0) {

@@ -123,40 +123,43 @@ final class CommandOperationHelper {
 
     static <D, T> T executeCommand(final ReadBinding binding, final String database, final CommandCreator commandCreator,
                                    final Decoder<D> decoder, final CommandTransformer<D, T> transformer, final boolean retryReads) {
-        BsonDocument command = null;
-        MongoException exception;
-
-        try {
-            command = commandCreator.create(binding.getReadConnectionSource().getServerDescription(),
-                    binding.getReadConnectionSource().getConnection().getDescription());
-            return executeCommand(database, command, decoder, binding.getReadConnectionSource().getConnection(),
-                    binding.getReadPreference(), transformer, binding.getSessionContext());
-        } catch (MongoException e) {
-            exception = e;
-
-            if (!shouldAttemptToRetryRead(retryReads, e)) {
-                if (retryReads) {
-                    logUnableToRetry(command.getFirstKey(), e);
-                }
-                throw exception;
-            }
-        }
-
-        final MongoException originalException = exception;
-        return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<T>() {
+        return withConnection(binding, new CallableWithConnectionAndSource<T>() {
             @Override
             public T call(final ConnectionSource source, final Connection connection) {
+                BsonDocument command = null;
+                MongoException exception;
                 try {
-                    if (!canRetryRead(source.getServerDescription(), connection.getDescription(), binding.getSessionContext())) {
-                        throw originalException;
-                    }
-                    BsonDocument retryCommand = commandCreator.create(source.getServerDescription(), connection.getDescription());
-                    logRetryExecute(retryCommand.getFirstKey(), originalException);
-                    return executeCommand(database, retryCommand, decoder, connection, binding.getReadPreference(), transformer,
+                    command = commandCreator.create(source.getServerDescription(), connection.getDescription());
+                    return executeCommand(database, command, decoder, connection, binding.getReadPreference(), transformer,
                             binding.getSessionContext());
-                } finally {
-                    connection.release();
+                } catch (MongoException e) {
+                    exception = e;
+
+                    if (!shouldAttemptToRetryRead(retryReads, e)) {
+                        if (retryReads) {
+                            logUnableToRetry(command.getFirstKey(), e);
+                        }
+                        throw exception;
+                    }
                 }
+
+                final MongoException originalException = exception;
+                return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<T>() {
+                    @Override
+                    public T call(final ConnectionSource source, final Connection connection) {
+                        try {
+                            if (!canRetryRead(source.getServerDescription(), connection.getDescription(), binding.getSessionContext())) {
+                                throw originalException;
+                            }
+                            BsonDocument retryCommand = commandCreator.create(source.getServerDescription(), connection.getDescription());
+                            logRetryExecute(retryCommand.getFirstKey(), originalException);
+                            return executeCommand(database, retryCommand, decoder, connection, binding.getReadPreference(), transformer,
+                                    binding.getSessionContext());
+                        } finally {
+                            connection.release();
+                        }
+                    }
+                });
             }
         });
     }

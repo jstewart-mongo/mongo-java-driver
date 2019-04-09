@@ -58,22 +58,29 @@ public final class SyncOperations<TDocument> {
 
     public SyncOperations(final Class<TDocument> documentClass, final ReadPreference readPreference,
                           final CodecRegistry codecRegistry) {
-        this(null, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true);
+        this(null, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true, true);
+    }
+
+    public SyncOperations(final Class<TDocument> documentClass, final ReadPreference readPreference,
+                          final CodecRegistry codecRegistry, final Boolean retryReads) {
+        this(null, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true, retryReads);
     }
 
     public SyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
                           final CodecRegistry codecRegistry) {
-        this(namespace, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true);
+        this(namespace, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true, true);
     }
 
     public SyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
-                          final CodecRegistry codecRegistry, final WriteConcern writeConcern, final boolean retryWrites) {
-        this.operations = new Operations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern, retryWrites);
+                          final CodecRegistry codecRegistry, final Boolean retryReads) {
+        this(namespace, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true, retryReads);
     }
 
-    public SyncOperations<TDocument> retryReads(final Boolean retryReads) {
-        operations.retryReads(retryReads);
-        return this;
+    public SyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
+                          final CodecRegistry codecRegistry, final WriteConcern writeConcern, final boolean retryWrites,
+                          final boolean retryReads) {
+        this.operations = new Operations<TDocument>(namespace, documentClass, readPreference, codecRegistry, writeConcern, retryWrites,
+                retryReads);
     }
 
     public ReadOperation<Long> count(final Bson filter, final CountOptions options, final CountStrategy countStrategy) {

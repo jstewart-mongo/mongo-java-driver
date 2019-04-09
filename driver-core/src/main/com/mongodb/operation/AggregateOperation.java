@@ -275,6 +275,16 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
     }
 
     /**
+     * Gets the value for retryable reads. The default is true.
+     *
+     * @return the retryable reads value
+     * @since 3.11
+     */
+    public Boolean getRetryReads() {
+        return wrapped.getRetryReads();
+    }
+
+    /**
      * Returns the hint for which index to use. The default is not to set a hint.
      *
      * @return the hint

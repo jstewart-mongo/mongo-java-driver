@@ -34,7 +34,6 @@ import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.SocketSettings;
-import com.mongodb.connection.SslSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import com.mongodb.lang.Nullable;
@@ -91,7 +90,7 @@ public abstract class AbstractTransactionsTest {
     private boolean useMultipleMongoses = false;
     private ConnectionString connectionString = null;
 
-    private final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
+    private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
     public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;
@@ -149,6 +148,7 @@ public abstract class AbstractTransactionsTest {
                 .readConcern(getReadConcern(clientOptions))
                 .readPreference(getReadPreference(clientOptions))
                 .retryWrites(clientOptions.getBoolean("retryWrites", BsonBoolean.FALSE).getValue())
+                .retryReads(false)
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
                     public void apply(final ServerSettings.Builder builder) {

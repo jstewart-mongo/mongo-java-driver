@@ -1597,6 +1597,48 @@ public interface MongoCollection<TDocument> {
     <TResult> ListDatabasesIterable<TResult> listDatabases(ClientSession clientSession, Class<TResult> resultClass);
 
     /**
+     * Get all collections.
+     *
+     * @return the list collections iterable interface
+     * @mongodb.driver.manual reference/command/listCollections/ List collections
+     */
+    ListCollectionsIterable<Document> listCollections();
+
+    /**
+     * Get all collections.
+     *
+     * @param resultClass the class to decode each document into
+     * @param <TResult>   the target document type of the iterable.
+     * @return the list collections iterable interface
+     * @mongodb.driver.manual reference/command/listCollections/ List collections
+     */
+    <TResult> ListCollectionsIterable<TResult> listCollections(Class<TResult> resultClass);
+
+    /**
+     * Get all collections.
+     *
+     * @param clientSession the client session with which to associate this operation
+     * @return the list collections iterable interface
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     * @mongodb.driver.manual reference/command/listCollections/ List collections
+     */
+    ListCollectionsIterable<Document> listCollections(ClientSession clientSession);
+
+    /**
+     * Get all collections.
+     *
+     * @param clientSession the client session with which to associate this operation
+     * @param resultClass the class to decode each document into
+     * @param <TResult>   the target document type of the iterable.
+     * @return the list collections iterable interface
+     * @since 3.11
+     * @mongodb.server.release 3.6
+     * @mongodb.driver.manual reference/command/listCollections/ List collections
+     */
+    <TResult> ListCollectionsIterable<TResult> listCollections(ClientSession clientSession, Class<TResult> resultClass);
+
+    /**
      * Drops the index given its name.
      *
      * @param indexName the name of the index to remove

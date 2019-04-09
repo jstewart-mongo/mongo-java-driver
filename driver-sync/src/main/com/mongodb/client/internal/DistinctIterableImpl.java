@@ -43,12 +43,19 @@ class DistinctIterableImpl<TDocument, TResult> extends MongoIterableImpl<TResult
     private long maxTimeMS;
     private Collation collation;
 
-
     DistinctIterableImpl(@Nullable final ClientSession clientSession, final MongoNamespace namespace, final Class<TDocument> documentClass,
                          final Class<TResult> resultClass, final CodecRegistry codecRegistry, final ReadPreference readPreference,
                          final ReadConcern readConcern, final OperationExecutor executor, final String fieldName, final Bson filter) {
-        super(clientSession, executor, readConcern, readPreference);
-        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry);
+        this(clientSession, namespace, documentClass, resultClass, codecRegistry, readPreference, readConcern, executor, fieldName,
+                filter, true);
+    }
+
+    DistinctIterableImpl(@Nullable final ClientSession clientSession, final MongoNamespace namespace, final Class<TDocument> documentClass,
+                         final Class<TResult> resultClass, final CodecRegistry codecRegistry, final ReadPreference readPreference,
+                         final ReadConcern readConcern, final OperationExecutor executor, final String fieldName, final Bson filter,
+                         final Boolean retryReads) {
+        super(clientSession, executor, readConcern, readPreference, retryReads);
+        this.operations = new SyncOperations<TDocument>(namespace, documentClass, readPreference, codecRegistry, retryReads);
         this.resultClass = notNull("resultClass", resultClass);
         this.fieldName = notNull("mapFunction", fieldName);
         this.filter = filter;
@@ -76,12 +83,6 @@ class DistinctIterableImpl<TDocument, TResult> extends MongoIterableImpl<TResult
     @Override
     public DistinctIterable<TResult> collation(@Nullable final Collation collation) {
         this.collation = collation;
-        return this;
-    }
-
-    @Override
-    public DistinctIterable<TResult> retryReads(@Nullable final Boolean retryReads) {
-        operations.retryReads(retryReads);
         return this;
     }
 
