@@ -66,9 +66,10 @@ class OperationUnitSpecification extends Specification {
         maxWireVersion
     }
 
-    void testOperation(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, BsonDocument result) {
+    void testOperation(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, BsonDocument result,
+                       Boolean retryReads = true) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
-        test(operation, serverVersion, result, true, expectedCommand)
+        test(operation, serverVersion, result, true, expectedCommand, retryReads)
     }
 
     void testOperationSlaveOk(operation, List<Integer> serverVersion, ReadPreference readPreference, boolean async, result = null) {
@@ -78,12 +79,13 @@ class OperationUnitSpecification extends Specification {
 
     void testOperationThrows(operation, List<Integer> serverVersion, boolean async) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
-        test(operation, serverVersion, null, false)
+        test(operation, serverVersion, null, false, null, false, ReadPreference.primary(), false)
     }
 
     def testSyncOperation(operation, List<Integer> serverVersion, result, Boolean checkCommand=true,
                           BsonDocument expectedCommand=null,
-                          Boolean checkSlaveOk=false, ReadPreference readPreference=ReadPreference.primary()) {
+                          Boolean checkSlaveOk=false, ReadPreference readPreference=ReadPreference.primary(),
+                          Boolean retryReads=true) {
         def connection = Mock(Connection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)
@@ -122,7 +124,11 @@ class OperationUnitSpecification extends Specification {
             result
         }
 
-        1 * connection.release()
+        if (retryReads) {
+            2 * connection.release()
+        } else {
+            1 * connection.release()
+        }
 
         if (operation instanceof ReadOperation) {
             operation.execute(readBinding)
@@ -133,7 +139,8 @@ class OperationUnitSpecification extends Specification {
 
     def testAsyncOperation(operation, List<Integer> serverVersion, result = null,
                            Boolean checkCommand=true, BsonDocument expectedCommand=null,
-                           Boolean checkSlaveOk=false, ReadPreference readPreference=ReadPreference.primary()) {
+                           Boolean checkSlaveOk=false, ReadPreference readPreference=ReadPreference.primary(),
+                           Boolean retryReads=true) {
         def connection = Mock(AsyncConnection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)
@@ -173,7 +180,11 @@ class OperationUnitSpecification extends Specification {
             it[6].onResult(result, null)
         }
 
-        1 * connection.release()
+        if (retryReads) {
+            2 * connection.release()
+        } else {
+            1 * connection.release()
+        }
 
         if (operation instanceof AsyncReadOperation) {
             operation.executeAsync(readBinding, callback)

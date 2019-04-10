@@ -298,7 +298,6 @@ public class RetryableReadsTest {
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
         List<Object[]> data = new ArrayList<Object[]>();
         for (File file : JsonPoweredTestHelper.getTestFiles("/retryable-reads")) {
-            String baseName = file.getName();
             BsonDocument testDocument = JsonPoweredTestHelper.getTestDocument(file);
             if (testDocument.containsKey("minServerVersion")
                     && serverVersionLessThan(testDocument.getString("minServerVersion").getValue())) {
@@ -318,7 +317,7 @@ public class RetryableReadsTest {
     }
 
     private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6) && isDiscoverableReplicaSet();
+        return serverVersionAtLeast(3, 6);
     }
 
     private ServerVersion getServerVersion(final String fieldName, final BsonDocument document) {

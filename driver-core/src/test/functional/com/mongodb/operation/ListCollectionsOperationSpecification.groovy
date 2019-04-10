@@ -455,7 +455,7 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         then:
         _ * connection.getDescription() >> helper.threeZeroConnectionDescription
         1 * connection.command(_, _, _, readPreference, _, _) >> helper.commandResult
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         readPreference << [ReadPreference.primary(), ReadPreference.secondary()]

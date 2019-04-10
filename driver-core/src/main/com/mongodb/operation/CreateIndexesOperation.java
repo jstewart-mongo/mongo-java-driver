@@ -47,7 +47,7 @@ import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.internal.operation.IndexHelper.generateIndexName;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
@@ -198,7 +198,7 @@ public class CreateIndexesOperation implements AsyncWriteOperation<Void>, WriteO
                             if (t != null) {
                                 wrappedCallback.onResult(null, t);
                             } else {
-                                executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
+                                executeCommandAsync(binding, namespace.getDatabaseName(),
                                         getCommand(connection.getDescription()), connection, writeConcernErrorTransformer(),
                                         new SingleResultCallback<Void>() {
                                             @Override

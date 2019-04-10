@@ -884,13 +884,13 @@ public class JsonPoweredCrudTestHelper {
         GridFSUploadOptions options = new GridFSUploadOptions();
         BsonDocument rawOptions = arguments.getDocument("options", new BsonDocument());
         if (rawOptions.containsKey("chunkSizeBytes")) {
-            options = options.chunkSizeBytes(rawOptions.getInt32("chunkSizeBytes").getValue());
+            options.chunkSizeBytes(rawOptions.getInt32("chunkSizeBytes").getValue());
         }
         if (rawOptions.containsKey("metadata")) {
-            options = options.metadata(Document.parse(rawOptions.getDocument("metadata").toJson()));
+            options.metadata(Document.parse(rawOptions.getDocument("metadata").toJson()));
         }
         if (rawOptions.containsKey("disableMD5")) {
-            gridFSUploadBucket = gridFSUploadBucket.withDisableMD5(rawOptions.getBoolean("disableMD5").getValue());
+            gridFSUploadBucket.withDisableMD5(rawOptions.getBoolean("disableMD5").getValue());
         }
 
         return new BsonDocument("objectId", new BsonObjectId(gridFSUploadBucket.uploadFromStream(filename, input, options)));
@@ -901,19 +901,19 @@ public class JsonPoweredCrudTestHelper {
     BsonDocument getClientWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
                                       @Nullable final ClientSession clientSession) {
         MongoCursor<ChangeStreamDocument<Document>> cursor = mongoClient.watch().iterator();
-        return null;
+        return new BsonDocument("ok", new BsonInt32(1));
     }
 
     BsonDocument getWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
                                       @Nullable final ClientSession clientSession) {
         MongoCursor<ChangeStreamDocument<BsonDocument>> cursor = baseCollection.watch().iterator();
-        return null;
+        return new BsonDocument("ok", new BsonInt32(1));
     }
 
     BsonDocument getDatabaseWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
                                         @Nullable final ClientSession clientSession) {
         MongoCursor<ChangeStreamDocument<Document>> cursor = database.watch().iterator();
-        return null;
+        return new BsonDocument("ok", new BsonInt32(1));
     }
 
     Collation getCollation(final BsonDocument bsonCollation) {
@@ -1043,10 +1043,6 @@ public class JsonPoweredCrudTestHelper {
 
     ReadConcern getReadConcern(final BsonDocument arguments) {
         return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
-    }
-
-    private BsonDocument parseHexDocument(final BsonDocument document) {
-        return parseHexDocument(document, "data");
     }
 
     private BsonDocument parseHexDocument(final BsonDocument document, final String hexDocument) {

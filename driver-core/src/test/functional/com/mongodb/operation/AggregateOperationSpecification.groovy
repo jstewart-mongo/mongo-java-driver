@@ -150,7 +150,6 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                 .maxAwaitTime(15, MILLISECONDS)
                 .maxTime(10, MILLISECONDS)
                 .useCursor(true)
-                .retryReads(false)
 
         def expectedCommand = new BsonDocument('aggregate', new BsonString(helper.namespace.getCollectionName()))
                 .append('pipeline', new BsonArray(pipeline))
@@ -158,7 +157,6 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                 .append('collation', defaultCollation.asDocument())
                 .append('cursor', new BsonDocument('batchSize', new BsonInt32(10)))
                 .append('maxTimeMS', new BsonInt64(10))
-                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.cursorResult)
@@ -331,6 +329,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
     def 'should throw execution timeout exception from execute'() {
         given:
         def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec()).maxTime(1, SECONDS)
+                .retryReads(false)
         enableMaxTimeFailPoint()
 
         when:
@@ -496,7 +495,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                 new BsonDocument('cursor', new BsonDocument('id', new BsonInt64(1))
                         .append('ns', new BsonString(getNamespace().getFullName()))
                         .append('firstBatch', new BsonArrayWrapper([])))
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [
@@ -537,7 +536,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                     .append('ns', new BsonString(getNamespace().getFullName()))
                     .append('firstBatch', new BsonArrayWrapper([]))), null)
         }
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [

@@ -36,7 +36,7 @@ import java.util.List;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotFour;
@@ -171,7 +171,7 @@ public class CreateViewOperation implements AsyncWriteOperation<Void>, WriteOper
                     if (!serverIsAtLeastVersionThreeDotFour(connection.getDescription())) {
                         wrappedCallback.onResult(null, createExceptionForIncompatibleServerVersion());
                     }
-                    executeWrappedCommandProtocolAsync(binding, databaseName, getCommand(connection.getDescription()),
+                    executeCommandAsync(binding, databaseName, getCommand(connection.getDescription()),
                             connection, writeConcernErrorTransformer(), wrappedCallback);
                 }
             }

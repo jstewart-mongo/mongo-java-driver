@@ -272,7 +272,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> DistinctIterable<TResult> createDistinctIterable(@Nullable final ClientSession clientSession, final String fieldName,
                                                                        final Bson filter, final Class<TResult> resultClass) {
         return new DistinctIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, fieldName, filter);
+                readPreference, readConcern, executor, fieldName, filter, retryReads);
     }
 
     @Override
@@ -319,7 +319,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     private <TResult> FindIterable<TResult> createFindIterable(@Nullable final ClientSession clientSession, final Bson filter,
                                                                final Class<TResult> resultClass) {
         return new FindIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, executor, filter);
+                readPreference, readConcern, executor, filter, retryReads);
     }
 
     @Override
@@ -348,7 +348,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
                                                                          final List<? extends Bson> pipeline,
                                                                          final Class<TResult> resultClass) {
         return new AggregateIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
-                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.COLLECTION);
+                readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.COLLECTION, retryReads);
     }
 
     @Override
@@ -397,7 +397,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
                                                                                final List<? extends Bson> pipeline,
                                                                                final Class<TResult> resultClass) {
         return new ChangeStreamIterableImpl<TResult>(clientSession, namespace, codecRegistry, readPreference, readConcern, executor,
-                pipeline, resultClass, ChangeStreamLevel.COLLECTION);
+                pipeline, resultClass, ChangeStreamLevel.COLLECTION, retryReads);
     }
 
     @Override
@@ -915,7 +915,62 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
 
     private <TResult> ListIndexesIterable<TResult> createListIndexesIterable(@Nullable final ClientSession clientSession,
                                                                              final Class<TResult> resultClass) {
-        return new ListIndexesIterableImpl<TResult>(clientSession, namespace, resultClass, codecRegistry, readPreference, executor);
+        return new ListIndexesIterableImpl<TResult>(clientSession, namespace, resultClass, codecRegistry, readPreference, executor,
+                retryReads);
+    }
+
+    @Override
+    public ListCollectionsIterable<Document> listCollections() {
+        return listCollections(Document.class);
+    }
+
+    @Override
+    public <TResult> ListCollectionsIterable<TResult> listCollections(final Class<TResult> resultClass) {
+        return createListCollectionsIterable(null, resultClass);
+    }
+
+    @Override
+    public ListCollectionsIterable<Document> listCollections(final ClientSession clientSession) {
+        return listCollections(clientSession, Document.class);
+    }
+
+    @Override
+    public <TResult> ListCollectionsIterable<TResult> listCollections(final ClientSession clientSession, final Class<TResult> resultClass) {
+        notNull("clientSession", clientSession);
+        return createListCollectionsIterable(clientSession, resultClass);
+    }
+
+    private <TResult> ListCollectionsIterable<TResult> createListCollectionsIterable(@Nullable final ClientSession clientSession,
+                                                                                     final Class<TResult> resultClass) {
+        return new ListCollectionsIterableImpl<TResult>(clientSession, namespace.getDatabaseName(), false, resultClass, codecRegistry,
+                readPreference, executor, retryReads);
+    }
+
+    @Override
+    public ListDatabasesIterable<Document> listDatabases() {
+        return listDatabases(Document.class);
+    }
+
+    @Override
+    public <TResult> ListDatabasesIterable<TResult> listDatabases(final Class<TResult> resultClass) {
+        return createListDatabasesIterable(null, resultClass);
+    }
+
+    @Override
+    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
+        return listDatabases(clientSession, Document.class);
+    }
+
+    @Override
+    public <TResult> ListDatabasesIterable<TResult> listDatabases(final ClientSession clientSession, final Class<TResult> resultClass) {
+        notNull("clientSession", clientSession);
+        return createListDatabasesIterable(clientSession, resultClass);
+    }
+
+    private <TResult> ListDatabasesIterable<TResult> createListDatabasesIterable(@Nullable final ClientSession clientSession,
+                                                                                 final Class<TResult> resultClass) {
+        return new ListDatabasesIterableImpl<TResult>(clientSession, resultClass, codecRegistry, readPreference, executor,
+                retryReads);
     }
 
     @Override

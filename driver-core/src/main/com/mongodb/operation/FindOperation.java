@@ -65,7 +65,7 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.CommandOperationHelper.CommandTransformer;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -712,7 +712,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     @Override
@@ -769,10 +769,10 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                                         if (t != null) {
                                             wrappedCallback.onResult(null, t);
                                         } else {
-                                            executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
-                                                    wrapInExplainIfNecessary(getCommand(binding.getSessionContext())),
-                                                    CommandResultDocumentCodec.create(decoder, FIRST_BATCH), connection,
-                                                    asyncTransformer(source, connection), wrappedCallback);
+                                            executeCommandAsync(binding, namespace.getDatabaseName(),
+                                                    getCommandCreator(binding.getSessionContext()),
+                                                    CommandResultDocumentCodec.create(decoder, FIRST_BATCH),
+                                                    asyncTransformer(source, connection), retryReads, wrappedCallback);
                                         }
                                     }
                                 });

@@ -46,7 +46,7 @@ import spock.lang.Specification
 import static com.mongodb.ReadPreference.primary
 import static com.mongodb.operation.CommandOperationHelper.executeRetryableCommand
 import static com.mongodb.operation.CommandOperationHelper.executeCommand
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError
 import static com.mongodb.operation.OperationUnitSpecification.getMaxWireVersionForServerVersion
@@ -280,7 +280,7 @@ class CommandOperationHelperSpecification extends Specification {
         def connectionDescription = Stub(ConnectionDescription)
 
         when:
-        executeWrappedCommandProtocolAsync(asyncWriteBinding, dbName, command, decoder, function, callback)
+        executeCommandAsync(asyncWriteBinding, dbName, command, decoder, function, callback)
 
         then:
         _ * connection.getDescription() >> connectionDescription
@@ -292,6 +292,7 @@ class CommandOperationHelperSpecification extends Specification {
         given:
         def dbName = 'db'
         def command = new BsonDocument()
+        def commandCreator = { serverDescription, connectionDescription -> command }
         def decoder = Stub(Decoder)
         def callback = Stub(SingleResultCallback)
         def function = Stub(CommandOperationHelper.CommandTransformer)
@@ -306,7 +307,7 @@ class CommandOperationHelperSpecification extends Specification {
         def connectionDescription = Stub(ConnectionDescription)
 
         when:
-        executeWrappedCommandProtocolAsync(asyncReadBinding, dbName, command, decoder, function, callback)
+        executeCommandAsync(asyncReadBinding, dbName, commandCreator, decoder, function, false, callback)
 
         then:
         _ * connection.getDescription() >> connectionDescription

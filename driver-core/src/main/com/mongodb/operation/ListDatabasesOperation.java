@@ -42,7 +42,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
@@ -168,7 +168,7 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     /**
@@ -210,9 +210,9 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    executeWrappedCommandProtocolAsync(binding,  "admin", getCommand(),
-                            CommandResultDocumentCodec.create(decoder, "databases"), connection, asyncTransformer(source, connection),
-                            releasingCallback(errHandlingCallback, source, connection));
+                    executeCommandAsync(binding,  "admin", getCommandCreator(),
+                            CommandResultDocumentCodec.create(decoder, "databases"), asyncTransformer(source, connection),
+                            retryReads, releasingCallback(errHandlingCallback, source, connection));
                 }
             }
         });

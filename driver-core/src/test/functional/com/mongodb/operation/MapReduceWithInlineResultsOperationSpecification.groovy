@@ -297,7 +297,7 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
                                 .append('output', new BsonInt32(0))
                                 .append('emit', new BsonInt32(0)))
                         .append('timeMillis', new BsonInt32(0))
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [
@@ -351,7 +351,7 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
                     .append('timeMillis', new BsonInt32(0)),
                     null)
         }
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [

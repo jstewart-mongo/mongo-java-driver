@@ -33,7 +33,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -82,7 +82,7 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     @Override
@@ -105,8 +105,8 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
                     errHandlingCallback.onResult(null, t);
                 } else {
                     final SingleResultCallback<Boolean> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                    executeWrappedCommandProtocolAsync(binding, databaseName, getCommand(), new BsonDocumentCodec(), connection,
-                            transformer(), wrappedCallback);
+                    executeCommandAsync(binding, databaseName, getCommandCreator(), new BsonDocumentCodec(),
+                            transformer(), retryReads, wrappedCallback);
                 }
             }
         });

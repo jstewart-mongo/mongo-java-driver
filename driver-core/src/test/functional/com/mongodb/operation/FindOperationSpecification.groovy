@@ -548,7 +548,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
                 new BsonDocument('cursor', new BsonDocument('id', new BsonInt64(1))
                         .append('ns', new BsonString(getNamespace().getFullName()))
                         .append('firstBatch', new BsonArrayWrapper([])))
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [
@@ -587,7 +587,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
                     .append('ns', new BsonString(getNamespace().getFullName()))
                     .append('firstBatch', new BsonArrayWrapper([]))), null)
         }
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [

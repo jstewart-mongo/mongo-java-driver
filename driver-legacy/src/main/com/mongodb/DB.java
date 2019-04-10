@@ -78,12 +78,11 @@ public class DB {
     private final ConcurrentHashMap<String, DBCollection> collectionCache;
     private final Bytes.OptionHolder optionHolder;
     private final Codec<DBObject> commandCodec;
-    private final Boolean retryReads;
     private volatile ReadPreference readPreference;
     private volatile WriteConcern writeConcern;
     private volatile ReadConcern readConcern;
 
-    DB(final Mongo mongo, final String name, final OperationExecutor executor, final Boolean retryReads) {
+    DB(final Mongo mongo, final String name, final OperationExecutor executor) {
         checkDatabaseNameValidity(name);
         this.mongo = mongo;
         this.name = name;
@@ -91,7 +90,6 @@ public class DB {
         this.collectionCache = new ConcurrentHashMap<String, DBCollection>();
         this.optionHolder = new Bytes.OptionHolder(mongo.getOptionHolder());
         this.commandCodec = MongoClient.getCommandCodec();
-        this.retryReads = retryReads;
     }
 
     /**
@@ -99,12 +97,11 @@ public class DB {
      *
      * @param mongo the mongo instance
      * @param name  the database name - must not be empty and cannot contain spaces
-     * @param retryReads  true if reads should be retried
      * @deprecated Prefer {@link MongoClient#getDB(String)}
      */
     @Deprecated
-    public DB(final Mongo mongo, final String name, final Boolean retryReads) {
-        this(mongo, name, mongo.createOperationExecutor(), retryReads);
+    public DB(final Mongo mongo, final String name) {
+        this(mongo, name, mongo.createOperationExecutor());
     }
 
     /**
@@ -284,7 +281,8 @@ public class DB {
      */
     public Set<String> getCollectionNames() {
         List<String> collectionNames =
-                new MongoIterableImpl<DBObject>(null, executor, ReadConcern.DEFAULT, primary(), retryReads) {
+                new MongoIterableImpl<DBObject>(null, executor, ReadConcern.DEFAULT, primary(),
+                        mongo.getMongoClientOptions().getRetryReads()) {
                     @Override
                     public ReadOperation<BatchCursor<DBObject>> asReadOperation() {
                         return new ListCollectionsOperation<DBObject>(name, commandCodec)

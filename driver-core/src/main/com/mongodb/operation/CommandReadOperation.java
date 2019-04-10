@@ -28,7 +28,6 @@ import org.bson.codecs.Decoder;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 
 /**
  * An operation that executes an arbitrary command that reads from the server.
@@ -71,6 +70,7 @@ public class CommandReadOperation<T> implements AsyncReadOperation<T>, ReadOpera
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<T> callback) {
-        executeWrappedCommandProtocolAsync(binding, databaseName, command, decoder, callback);
+        CommandOperationHelper.executeCommandAsync(binding, databaseName, getCommandCreator(binding.getSessionContext()), decoder,
+                false, callback);
     }
 }

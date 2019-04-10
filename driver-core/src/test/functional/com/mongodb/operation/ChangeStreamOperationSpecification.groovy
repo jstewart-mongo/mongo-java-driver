@@ -118,14 +118,12 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
                 .collation(defaultCollation)
                 .maxAwaitTime(15, MILLISECONDS)
                 .startAtOperationTime(new BsonTimestamp())
-                .retryReads(false)
 
         def expectedCommand = new BsonDocument('aggregate', aggregate)
                 .append('collation', defaultCollation.asDocument())
                 .append('cursor', new BsonDocument('batchSize', new BsonInt32(5)))
                 .append('pipeline', new BsonArray([changeStream, *pipeline]))
                 .append('readConcern', new BsonDocument('level', new BsonString('majority')))
-                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [4, 0, 0], ReadConcern.MAJORITY, expectedCommand, async, cursorResult)

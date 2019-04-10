@@ -221,14 +221,12 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
                 .filter(new BsonDocument('a', BsonBoolean.TRUE))
                 .maxTime(10, MILLISECONDS)
                 .collation(defaultCollation)
-                .retryReads(false)
 
         def expectedCommand = new BsonDocument('distinct', new BsonString(helper.namespace.getCollectionName()))
                 .append('key', new BsonString('name'))
                 .append('query', operation.getFilter())
                 .append('maxTimeMS', new BsonInt64(operation.getMaxTime(MILLISECONDS)))
                 .append('collation', defaultCollation.asDocument())
-                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.commandResult)
@@ -298,7 +296,6 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
         source.retain() >> source
         def commandDocument = new BsonDocument('distinct', new BsonString(getCollectionName()))
                 .append('key', new BsonString('str'))
-                .append('retryReads', new BsonBoolean(false))
         appendReadConcernToCommand(sessionContext, commandDocument)
 
         def operation = new DistinctOperation<String>(getNamespace(), 'str', new StringCodec())
@@ -312,7 +309,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
                 new ServerVersion(3, 6), 6, STANDALONE, 1000, 100000, 100000, [])
         1 * connection.command(_, commandDocument, _, _, _, sessionContext) >>
                 new BsonDocument('values', new BsonArrayWrapper([]))
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [
@@ -350,7 +347,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
         1 * connection.commandAsync(_, commandDocument, _, _, _, sessionContext, _) >> {
             it[6].onResult(new BsonDocument('values', new BsonArrayWrapper([])), null)
         }
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [

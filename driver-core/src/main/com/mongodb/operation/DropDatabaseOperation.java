@@ -29,7 +29,7 @@ import org.bson.BsonInt32;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
@@ -102,7 +102,7 @@ public class DropDatabaseOperation implements AsyncWriteOperation<Void>, WriteOp
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    executeWrappedCommandProtocolAsync(binding, databaseName, getCommand(connection.getDescription()), connection,
+                    executeCommandAsync(binding, databaseName, getCommand(connection.getDescription()), connection,
                             writeConcernErrorTransformer(), releasingCallback(errHandlingCallback, connection));
 
                 }

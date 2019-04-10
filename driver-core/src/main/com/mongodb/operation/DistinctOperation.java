@@ -45,7 +45,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -130,7 +130,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     /**
@@ -212,9 +212,9 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
                                     if (t != null) {
                                         wrappedCallback.onResult(null, t);
                                     } else {
-                                        executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
-                                                getCommand(binding.getSessionContext()), createCommandDecoder(),
-                                                connection, asyncTransformer(connection.getDescription()), wrappedCallback);
+                                        executeCommandAsync(binding, namespace.getDatabaseName(),
+                                                getCommandCreator(binding.getSessionContext()), createCommandDecoder(),
+                                                asyncTransformer(connection.getDescription()), retryReads, wrappedCallback);
                                     }
                                 }
                     });

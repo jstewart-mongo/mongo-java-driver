@@ -41,7 +41,6 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.IdentityTransformer;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -113,7 +112,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     /**
@@ -202,8 +201,8 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
                             if (t != null) {
                                 wrappedCallback.onResult(null, t);
                             } else {
-                                executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(), getCommand(),
-                                        connection, new IdentityTransformer<BsonDocument>(),  wrappedCallback);
+                                CommandOperationHelper.executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(),
+                                        new IdentityTransformer<BsonDocument>(), retryReads, wrappedCallback);
                             }
                         }
                     });

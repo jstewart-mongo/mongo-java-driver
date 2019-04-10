@@ -505,7 +505,7 @@ public class Mongo {
             return db;
         }
 
-        db = new DB(this, dbName, createOperationExecutor(), options.getRetryReads());
+        db = new DB(this, dbName, createOperationExecutor());
         DB temp = dbCache.putIfAbsent(dbName, db);
         if (temp != null) {
             return temp;

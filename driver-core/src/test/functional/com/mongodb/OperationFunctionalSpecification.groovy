@@ -208,16 +208,16 @@ class OperationFunctionalSpecification extends Specification {
 
     void testOperation(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
                        boolean checkCommand = true, boolean checkSlaveOk = false, ReadPreference readPreference = ReadPreference.primary(),
-                       boolean retryableWrites = false, boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE,
+                       boolean retryableWrites = false, boolean retryableReads = true, ServerType serverType = ServerType.STANDALONE,
                        Boolean activeTransaction = false) {
         testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSlaveOk,
-        readPreference, retryableWrites, retryableReads, serverType, activeTransaction)
+                readPreference, retryableWrites, retryableReads, serverType, activeTransaction)
     }
 
     void testOperation(operation, List<Integer> serverVersion, ReadConcern readConcern, BsonDocument expectedCommand, boolean async,
                        result = null, boolean checkCommand = true, boolean checkSlaveOk = false,
                        ReadPreference readPreference = ReadPreference.primary(), boolean retryableWrites = false,
-                       boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+                       boolean retryableReads = true, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
         test(operation, serverVersion, readConcern, result, checkCommand, expectedCommand, checkSlaveOk, readPreference,
                 retryableWrites, retryableReads, serverType, activeTransaction)
@@ -225,8 +225,8 @@ class OperationFunctionalSpecification extends Specification {
 
     void testOperationRetries(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
                               Boolean activeTransaction = false) {
-        testOperation(operation, serverVersion, expectedCommand, async, result, true, false, ReadPreference.primary(), true,
-             true, ServerType.REPLICA_SET_PRIMARY, activeTransaction)
+        testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, true, false,
+                ReadPreference.primary(), true,true, ServerType.REPLICA_SET_PRIMARY, activeTransaction)
     }
 
     void testRetryableOperationThrowsOriginalError(operation, List<List<Integer>> serverVersions, List<ServerType> serverTypes,
@@ -246,13 +246,13 @@ class OperationFunctionalSpecification extends Specification {
 
     void testOperationThrows(operation, List<Integer> serverVersion, ReadConcern readConcern, boolean async) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
-        test(operation, serverVersion, readConcern, null, false)
+        test(operation, serverVersion, readConcern, null, false, null, false, ReadPreference.primary(), false, false)
     }
 
     def testSyncOperation(operation, List<Integer> serverVersion, ReadConcern readConcern, result, Boolean checkCommand=true,
                           BsonDocument expectedCommand=null, Boolean checkSlaveOk=false,
                           ReadPreference readPreference=ReadPreference.primary(), Boolean retryableWrites = false,
-                          Boolean retryableReads = false, ServerType serverType = ServerType.STANDALONE,
+                          Boolean retryableReads = true, ServerType serverType = ServerType.STANDALONE,
                           Boolean activeTransaction = false) {
         def connection = Mock(Connection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
@@ -316,11 +316,12 @@ class OperationFunctionalSpecification extends Specification {
             result
         }
 
-        if (retryableWrites) {
+        if (retryableWrites || retryableReads) {
             2 * connection.release()
         } else {
             1 * connection.release()
         }
+
         if (operation instanceof ReadOperation) {
             operation.execute(readBinding)
         } else if (operation instanceof WriteOperation) {
@@ -331,8 +332,7 @@ class OperationFunctionalSpecification extends Specification {
     def testAsyncOperation(operation = operation, List<Integer> serverVersion = serverVersion, ReadConcern readConcern, result = null,
                            Boolean checkCommand = true, BsonDocument expectedCommand = null, Boolean checkSlaveOk = false,
                            ReadPreference readPreference = ReadPreference.primary(), Boolean retryableWrites = false,
-                           Boolean retryableReads = false,
-                           ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+                           Boolean retryableReads = true, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
         def connection = Mock(AsyncConnection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)
@@ -396,7 +396,7 @@ class OperationFunctionalSpecification extends Specification {
             it[5].onResult(result, null)
         }
 
-        if (retryableWrites) {
+        if (retryableWrites || retryableReads) {
             2 * connection.release()
         } else {
             1 * connection.release()

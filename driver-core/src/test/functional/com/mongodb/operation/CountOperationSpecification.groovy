@@ -141,7 +141,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should throw execution timeout exception from execute'() {
         given:
-        def operation = new CountOperation(getNamespace(), strategy).maxTime(1, SECONDS)
+        def operation = new CountOperation(getNamespace(), strategy).maxTime(1, SECONDS).retryReads(false)
         enableMaxTimeFailPoint()
 
         when:
@@ -212,6 +212,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         def operation = new CountOperation(getNamespace(), strategy)
                 .filter(new BsonDocument('a', new BsonInt32(1)))
                 .hint(new BsonString('BAD HINT'))
+                .retryReads(false)
 
         when:
         execute(operation, async)
@@ -255,7 +256,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         when:
         def filter = new BsonDocument('filter', new BsonInt32(1))
         def hint = new BsonDocument('hint', new BsonInt32(1))
-        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND).retryReads(false)
+        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND)
         def expectedCommand = new BsonDocument('count', new BsonString(helper.namespace.getCollectionName()))
 
         then:
@@ -268,7 +269,6 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .hint(hint)
                 .maxTime(10, MILLISECONDS)
                 .collation(defaultCollation)
-                .retryReads(false)
 
          expectedCommand.append('query', filter)
                 .append('limit', new BsonInt64(20))
@@ -276,7 +276,6 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .append('hint', hint)
                 .append('maxTimeMS', new BsonInt64(10))
                 .append('collation', defaultCollation.asDocument())
-                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.commandResult)
@@ -289,11 +288,10 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         when:
         def filter = new BsonDocument('filter', new BsonInt32(1))
         def operation = new CountOperation(helper.namespace, CountStrategy.AGGREGATE).retryReads(false)
-        def pipeline = [BsonDocument.parse('{ $match: {}}'), BsonDocument.parse('{$group: {_id: null, n: {$sum: 1}}}')]
+        def pipeline = [BsonDocument.parse('{ $match: {}}'), BsonDocument.parse('{$group: {_id: 1, n: {$sum: 1}}}')]
         def expectedCommand = new BsonDocument('aggregate', new BsonString(helper.namespace.getCollectionName()))
                 .append('pipeline', new BsonArray(pipeline))
                 .append('cursor', new BsonDocument())
-                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.cursorResult)
@@ -315,7 +313,6 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 .append('maxTimeMS', new BsonInt64(10))
                 .append('collation', defaultCollation.asDocument())
                 .append('hint', hint)
-                .append('retryReads', new BsonBoolean(false))
 
         then:
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.cursorResult)
@@ -326,7 +323,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should throw an exception when using an unsupported ReadConcern'() {
         given:
-        def operation = new CountOperation(helper.namespace, strategy)
+        def operation = new CountOperation(helper.namespace, strategy).retryReads(false)
 
         when:
         testOperationThrows(operation, [3, 0, 0], readConcern, async)
@@ -395,7 +392,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 new ServerVersion(3, 6), 6, STANDALONE, 1000, 100000, 100000, [])
         1 * connection.command(_, commandDocument, _, _, _, sessionContext) >>
                 new BsonDocument('n', new BsonInt64(42))
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [
@@ -421,7 +418,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         def commandDocument = new BsonDocument('count', new BsonString(getCollectionName()))
         appendReadConcernToCommand(sessionContext, commandDocument)
 
-        def operation = new CountOperation(getNamespace())
+        def operation = new CountOperation(getNamespace()).retryReads(false)
 
         when:
         executeAsync(operation, binding)
@@ -432,7 +429,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         1 * connection.commandAsync(_, commandDocument, _, _, _, sessionContext, _) >> {
             it[6].onResult(new BsonDocument('n', new BsonInt64(42)), null)
         }
-        1 * connection.release()
+        2 * connection.release()
 
         where:
         sessionContext << [

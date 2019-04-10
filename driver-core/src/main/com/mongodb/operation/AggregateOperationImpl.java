@@ -52,7 +52,7 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotSix;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -186,7 +186,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
     }
 
     Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     BsonValue getHint() {
@@ -231,10 +231,10 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
                                     if (t != null) {
                                         wrappedCallback.onResult(null, t);
                                     } else {
-                                        executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
-                                                getCommand(connection.getDescription(), binding.getSessionContext()),
+                                        executeCommandAsync(binding, namespace.getDatabaseName(),
+                                                getCommandCreator(binding.getSessionContext()),
                                                 CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                                                connection, asyncTransformer(source, connection), wrappedCallback);
+                                                asyncTransformer(source, connection), retryReads, wrappedCallback);
                                     }
                                 }
                             });

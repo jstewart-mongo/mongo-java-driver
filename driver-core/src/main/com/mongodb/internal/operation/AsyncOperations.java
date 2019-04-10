@@ -61,9 +61,19 @@ public final class AsyncOperations<TDocument> {
         this(null, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, false, true);
     }
 
+    public AsyncOperations(final Class<TDocument> documentClass, final ReadPreference readPreference,
+                           final CodecRegistry codecRegistry, final Boolean retryReads) {
+        this(null, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, false, retryReads);
+    }
+
     public AsyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
                            final CodecRegistry codecRegistry) {
         this(namespace, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, false, true);
+    }
+
+    public AsyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
+                           final CodecRegistry codecRegistry, final Boolean retryReads) {
+        this(namespace, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, false, retryReads);
     }
 
     public AsyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,

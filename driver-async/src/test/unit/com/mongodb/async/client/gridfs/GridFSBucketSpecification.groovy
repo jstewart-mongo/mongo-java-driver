@@ -757,7 +757,7 @@ class GridFSBucketSpecification extends Specification {
         then:
         executor.getReadPreference() == primary()
         expect executor.getReadOperation(), isTheSameAs(new FindOperation<GridFSFile>(new MongoNamespace('test.fs.files'), decoder)
-                .filter(new BsonDocument()))
+                .filter(new BsonDocument()).retryReads(true))
 
         when:
         def filter = new BsonDocument('filename', new BsonString('filename'))
@@ -767,7 +767,7 @@ class GridFSBucketSpecification extends Specification {
         then:
         executor.getReadPreference() == secondary()
         expect executor.getReadOperation(), isTheSameAs(new FindOperation<GridFSFile>(new MongoNamespace('test.fs.files'), decoder)
-                .filter(filter).slaveOk(true))
+                .filter(filter).slaveOk(true).retryReads(true))
 
         where:
         clientSession << [null, Stub(ClientSession)]

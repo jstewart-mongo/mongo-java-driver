@@ -49,7 +49,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.DocumentHelper.putIfTrue;
 import static com.mongodb.operation.ExplainHelper.asExplainCommand;
@@ -389,10 +389,10 @@ public class MapReduceWithInlineResultsOperation<T> implements AsyncReadOperatio
                                     if (t != null) {
                                         wrappedCallback.onResult(null, t);
                                     } else {
-                                        executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
-                                                getCommand(binding.getSessionContext()),
-                                                CommandResultDocumentCodec.create(decoder, "results"), connection,
-                                                asyncTransformer(connection), wrappedCallback);
+                                        executeCommandAsync(binding, namespace.getDatabaseName(),
+                                                getCommandCreator(binding.getSessionContext()),
+                                                CommandResultDocumentCodec.create(decoder, "results"),
+                                                asyncTransformer(connection), false, wrappedCallback);
                                     }
                                 }
                             });

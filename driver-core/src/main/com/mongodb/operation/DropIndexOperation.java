@@ -37,7 +37,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
@@ -177,7 +177,7 @@ public class DropIndexOperation implements AsyncWriteOperation<Void>, WriteOpera
                     errHandlingCallback.onResult(null, t);
                 } else {
                     final SingleResultCallback<Void> releasingCallback = releasingCallback(errHandlingCallback, connection);
-                    executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
+                    executeCommandAsync(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
                             connection, writeConcernErrorTransformer(), new SingleResultCallback<Void>() {
                                 @Override
                                 public void onResult(final Void result, final Throwable t) {

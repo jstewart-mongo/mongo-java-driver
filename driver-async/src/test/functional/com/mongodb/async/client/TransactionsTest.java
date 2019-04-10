@@ -96,7 +96,7 @@ public class TransactionsTest {
     private boolean useMultipleMongoses = false;
     private ConnectionString connectionString;
 
-    private final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
+    private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
     public TransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition) {
         this.filename = filename;
@@ -166,6 +166,7 @@ public class TransactionsTest {
                 .readConcern(getReadConcern(clientOptions))
                 .readPreference(getReadPreference(clientOptions))
                 .retryWrites(clientOptions.getBoolean("retryWrites", BsonBoolean.FALSE).getValue())
+                .retryReads(false)
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
                     public void apply(final ServerSettings.Builder builder) {

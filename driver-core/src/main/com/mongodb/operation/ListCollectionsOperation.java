@@ -57,7 +57,7 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotZero;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
 import static com.mongodb.operation.CursorHelper.getCursorDocumentFromBatchSize;
@@ -221,7 +221,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     @Override
@@ -259,8 +259,8 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
                     final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback = releasingCallback(errHandlingCallback,
                                                                                                         source, connection);
                     if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
-                        executeWrappedCommandProtocolAsync(binding, databaseName, getCommand(), createCommandDecoder(),
-                                connection, asyncTransformer(source, connection),
+                        executeCommandAsync(binding, databaseName, getCommandCreator(), createCommandDecoder(),
+                                asyncTransformer(source, connection), retryReads,
                                 new SingleResultCallback<AsyncBatchCursor<T>>() {
                                     @Override
                                     public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {

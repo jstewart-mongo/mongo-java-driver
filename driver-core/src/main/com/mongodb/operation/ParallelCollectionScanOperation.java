@@ -46,7 +46,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -141,7 +141,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
      * @since 3.11
      */
     public Boolean getRetryReads() {
-        return (this.retryReads == null ? true : retryReads);
+        return (this.retryReads == null ? Boolean.TRUE : retryReads);
     }
 
     @Override
@@ -175,10 +175,10 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
                                     if (t != null) {
                                         wrappedCallback.onResult(null, t);
                                     } else {
-                                        executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
-                                                getCommand(binding.getSessionContext()),
-                                                CommandResultDocumentCodec.create(decoder, "firstBatch"), connection,
-                                                asyncTransformer(source, connection), wrappedCallback);
+                                        executeCommandAsync(binding, namespace.getDatabaseName(),
+                                                getCommandCreator(binding.getSessionContext()),
+                                                CommandResultDocumentCodec.create(decoder, "firstBatch"),
+                                                asyncTransformer(source, connection), retryReads, wrappedCallback);
                                     }
                                 }
                     });

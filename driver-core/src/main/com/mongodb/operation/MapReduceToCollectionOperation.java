@@ -43,7 +43,7 @@ import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeWrappedCommandProtocolAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.DocumentHelper.putIfTrue;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
@@ -533,7 +533,7 @@ MapReduceToCollectionOperation implements AsyncWriteOperation<MapReduceStatistic
                             if (t != null) {
                                 wrappedCallback.onResult(null, t);
                             } else {
-                                executeWrappedCommandProtocolAsync(binding, namespace.getDatabaseName(),
+                                executeCommandAsync(binding, namespace.getDatabaseName(),
                                         getCommand(connection.getDescription()), connection, transformer(), wrappedCallback);
                             }
                         }

@@ -134,7 +134,7 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
 
     def 'should find with correct command'() {
         when:
-        def operation = new FindOperation<BsonDocument>(namespace, new BsonDocumentCodec())
+        def operation = new FindOperation<BsonDocument>(namespace, new BsonDocumentCodec()).retryReads(false)
         def expectedCommand = new BsonDocument('find', new BsonString(namespace.getCollectionName()))
 
         then:
@@ -302,7 +302,7 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
 
     def 'should use the readPreference to set slaveOK for commands'() {
         when:
-        def operation = new FindOperation<BsonDocument>(namespace, new DocumentCodec())
+        def operation = new FindOperation<BsonDocument>(namespace, new DocumentCodec()).retryReads(false)
 
         then:
         testOperationSlaveOk(operation, [3, 2, 0], readPreference, async, commandResult)
@@ -316,6 +316,7 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
         def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
                 .filter(BsonDocument.parse('{str: "FOO"}'))
                 .collation(defaultCollation)
+                .retryReads(false)
 
         when:
         testOperationThrows(operation, [3, 2, 0], async)

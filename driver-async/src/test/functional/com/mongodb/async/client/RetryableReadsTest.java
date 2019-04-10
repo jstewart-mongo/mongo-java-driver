@@ -17,7 +17,9 @@
 package com.mongodb.async.client;
 
 import com.mongodb.Block;
+import com.mongodb.ClusterFixture;
 import com.mongodb.ConnectionString;
+import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadConcernLevel;
@@ -28,6 +30,7 @@ import com.mongodb.async.client.gridfs.GridFSBuckets;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.connection.ServerSettings;
+import com.mongodb.connection.ServerVersion;
 import com.mongodb.connection.SocketSettings;
 import com.mongodb.connection.SslSettings;
 import com.mongodb.event.CommandEvent;
@@ -60,6 +63,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.getMultiMongosConnectionString;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
+import static com.mongodb.ClusterFixture.isStandalone;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
 import static com.mongodb.async.client.Fixture.getConnectionString;
@@ -69,6 +73,8 @@ import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEqualit
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/transactions/tests
@@ -77,6 +83,7 @@ public class RetryableReadsTest {
     private final String filename;
     private final String description;
     private final String databaseName;
+    private final String collectionName;
     private final String gridFSBucketName;
     private final BsonDocument gridFSData;
     private final BsonArray data;
@@ -88,16 +95,19 @@ public class RetryableReadsTest {
     private boolean useMultipleMongoses = false;
     private ConnectionString connectionString;
     private GridFSBucket gridFSBucket;
+    private MongoCollection<BsonDocument> filesCollection;
+    private MongoCollection<BsonDocument> chunksCollection;
 
-    private final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
+    private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
-    public RetryableReadsTest(final String filename, final String description, final String databaseName, final BsonArray data,
-                              final String bucketName, final BsonDocument definition) {
+    public RetryableReadsTest(final String filename, final String description, final String databaseName, final String collectionName,
+                              final BsonArray data, final BsonString bucketName, final BsonDocument definition) {
         this.filename = filename;
         this.description = description;
         this.databaseName = databaseName;
+        this.collectionName = collectionName;
         this.definition = definition;
-        this.gridFSBucketName = bucketName;
+        this.gridFSBucketName = (bucketName != null ? bucketName.getValue() : null);
         this.gridFSData = (bucketName != null ? (BsonDocument) data.get(0) : null);
         this.data = (bucketName != null ? null : data);
         this.commandListener = new TestCommandListener();
@@ -109,19 +119,49 @@ public class RetryableReadsTest {
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
-        String collectionName = "test";
+        if (definition.containsKey("runOn")) {
+            BsonArray runOnDocuments = definition.getArray("runOn");
+            for (BsonValue info : runOnDocuments) {
+                final BsonDocument document = info.asDocument();
+                ServerVersion serverVersion = ClusterFixture.getServerVersion();
+
+                if (document.containsKey("minServerVersion")) {
+                    assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion", document)) < 0);
+                }
+                if (document.containsKey("maxServerVersion")) {
+                    assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion", document)) > 0);
+                }
+                if (document.containsKey("topology")) {
+                    BsonArray topologyTypes = definition.getArray("topology");
+                    for (BsonValue type : topologyTypes) {
+                        String typeString = type.asString().getValue();
+                        if (typeString.equals("sharded")) {
+                            assumeTrue(isSharded());
+                        } else if (typeString.equals("replicaset")) {
+                            assumeTrue(isDiscoverableReplicaSet());
+                        } else if (typeString.equals("single")) {
+                            assumeTrue(isStandalone());
+                        }
+                    }
+                }
+            }
+        }
+
         collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
 
         collectionHelper.killAllSessions();
         collectionHelper.create(collectionName, new CreateCollectionOptions(), WriteConcern.MAJORITY);
 
-        if (!data.isEmpty()) {
+        if (data != null) {
             List<BsonDocument> documents = new ArrayList<BsonDocument>();
             for (BsonValue document : data) {
                 documents.add(document.asDocument());
             }
 
-            collectionHelper.insertDocuments(documents, WriteConcern.MAJORITY);
+            collectionHelper.drop();
+            if (documents.size() > 0) {
+                collectionHelper.insertDocuments(documents, WriteConcern.MAJORITY);
+            }
         }
 
 
@@ -161,7 +201,7 @@ public class RetryableReadsTest {
                 .writeConcern(getWriteConcern(clientOptions))
                 .readConcern(getReadConcern(clientOptions))
                 .readPreference(getReadPreference(clientOptions))
-                .retryWrites(clientOptions.getBoolean("retryWrites", BsonBoolean.FALSE).getValue())
+                .retryReads(clientOptions.getBoolean("retryReads", BsonBoolean.TRUE).getValue())
                 .applyToServerSettings(new Block<ServerSettings.Builder>() {
                     @Override
                     public void apply(final ServerSettings.Builder builder) {
@@ -183,8 +223,10 @@ public class RetryableReadsTest {
         MongoDatabase database = mongoClient.getDatabase(databaseName);
         if (gridFSBucketName != null) {
             setupGridFSBuckets(database);
+            commandListener.reset();
         }
-        helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class));
+        helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class),
+                gridFSBucket, mongoClient);
     }
 
     private ReadConcern getReadConcern(final BsonDocument clientOptions) {
@@ -215,7 +257,7 @@ public class RetryableReadsTest {
         }
     }
 
-    private void setupGridFSBuckets(MongoDatabase database) {
+    private void setupGridFSBuckets(final MongoDatabase database) {
         gridFSBucket = GridFSBuckets.create(database);
         final MongoCollection<BsonDocument> filesCollection = database.getCollection("fs.files", BsonDocument.class);
         final MongoCollection<BsonDocument> chunksCollection = database.getCollection("fs.chunks", BsonDocument.class);
@@ -289,12 +331,16 @@ public class RetryableReadsTest {
             final BsonDocument operation = cur.asDocument();
             BsonValue expectedResult = operation.get("result");
 
-            BsonDocument actualOutcome = helper.getOperationResults(operation);
-            if (expectedResult != null) {
-                BsonValue actualResult = actualOutcome.get("result");
-                if (actualResult.isDocument()) {
-                    assertEquals("Expected operation result differs from actual", expectedResult, actualResult);
+            try {
+                BsonDocument actualOutcome = helper.getOperationResults(operation);
+                if (expectedResult != null) {
+                    BsonValue actualResult = actualOutcome.get("result");
+                    if (actualResult.isDocument()) {
+                        assertEquals("Expected operation result differs from actual", expectedResult, actualResult);
+                    }
                 }
+            } catch (MongoException e) {
+                assertTrue("Unexpected error in operation", operation.getBoolean("error", BsonBoolean.FALSE).getValue());
             }
         }
     }
@@ -311,22 +357,23 @@ public class RetryableReadsTest {
             for (BsonValue test : testDocument.getArray("tests")) {
                 data.add(new Object[]{file.getName(), test.asDocument().getString("description").getValue(),
                         testDocument.getString("database_name", new BsonString(getDefaultDatabaseName())).getValue(),
+                        testDocument.getString("collection_name",
+                                new BsonString(file.getName().substring(0, file.getName().lastIndexOf(".")))).getValue(),
                         (testDocument.containsKey("bucket_name") ? new BsonArray(singletonList(testDocument.getDocument("data")))
                                 : testDocument.getArray("data")),
-                        testDocument.getString("bucket_name", null).getValue(), test.asDocument()});
+                        testDocument.getString("bucket_name", null), test.asDocument()});
             }
         }
         return data;
     }
 
     private boolean canRunTests() {
-        if (isSharded()) {
-            return serverVersionAtLeast(4, 1);
-        } else if (isDiscoverableReplicaSet()) {
-            return serverVersionAtLeast(4, 0);
-        } else {
-            return false;
-        }
+        return serverVersionAtLeast(3, 6);
+    }
+
+    private ServerVersion getServerVersion(final String fieldName, final BsonDocument document) {
+        String[] versionStringArray = document.getString(fieldName).getValue().split("\\.");
+        return new ServerVersion(Integer.parseInt(versionStringArray[0]), Integer.parseInt(versionStringArray[1]));
     }
 
     private List<BsonDocument> processFiles(final BsonArray bsonArray, final List<BsonDocument> documents) {
