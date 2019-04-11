@@ -113,7 +113,8 @@ class MongoIterablesSpecification extends Specification {
                 codecRegistry, readPreference, executor, true))
 
         when:
-        def listIndexesIterable = MongoIterables.listIndexesOf(clientSession, namespace, Document, codecRegistry, readPreference, executor, true)
+        def listIndexesIterable = MongoIterables.listIndexesOf(clientSession, namespace, Document, codecRegistry, readPreference, executor,
+                true)
 
         then:
         expect listIndexesIterable, isTheSameAs(new Java8ListIndexesIterableImpl(clientSession, namespace, Document, codecRegistry,

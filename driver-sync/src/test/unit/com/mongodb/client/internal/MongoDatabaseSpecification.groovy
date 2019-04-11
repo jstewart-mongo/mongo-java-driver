@@ -335,7 +335,8 @@ class MongoDatabaseSpecification extends Specification {
         given:
         def viewName = 'view1'
         def viewOn = 'col1'
-        def database = new MongoDatabaseImpl(name, codecRegistry, readPreference, writeConcern, false, false, readConcern, Stub(OperationExecutor))
+        def database = new MongoDatabaseImpl(name, codecRegistry, readPreference, writeConcern, false, false,
+                readConcern, Stub(OperationExecutor))
 
         when:
         database.createView(viewName, viewOn, null)
@@ -425,7 +426,8 @@ class MongoDatabaseSpecification extends Specification {
 
         then:
         expect aggregateIterable, isTheSameAs(MongoIterables.aggregateOf(session, name, Document, BsonDocument, codecRegistry,
-                readPreference, readConcern, writeConcern, executor, [new Document('$match', 1)], AggregationLevel.DATABASE, false), ['codec'])
+                readPreference, readConcern, writeConcern, executor, [new Document('$match', 1)], AggregationLevel.DATABASE, false),
+                ['codec'])
 
         where:
         session << [null, Stub(ClientSession)]
