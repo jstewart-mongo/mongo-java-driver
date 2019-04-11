@@ -39,7 +39,6 @@ import com.mongodb.connection.ServerId
 import com.mongodb.connection.ServerVersion
 import com.mongodb.session.SessionContext
 import org.bson.BsonArray
-import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64

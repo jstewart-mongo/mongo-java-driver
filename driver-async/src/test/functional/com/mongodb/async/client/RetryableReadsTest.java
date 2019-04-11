@@ -88,6 +88,7 @@ public class RetryableReadsTest {
     private final BsonDocument gridFSData;
     private final BsonArray data;
     private final BsonDocument definition;
+    private final BsonArray runOn;
     private JsonPoweredCrudTestHelper helper;
     private final TestCommandListener commandListener;
     private MongoClient mongoClient;
@@ -100,9 +101,11 @@ public class RetryableReadsTest {
 
     private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
-    public RetryableReadsTest(final String filename, final String description, final String databaseName, final String collectionName,
-                              final BsonArray data, final BsonString bucketName, final BsonDocument definition) {
+    public RetryableReadsTest(final String filename, final BsonArray runOn, final String description, final String databaseName,
+                              final String collectionName, final BsonArray data, final BsonString bucketName,
+                              final BsonDocument definition) {
         this.filename = filename;
+        this.runOn = runOn;
         this.description = description;
         this.databaseName = databaseName;
         this.collectionName = collectionName;
@@ -119,29 +122,26 @@ public class RetryableReadsTest {
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
-        if (definition.containsKey("runOn")) {
-            BsonArray runOnDocuments = definition.getArray("runOn");
-            for (BsonValue info : runOnDocuments) {
-                final BsonDocument document = info.asDocument();
-                ServerVersion serverVersion = ClusterFixture.getServerVersion();
+        for (BsonValue info : runOn) {
+            final BsonDocument document = info.asDocument();
+            ServerVersion serverVersion = ClusterFixture.getServerVersion();
 
-                if (document.containsKey("minServerVersion")) {
-                    assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion", document)) < 0);
-                }
-                if (document.containsKey("maxServerVersion")) {
-                    assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion", document)) > 0);
-                }
-                if (document.containsKey("topology")) {
-                    BsonArray topologyTypes = definition.getArray("topology");
-                    for (BsonValue type : topologyTypes) {
-                        String typeString = type.asString().getValue();
-                        if (typeString.equals("sharded")) {
-                            assumeTrue(isSharded());
-                        } else if (typeString.equals("replicaset")) {
-                            assumeTrue(isDiscoverableReplicaSet());
-                        } else if (typeString.equals("single")) {
-                            assumeTrue(isStandalone());
-                        }
+            if (document.containsKey("minServerVersion")) {
+                assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion", document)) < 0);
+            }
+            if (document.containsKey("maxServerVersion")) {
+                assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion", document)) > 0);
+            }
+            if (document.containsKey("topology")) {
+                BsonArray topologyTypes = document.getArray("topology");
+                for (BsonValue type : topologyTypes) {
+                    String typeString = type.asString().getValue();
+                    if (typeString.equals("sharded")) {
+                        assumeTrue(isSharded());
+                    } else if (typeString.equals("replicaset")) {
+                        assumeTrue(isDiscoverableReplicaSet());
+                    } else if (typeString.equals("single")) {
+                        assumeTrue(isStandalone());
                     }
                 }
             }
@@ -259,19 +259,13 @@ public class RetryableReadsTest {
 
     private void setupGridFSBuckets(final MongoDatabase database) {
         gridFSBucket = GridFSBuckets.create(database);
-        final MongoCollection<BsonDocument> filesCollection = database.getCollection("fs.files", BsonDocument.class);
-        final MongoCollection<BsonDocument> chunksCollection = database.getCollection("fs.chunks", BsonDocument.class);
+        filesCollection = Fixture.initializeCollection(new MongoNamespace(databaseName, "fs.files"))
+                .withDocumentClass(BsonDocument.class);
+        chunksCollection = Fixture.initializeCollection(new MongoNamespace(databaseName, "fs.chunks"))
+                .withDocumentClass(BsonDocument.class);
 
-        new MongoOperation<Void>() {
-            @Override
-            public void execute() {
-                filesCollection.drop(getCallback());
-                chunksCollection.drop(getCallback());
-            }
-        }.get();
-
-        final List<BsonDocument> filesDocuments = processFiles(
-                gridFSData.getArray("fs.files", new BsonArray()), new ArrayList<BsonDocument>());
+        final List<BsonDocument> filesDocuments = processFiles(gridFSData.getArray("fs.files", new BsonArray()),
+                new ArrayList<BsonDocument>());
         if (!filesDocuments.isEmpty()) {
             new MongoOperation<Void>() {
                 @Override
@@ -281,8 +275,8 @@ public class RetryableReadsTest {
             }.get();
         }
 
-        final List<BsonDocument> chunksDocuments = processChunks(
-                gridFSData.getArray("fs.chunks", new BsonArray()), new ArrayList<BsonDocument>());
+        final List<BsonDocument> chunksDocuments = processChunks(gridFSData.getArray("fs.chunks", new BsonArray()),
+                new ArrayList<BsonDocument>());
         if (!chunksDocuments.isEmpty()) {
             new MongoOperation<Void>() {
                 @Override
@@ -355,7 +349,8 @@ public class RetryableReadsTest {
                 continue;
             }
             for (BsonValue test : testDocument.getArray("tests")) {
-                data.add(new Object[]{file.getName(), test.asDocument().getString("description").getValue(),
+                data.add(new Object[]{file.getName(), testDocument.getArray("runOn"),
+                        test.asDocument().getString("description").getValue(),
                         testDocument.getString("database_name", new BsonString(getDefaultDatabaseName())).getValue(),
                         testDocument.getString("collection_name",
                                 new BsonString(file.getName().substring(0, file.getName().lastIndexOf(".")))).getValue(),

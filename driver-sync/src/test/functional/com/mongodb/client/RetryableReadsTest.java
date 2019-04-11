@@ -87,6 +87,7 @@ public class RetryableReadsTest {
     private final BsonDocument gridFSData;
     private final BsonArray data;
     private final BsonDocument definition;
+    private final BsonArray runOn;
     private MongoClient mongoClient;
     private CollectionHelper<Document> collectionHelper;
     private MongoCollection<BsonDocument> collection;
@@ -97,9 +98,11 @@ public class RetryableReadsTest {
     private MongoCollection<BsonDocument> chunksCollection;
     private boolean useMultipleMongoses = false;
 
-    public RetryableReadsTest(final String filename, final String description, final String databaseName, final String collectionName,
-                              final BsonArray data, final BsonString bucketName, final BsonDocument definition) {
+    public RetryableReadsTest(final String filename, final BsonArray runOn, final String description, final String databaseName,
+                              final String collectionName, final BsonArray data, final BsonString bucketName,
+                              final BsonDocument definition) {
         this.filename = filename;
+        this.runOn = runOn;
         this.description = description;
         this.databaseName = databaseName;
         this.collectionName = collectionName;
@@ -116,29 +119,26 @@ public class RetryableReadsTest {
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
-        if (definition.containsKey("runOn")) {
-            BsonArray runOnDocuments = definition.getArray("runOn");
-            for (BsonValue info : runOnDocuments) {
-                final BsonDocument document = info.asDocument();
-                ServerVersion serverVersion = ClusterFixture.getServerVersion();
+        for (BsonValue info : runOn) {
+            final BsonDocument document = info.asDocument();
+            ServerVersion serverVersion = ClusterFixture.getServerVersion();
 
-                if (document.containsKey("minServerVersion")) {
-                    assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion", document)) < 0);
-                }
-                if (document.containsKey("maxServerVersion")) {
-                    assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion", document)) > 0);
-                }
-                if (document.containsKey("topology")) {
-                    BsonArray topologyTypes = definition.getArray("topology");
-                    for (BsonValue type : topologyTypes) {
-                        String typeString = type.asString().getValue();
-                        if (typeString.equals("sharded")) {
-                            assumeTrue(isSharded());
-                        } else if (typeString.equals("replicaset")) {
-                            assumeTrue(isDiscoverableReplicaSet());
-                        } else if (typeString.equals("single")) {
-                            assumeTrue(isStandalone());
-                        }
+            if (document.containsKey("minServerVersion")) {
+                assumeFalse(serverVersion.compareTo(getServerVersion("minServerVersion", document)) < 0);
+            }
+            if (document.containsKey("maxServerVersion")) {
+                assumeFalse(serverVersion.compareTo(getServerVersion("maxServerVersion", document)) > 0);
+            }
+            if (document.containsKey("topology")) {
+                BsonArray topologyTypes = document.getArray("topology");
+                for (BsonValue type : topologyTypes) {
+                    String typeString = type.asString().getValue();
+                    if (typeString.equals("sharded")) {
+                        assumeTrue(isSharded());
+                    } else if (typeString.equals("replicaset")) {
+                        assumeTrue(isDiscoverableReplicaSet());
+                    } else if (typeString.equals("single")) {
+                        assumeTrue(isStandalone());
                     }
                 }
             }
@@ -304,7 +304,8 @@ public class RetryableReadsTest {
                 continue;
             }
             for (BsonValue test : testDocument.getArray("tests")) {
-                data.add(new Object[]{file.getName(), test.asDocument().getString("description").getValue(),
+                data.add(new Object[]{file.getName(), testDocument.getArray("runOn", null),
+                        test.asDocument().getString("description").getValue(),
                         testDocument.getString("database_name", new BsonString(getDefaultDatabaseName())).getValue(),
                         testDocument.getString("collection_name",
                                 new BsonString(file.getName().substring(0, file.getName().lastIndexOf(".")))).getValue(),
@@ -317,7 +318,7 @@ public class RetryableReadsTest {
     }
 
     private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6);
+        return serverVersionAtLeast(3, 6) && !isStandalone();
     }
 
     private ServerVersion getServerVersion(final String fieldName, final BsonDocument document) {

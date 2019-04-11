@@ -226,7 +226,7 @@ class OperationFunctionalSpecification extends Specification {
     void testOperationRetries(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
                               Boolean activeTransaction = false) {
         testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, true, false,
-                ReadPreference.primary(), true,true, ServerType.REPLICA_SET_PRIMARY, activeTransaction)
+                ReadPreference.primary(), true, true, ServerType.REPLICA_SET_PRIMARY, activeTransaction)
     }
 
     void testRetryableOperationThrowsOriginalError(operation, List<List<Integer>> serverVersions, List<ServerType> serverTypes,
@@ -332,7 +332,8 @@ class OperationFunctionalSpecification extends Specification {
     def testAsyncOperation(operation = operation, List<Integer> serverVersion = serverVersion, ReadConcern readConcern, result = null,
                            Boolean checkCommand = true, BsonDocument expectedCommand = null, Boolean checkSlaveOk = false,
                            ReadPreference readPreference = ReadPreference.primary(), Boolean retryableWrites = false,
-                           Boolean retryableReads = true, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+                           Boolean retryableReads = true, ServerType serverType = ServerType.STANDALONE,
+                           Boolean activeTransaction = false) {
         def connection = Mock(AsyncConnection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)

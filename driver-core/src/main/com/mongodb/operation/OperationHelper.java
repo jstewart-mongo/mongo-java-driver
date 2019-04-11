@@ -303,7 +303,7 @@ final class OperationHelper {
         } else if (serverDescription.getLogicalSessionTimeoutMinutes() == null) {
             LOGGER.debug("retryReads set to true but the server does not have 3.6 feature compatibility enabled.");
             return false;
-        } else if (!sessionContext.hasSession()) {
+        } else if (serverDescription.getType() != ServerType.STANDALONE && !sessionContext.hasSession()) {
             LOGGER.debug("retryReads set to true but there is no implicit session, likely because the MongoClient was created with "
                     + "multiple MongoCredential instances and sessions can only be used with a single MongoCredential");
             return false;
