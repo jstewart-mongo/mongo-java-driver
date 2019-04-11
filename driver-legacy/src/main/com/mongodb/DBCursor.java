@@ -105,6 +105,7 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
      * @param query          the query filter to apply
      * @param fields         keys to return from the query
      * @param readPreference the read preference for this query
+     * @param retryReads     true if reads should be retried
      */
     public DBCursor(final DBCollection collection, final DBObject query, @Nullable final DBObject fields,
                     @Nullable final ReadPreference readPreference, final boolean retryReads) {

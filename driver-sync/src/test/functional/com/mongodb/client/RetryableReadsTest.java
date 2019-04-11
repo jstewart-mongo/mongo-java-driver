@@ -318,7 +318,7 @@ public class RetryableReadsTest {
     }
 
     private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6) && !isStandalone();
+        return serverVersionAtLeast(3, 6);
     }
 
     private ServerVersion getServerVersion(final String fieldName, final BsonDocument document) {

@@ -191,6 +191,7 @@ public class RetryableReadsTest {
             });
         }
         builder.addCommandListener(commandListener)
+                .applyConnectionString(connectionString)
                 .applyToSocketSettings(new Block<SocketSettings.Builder>() {
                     @Override
                     public void apply(final SocketSettings.Builder builder) {
