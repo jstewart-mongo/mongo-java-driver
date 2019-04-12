@@ -109,7 +109,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should get the count'() {
         expect:
-        execute(new CountOperation(getNamespace(), strategy), async) == documents.size()
+        execute(new CountOperation(getNamespace(), strategy).retryReads(false), async) == documents.size()
 
         where:
         [async, strategy] << [[true, false], [CountStrategy.AGGREGATE, CountStrategy.COMMAND]].combinations()
@@ -391,7 +391,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 new ServerVersion(3, 6), 6, STANDALONE, 1000, 100000, 100000, [])
         1 * connection.command(_, commandDocument, _, _, _, sessionContext) >>
                 new BsonDocument('n', new BsonInt64(42))
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         sessionContext << [
@@ -428,7 +428,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         1 * connection.commandAsync(_, commandDocument, _, _, _, sessionContext, _) >> {
             it[6].onResult(new BsonDocument('n', new BsonInt64(42)), null)
         }
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         sessionContext << [

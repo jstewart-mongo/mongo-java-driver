@@ -67,6 +67,10 @@ final class OperationHelper {
         T call(Connection connection);
     }
 
+    interface CallableWithSource<T> {
+        T call(ConnectionSource source);
+    }
+
     interface CallableWithConnectionAndSource<T> {
         T call(ConnectionSource source, Connection connection);
     }
@@ -75,14 +79,22 @@ final class OperationHelper {
         void call(AsyncConnection connection, Throwable t);
     }
 
+    interface AsyncCallableWithSource {
+        void call(AsyncConnectionSource source, Throwable t);
+    }
+
     interface AsyncCallableWithConnectionAndSource {
         void call(AsyncConnectionSource source, AsyncConnection connection, Throwable t);
     }
 
     static void validateReadConcern(final Connection connection, final ReadConcern readConcern) {
-        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo(connection.getDescription()) && !readConcern.isServerDefault()) {
+        validateReadConcern(connection.getDescription(), readConcern);
+    }
+
+    static void validateReadConcern(final ConnectionDescription description, final ReadConcern readConcern) {
+        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo(description) && !readConcern.isServerDefault()) {
             throw new IllegalArgumentException(format("ReadConcern not supported by server version: %s",
-                    connection.getDescription().getServerVersion()));
+                    description.getServerVersion()));
         }
     }
 
@@ -212,6 +224,12 @@ final class OperationHelper {
                                                 final Collation collation) {
         validateReadConcern(connection, readConcern);
         validateCollation(connection, collation);
+    }
+
+    static void validateReadConcernAndCollation(final ConnectionDescription description, final ReadConcern readConcern,
+                                                final Collation collation) {
+        validateReadConcern(description, readConcern);
+        validateCollation(description, collation);
     }
 
     static void validateReadConcernAndCollation(final AsyncConnection connection, final ReadConcern readConcern,
@@ -437,6 +455,15 @@ final class OperationHelper {
         }
     }
 
+    static <T> T withConnectionSource(final ReadBinding binding, final CallableWithSource<T> callable) {
+        ConnectionSource source = binding.getReadConnectionSource();
+        try {
+            return callable.call(source);
+        } finally {
+            source.release();
+        }
+    }
+
     static <T> T withReleasableConnection(final ReadBinding binding, final MongoException connectionException,
                                           final CallableWithConnectionAndSource<T> callable) {
         ConnectionSource source = null;
@@ -525,6 +552,10 @@ final class OperationHelper {
         binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionCallback(callable), LOGGER));
     }
 
+    static void withConnection(final AsyncReadBinding binding, final AsyncCallableWithSource callable) {
+        binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithSourceCallback(callable), LOGGER));
+    }
+
     static void withConnection(final AsyncReadBinding binding, final AsyncCallableWithConnectionAndSource callable) {
         binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionAndSourceCallback(callable), LOGGER));
     }
@@ -532,6 +563,21 @@ final class OperationHelper {
     private static class AsyncCallableWithConnectionCallback implements SingleResultCallback<AsyncConnectionSource> {
         private final AsyncCallableWithConnection callable;
         AsyncCallableWithConnectionCallback(final AsyncCallableWithConnection callable) {
+            this.callable = callable;
+        }
+        @Override
+        public void onResult(final AsyncConnectionSource source, final Throwable t) {
+            if (t != null) {
+                callable.call(null, t);
+            } else {
+                withConnectionSource(source, callable);
+            }
+        }
+    }
+
+    private static class AsyncCallableWithSourceCallback implements SingleResultCallback<AsyncConnectionSource> {
+        private final AsyncCallableWithSource callable;
+        AsyncCallableWithSourceCallback(final AsyncCallableWithSource callable) {
             this.callable = callable;
         }
         @Override
@@ -556,6 +602,10 @@ final class OperationHelper {
                 }
             }
         });
+    }
+
+    private static void withConnectionSource(final AsyncConnectionSource source, final AsyncCallableWithSource callable) {
+        callable.call(source, null);
     }
 
     private static void withConnectionSource(final AsyncConnectionSource source, final AsyncCallableWithConnectionAndSource callable) {

@@ -87,12 +87,7 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
 
     @Override
     public Boolean execute(final ReadBinding binding) {
-        return withConnection(binding, new CallableWithConnection<Boolean>() {
-            @Override
-            public Boolean call(final Connection connection) {
-                return executeCommand(binding, databaseName, getCommandCreator(), transformer(), getRetryReads());
-            }
-        });
+        return executeCommand(binding, databaseName, getCommandCreator(), transformer(), getRetryReads());
     }
 
     @Override

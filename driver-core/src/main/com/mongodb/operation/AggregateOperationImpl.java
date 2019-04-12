@@ -53,13 +53,16 @@ import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeast
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
-import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
+import static com.mongodb.operation.OperationHelper.AsyncCallableWithSource;
+import static com.mongodb.operation.OperationHelper.CallableWithSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.validateReadConcernAndCollation;
 import static com.mongodb.operation.OperationHelper.withConnection;
+import static com.mongodb.operation.OperationHelper.withConnectionSource;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
@@ -201,43 +204,42 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return withConnection(binding, new CallableWithConnectionAndSource<BatchCursor<T>>() {
+        return withConnectionSource(binding, new CallableWithSource<BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
-                validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                return executeCommand(binding, namespace.getDatabaseName(),
-                        getCommandCreator(binding.getSessionContext()),
-                        CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                        transformer(source, connection), getRetryReads());
+            public BatchCursor<T> call(final ConnectionSource source) {
+                final Connection connection = source.getConnection();
+                try {
+                    return executeCommand(binding, namespace.getDatabaseName(),
+                            getCommandCreator(binding.getSessionContext()),
+                            CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
+                            transformer(source, connection), getRetryReads(), connection);
+                } finally {
+                    connection.release();
+                }
             }
         });
     }
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        withConnection(binding, new AsyncCallableWithConnectionAndSource() {
+        withConnection(binding, new AsyncCallableWithSource() {
             @Override
-            public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
+            public void call(final AsyncConnectionSource source, final Throwable t) {
+                final SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback =
-                            releasingCallback(errHandlingCallback, source, connection);
-                    validateReadConcernAndCollation(source, connection, binding.getSessionContext().getReadConcern(), collation,
-                            new AsyncCallableWithConnectionAndSource() {
-                                @Override
-                                public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                                    if (t != null) {
-                                        wrappedCallback.onResult(null, t);
-                                    } else {
-                                        executeCommandAsync(binding, namespace.getDatabaseName(),
-                                                getCommandCreator(binding.getSessionContext()),
-                                                CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                                                asyncTransformer(source, connection), retryReads, wrappedCallback);
-                                    }
-                                }
-                            });
+                    source.getConnection(new SingleResultCallback<AsyncConnection>() {
+                        @Override
+                        public void onResult(final AsyncConnection connection, final Throwable t) {
+                            final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback =
+                                    releasingCallback(errHandlingCallback, source, connection);
+                            executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(),
+                                    getCommandCreator(binding.getSessionContext()),
+                                    CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
+                                    asyncTransformer(source, connection), retryReads, connection, wrappedCallback);
+                        }
+                    });
                 }
             }
         });
@@ -251,6 +253,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(connectionDescription, sessionContext);
             }
         };

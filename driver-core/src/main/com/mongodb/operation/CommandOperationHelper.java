@@ -52,11 +52,13 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
+import static com.mongodb.operation.OperationHelper.CallableWithSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.canRetryRead;
 import static com.mongodb.operation.OperationHelper.canRetryWrite;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
+import static com.mongodb.operation.OperationHelper.withConnectionSource;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -123,43 +125,63 @@ final class CommandOperationHelper {
 
     static <D, T> T executeCommand(final ReadBinding binding, final String database, final CommandCreator commandCreator,
                                    final Decoder<D> decoder, final CommandTransformer<D, T> transformer, final Boolean retryReads) {
-        return withConnection(binding, new CallableWithConnectionAndSource<T>() {
+        return withConnectionSource(binding, new CallableWithSource<T>() {
+            @Override
+            public T call(final ConnectionSource source) {
+                final Connection connection = source.getConnection();
+                try {
+                    return executeCommandWithConnection(binding, binding.getReadConnectionSource(), database, commandCreator, decoder,
+                            transformer, retryReads, connection);
+                } finally {
+                    connection.release();
+                }
+            }
+        });
+    }
+
+    static <D, T> T executeCommand(final ReadBinding binding, final String database, final CommandCreator commandCreator,
+                                   final Decoder<D> decoder, final CommandTransformer<D, T> transformer,
+                                   final Boolean retryReads, final Connection connection) {
+        return executeCommandWithConnection(binding, binding.getReadConnectionSource(), database, commandCreator, decoder, transformer,
+                retryReads, connection);
+    }
+
+    private static <D, T> T executeCommandWithConnection(final ReadBinding binding, final ConnectionSource source, final String database,
+                                                         final CommandCreator commandCreator, final Decoder<D> decoder,
+                                                         final CommandTransformer<D, T> transformer, final Boolean retryReads,
+                                                         final Connection connection) {
+        BsonDocument command = null;
+        MongoException exception;
+        try {
+            command = commandCreator.create(source.getServerDescription(), connection.getDescription());
+            return executeCommand(database, command, decoder, connection, binding.getReadPreference(), transformer,
+                    binding.getSessionContext());
+        } catch (MongoException e) {
+            exception = e;
+
+            if (!shouldAttemptToRetryRead(retryReads, e)) {
+                if (retryReads) {
+                    logUnableToRetry(command.getFirstKey(), e);
+                }
+                throw exception;
+            }
+        }
+
+        final MongoException originalException = exception;
+        return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<T>() {
             @Override
             public T call(final ConnectionSource source, final Connection connection) {
-                BsonDocument command = null;
-                MongoException exception;
                 try {
-                    command = commandCreator.create(source.getServerDescription(), connection.getDescription());
-                    return executeCommand(database, command, decoder, connection, binding.getReadPreference(), transformer,
+                    if (!canRetryRead(source.getServerDescription(), connection.getDescription(), binding.getSessionContext())) {
+                        throw originalException;
+                    }
+                    BsonDocument retryCommand = commandCreator.create(source.getServerDescription(), connection.getDescription());
+                    logRetryExecute(retryCommand.getFirstKey(), originalException);
+                    return executeCommand(database, retryCommand, decoder, connection, binding.getReadPreference(), transformer,
                             binding.getSessionContext());
-                } catch (MongoException e) {
-                    exception = e;
-
-                    if (!shouldAttemptToRetryRead(retryReads, e)) {
-                        if (retryReads) {
-                            logUnableToRetry(command.getFirstKey(), e);
-                        }
-                        throw exception;
-                    }
+                } finally {
+                    connection.release();
                 }
-
-                final MongoException originalException = exception;
-                return withReleasableConnection(binding, originalException, new CallableWithConnectionAndSource<T>() {
-                    @Override
-                    public T call(final ConnectionSource source, final Connection connection) {
-                        try {
-                            if (!canRetryRead(source.getServerDescription(), connection.getDescription(), binding.getSessionContext())) {
-                                throw originalException;
-                            }
-                            BsonDocument retryCommand = commandCreator.create(source.getServerDescription(), connection.getDescription());
-                            logRetryExecute(retryCommand.getFirstKey(), originalException);
-                            return executeCommand(database, retryCommand, decoder, connection, binding.getReadPreference(), transformer,
-                                    binding.getSessionContext());
-                        } finally {
-                            connection.release();
-                        }
-                    }
-                });
             }
         });
     }
@@ -319,18 +341,15 @@ final class CommandOperationHelper {
                         @Override
                         public void onResult(final AsyncConnection connection, final Throwable t) {
                             if (t != null) {
-                                releasingCallback(errorHandlingCallback, source).onResult(null, t);
+                                releasingCallback(errorHandlingCallback, source, connection).onResult(null, t);
                             } else {
                                 try {
-                                    BsonDocument command = commandCreator.create(source.getServerDescription(),
-                                            connection.getDescription());
-                                    connection.commandAsync(database, command, new NoOpFieldNameValidator(), binding.getReadPreference(),
-                                            decoder, binding.getSessionContext(),
-                                            createCommandCallback(binding, source, connection, database, binding.getReadPreference(),
-                                                    command, commandCreator, new NoOpFieldNameValidator(), decoder, transformer, retryReads,
-                                                    errorHandlingCallback));
+                                    executeCommandAsyncWithConnection(binding, source, database, commandCreator, decoder, transformer,
+                                            retryReads, connection, errorHandlingCallback);
                                 } catch (Throwable t1) {
                                     releasingCallback(errorHandlingCallback, source, connection).onResult(null, t1);
+                                } finally {
+                                    connection.release();
                                 }
                             }
                         }
@@ -338,6 +357,42 @@ final class CommandOperationHelper {
                 }
             }
         });
+    }
+
+    static <D, T> void executeCommandAsync(final AsyncReadBinding binding,
+                                           final String database,
+                                           final CommandCreator commandCreator,
+                                           final Decoder<D> decoder,
+                                           final CommandTransformer<D, T> transformer,
+                                           final Boolean retryReads,
+                                           final AsyncConnection connection,
+                                           final SingleResultCallback<T> originalCallback) {
+        final SingleResultCallback<T> errorHandlingCallback = errorHandlingCallback(originalCallback, LOGGER);
+        binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+            @Override
+            public void onResult(final AsyncConnectionSource source, final Throwable t) {
+                executeCommandAsyncWithConnection(binding, source, database, commandCreator, decoder, transformer, retryReads,
+                        connection, errorHandlingCallback);
+            }
+        });
+    }
+
+    static <D, T> void executeCommandAsyncWithConnection(final AsyncReadBinding binding,
+                                                         final AsyncConnectionSource source,
+                                                         final String database,
+                                                         final CommandCreator commandCreator,
+                                                         final Decoder<D> decoder,
+                                                         final CommandTransformer<D, T> transformer,
+                                                         final Boolean retryReads,
+                                                         final AsyncConnection connection,
+                                                         final SingleResultCallback<T> callback) {
+        BsonDocument command = commandCreator.create(source.getServerDescription(),
+                connection.getDescription());
+        connection.commandAsync(database, command, new NoOpFieldNameValidator(), binding.getReadPreference(),
+                decoder, binding.getSessionContext(),
+                createCommandCallback(binding, source, connection, database, binding.getReadPreference(),
+                        command, commandCreator, new NoOpFieldNameValidator(), decoder, transformer, retryReads,
+                        callback));
     }
 
     private static <T, R> SingleResultCallback<T> createCommandCallback(final AsyncReadBinding binding,
@@ -355,14 +410,13 @@ final class CommandOperationHelper {
         return new SingleResultCallback<T>() {
             @Override
             public void onResult(final T result, final Throwable originalError) {
-                SingleResultCallback<R> releasingCallback = releasingCallback(callback, oldSource, oldConnection);
                 if (originalError != null) {
-                    checkRetryableException(originalError, releasingCallback);
+                    checkRetryableException(originalError, callback);
                 } else {
                     try {
-                        releasingCallback.onResult(transformer.apply(result, oldConnection.getDescription().getServerAddress()), null);
+                        callback.onResult(transformer.apply(result, oldConnection.getDescription().getServerAddress()), null);
                     } catch (Throwable transformError) {
-                        checkRetryableException(transformError, releasingCallback);
+                        checkRetryableException(transformError, callback);
                     }
                 }
             }
