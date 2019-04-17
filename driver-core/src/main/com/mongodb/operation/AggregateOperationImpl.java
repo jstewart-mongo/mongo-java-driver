@@ -17,7 +17,6 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.ServerAddress;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
@@ -32,6 +31,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -51,15 +51,17 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotSix;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
-import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
+import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
+import static com.mongodb.operation.OperationHelper.CallableWithSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.validateReadConcernAndCollation;
 import static com.mongodb.operation.OperationHelper.withConnection;
+import static com.mongodb.operation.OperationHelper.withConnectionSource;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
@@ -201,14 +203,14 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return withConnection(binding, new CallableWithConnectionAndSource<BatchCursor<T>>() {
+        return withConnectionSource(binding, new CallableWithSource<BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
-                validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                return executeCommand(binding, namespace.getDatabaseName(),
+            public BatchCursor<T> call(final ConnectionSource source) {
+                Connection connection = source.getConnection();
+                return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
                         getCommandCreator(binding.getSessionContext()),
                         CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                        transformer(source, connection), getRetryReads());
+                        transformer(source), getRetryReads(), connection);
             }
         });
     }
@@ -220,24 +222,12 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
             public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
                 SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
                 if (t != null) {
-                    errHandlingCallback.onResult(null, t);
+                    callback.onResult(null, t);
                 } else {
-                    final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback =
-                            releasingCallback(errHandlingCallback, source, connection);
-                    validateReadConcernAndCollation(source, connection, binding.getSessionContext().getReadConcern(), collation,
-                            new AsyncCallableWithConnectionAndSource() {
-                                @Override
-                                public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                                    if (t != null) {
-                                        wrappedCallback.onResult(null, t);
-                                    } else {
-                                        executeCommandAsync(binding, namespace.getDatabaseName(),
-                                                getCommandCreator(binding.getSessionContext()),
-                                                CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                                                asyncTransformer(source, connection), retryReads, wrappedCallback);
-                                    }
-                                }
-                            });
+                    executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(),
+                            getCommandCreatorAsync(binding.getSessionContext()),
+                            CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
+                            asyncTransformer(), retryReads, connection, errHandlingCallback);
                 }
             }
         });
@@ -251,7 +241,28 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(connectionDescription, sessionContext);
+            }
+        };
+    }
+
+    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
+                        new AsyncCallableWithConnectionDescription() {
+                            @Override
+                            public void call(final ConnectionDescription description, final Throwable t) {
+                                if (t != null) {
+                                    callback.onResult(null, t);
+                                } else {
+                                    callback.onResult(getCommand(description, sessionContext), null);
+                                }
+                            }
+                        });
             }
         };
     }
@@ -296,10 +307,10 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         }
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source, final Connection connection) {
+    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
         return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
                 QueryResult<T> queryResult = createQueryResult(result, connection.getDescription());
                 return new QueryBatchCursor<T>(queryResult, 0, batchSize != null ? batchSize : 0, maxAwaitTimeMS, decoder, source,
                         connection);
@@ -307,11 +318,11 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         };
     }
 
-    private CommandTransformer<BsonDocument, AsyncBatchCursor<T>> asyncTransformer(final AsyncConnectionSource source,
-                                                                                   final AsyncConnection connection) {
-        return new CommandTransformer<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
-            public AsyncBatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
+                                             final AsyncConnection connection) {
                 QueryResult<T> queryResult = createQueryResult(result, connection.getDescription());
                 return new AsyncQueryBatchCursor<T>(queryResult, 0, batchSize != null ? batchSize : 0, maxAwaitTimeMS, decoder,
                         source, connection);

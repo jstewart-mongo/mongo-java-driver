@@ -309,7 +309,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
                 new ServerVersion(3, 6), 6, STANDALONE, 1000, 100000, 100000, [])
         1 * connection.command(_, commandDocument, _, _, _, sessionContext) >>
                 new BsonDocument('values', new BsonArrayWrapper([]))
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         sessionContext << [
@@ -347,7 +347,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
         1 * connection.commandAsync(_, commandDocument, _, _, _, sessionContext, _) >> {
             it[6].onResult(new BsonDocument('values', new BsonArrayWrapper([])), null)
         }
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         sessionContext << [

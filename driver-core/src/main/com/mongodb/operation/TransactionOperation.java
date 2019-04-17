@@ -25,6 +25,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.codecs.BsonDocumentCodec;
@@ -34,6 +35,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeRetryableCommand;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 
 /**
@@ -74,7 +76,7 @@ public abstract class TransactionOperation implements WriteOperation<Void>, Asyn
     public void executeAsync(final AsyncWriteBinding binding, final SingleResultCallback<Void> callback) {
         isTrue("in transaction", binding.getSessionContext().hasActiveTransaction());
         executeRetryableCommand(binding, "admin", null, new NoOpFieldNameValidator(),
-                new BsonDocumentCodec(), getCommandCreator(), writeConcernErrorTransformer(), getRetryCommandModifier(),
+                new BsonDocumentCodec(), getCommandCreatorAsync(), writeConcernErrorTransformerAsync(), getRetryCommandModifier(),
                 errorHandlingCallback(callback, LOGGER));
     }
 
@@ -87,6 +89,20 @@ public abstract class TransactionOperation implements WriteOperation<Void>, Asyn
                     command.put("writeConcern", writeConcern.asDocument());
                 }
                 return command;
+            }
+        };
+    }
+
+    CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                BsonDocument command = new BsonDocument(getCommandName(), new BsonInt32(1));
+                if (!writeConcern.isServerDefault()) {
+                    command.put("writeConcern", writeConcern.asDocument());
+                }
+                callback.onResult(command, null);
             }
         };
     }

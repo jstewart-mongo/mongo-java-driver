@@ -17,7 +17,6 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.ServerAddress;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
@@ -30,6 +29,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
@@ -196,7 +197,7 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
             public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
                 return executeCommand(binding, (namespace != null ? namespace.getDatabaseName() : "admin"),
                         getCommandCreator(), CommandResultDocumentCodec.create(decoder, "databases"),
-                        transformer(source, connection), getRetryReads());
+                        transformer(source), getRetryReads());
             }
         });
     }
@@ -210,28 +211,28 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    executeCommandAsync(binding,  "admin", getCommandCreator(),
-                            CommandResultDocumentCodec.create(decoder, "databases"), asyncTransformer(source, connection),
+                    executeCommandAsync(binding,  "admin", getCommandCreatorAsync(),
+                            CommandResultDocumentCodec.create(decoder, "databases"), asyncTransformer(),
                             retryReads, releasingCallback(errHandlingCallback, source, connection));
                 }
             }
         });
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source, final Connection connection) {
+    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
         return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
                 return new QueryBatchCursor<T>(createQueryResult(result, connection.getDescription()), 0, 0, decoder, source);
             }
         };
     }
 
-    private CommandTransformer<BsonDocument, AsyncBatchCursor<T>> asyncTransformer(final AsyncConnectionSource source,
-                                                                         final AsyncConnection connection) {
-        return new CommandTransformer<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
-            public AsyncBatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
+                                             final AsyncConnection connection) {
                 return new AsyncQueryBatchCursor<T>(createQueryResult(result, connection.getDescription()), 0, 0, 0, decoder, source,
                                                     connection);
             }
@@ -252,6 +253,17 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
             }
         };
     }
+
+    private CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                callback.onResult(getCommand(), null);
+            }
+        };
+    }
+
     private BsonDocument getCommand() {
         BsonDocument command = new BsonDocument("listDatabases", new BsonInt32(1));
         if (maxTimeMS > 0) {

@@ -30,6 +30,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
@@ -45,9 +46,11 @@ import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
+import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
@@ -149,7 +152,6 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
         return withConnection(binding, new CallableWithConnectionAndSource<List<BatchCursor<T>>>() {
             @Override
             public List<BatchCursor<T>> call(final ConnectionSource source, final Connection connection) {
-                validateReadConcern(connection, binding.getSessionContext().getReadConcern());
                 return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
                         CommandResultDocumentCodec.create(decoder, "firstBatch"),
                         transformer(source), getRetryReads());
@@ -176,9 +178,9 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
                                         wrappedCallback.onResult(null, t);
                                     } else {
                                         executeCommandAsync(binding, namespace.getDatabaseName(),
-                                                getCommandCreator(binding.getSessionContext()),
+                                                getCommandCreatorAsync(binding.getSessionContext()),
                                                 CommandResultDocumentCodec.create(decoder, "firstBatch"),
-                                                asyncTransformer(source, connection), retryReads, wrappedCallback);
+                                                asyncTransformer(), retryReads, wrappedCallback);
                                     }
                                 }
                     });
@@ -190,7 +192,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
     private CommandTransformer<BsonDocument, List<BatchCursor<T>>> transformer(final ConnectionSource source) {
         return new CommandTransformer<BsonDocument, List<BatchCursor<T>>>() {
             @Override
-            public List<BatchCursor<T>> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public List<BatchCursor<T>> apply(final BsonDocument result, final Connection connection) {
                 List<BatchCursor<T>> cursors = new ArrayList<BatchCursor<T>>();
                 for (BsonValue cursorValue : getCursorDocuments(result)) {
                     cursors.add(new QueryBatchCursor<T>(createQueryResult(getCursorDocument(cursorValue.asDocument()),
@@ -202,11 +204,11 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
         };
     }
 
-    private CommandTransformer<BsonDocument, List<AsyncBatchCursor<T>>> asyncTransformer(final AsyncConnectionSource source,
-                                                                               final AsyncConnection connection) {
-        return new CommandTransformer<BsonDocument, List<AsyncBatchCursor<T>>>() {
+    private CommandTransformerAsync<BsonDocument, List<AsyncBatchCursor<T>>> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, List<AsyncBatchCursor<T>>>() {
             @Override
-            public List<AsyncBatchCursor<T>> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public List<AsyncBatchCursor<T>> apply(final BsonDocument result, final AsyncConnectionSource source,
+                                                   final AsyncConnection connection) {
                 List<AsyncBatchCursor<T>> cursors = new ArrayList<AsyncBatchCursor<T>>();
                 for (BsonValue cursorValue : getCursorDocuments(result)) {
                     cursors.add(new AsyncQueryBatchCursor<T>(createQueryResult(getCursorDocument(cursorValue.asDocument()),
@@ -236,7 +238,28 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateReadConcern(connectionDescription, sessionContext.getReadConcern());
                 return getCommand(sessionContext);
+            }
+        };
+    }
+
+    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                validateReadConcern(connectionDescription, sessionContext.getReadConcern(),
+                        new AsyncCallableWithConnectionDescription() {
+                            @Override
+                            public void call(final ConnectionDescription description, final Throwable t) {
+                                if (t != null) {
+                                    callback.onResult(null, t);
+                                } else {
+                                    callback.onResult(getCommand(sessionContext), null);
+                                }
+                            }
+                        });
             }
         };
     }

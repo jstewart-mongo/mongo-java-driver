@@ -18,10 +18,11 @@ package com.mongodb.operation;
 
 import com.mongodb.ExplainVerbosity;
 import com.mongodb.MongoNamespace;
-import com.mongodb.ServerAddress;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
+import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.client.model.Collation;
 import com.mongodb.connection.AsyncConnection;
@@ -31,8 +32,10 @@ import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.client.model.CountStrategy;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
-import com.mongodb.operation.OperationHelper.CallableWithConnection;
+import com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
+import com.mongodb.operation.OperationHelper.CallableWithSource;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -47,17 +50,16 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.executeCommand;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
 import static com.mongodb.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.ExplainHelper.asExplainCommand;
-import static com.mongodb.operation.OperationHelper.LOGGER;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.validateReadConcernAndCollation;
 import static com.mongodb.operation.OperationHelper.withConnection;
+import static com.mongodb.operation.OperationHelper.withConnectionSource;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 /**
@@ -256,12 +258,12 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     @Override
     public Long execute(final ReadBinding binding) {
         if (countStrategy.equals(CountStrategy.COMMAND)) {
-            return withConnection(binding, new CallableWithConnection<Long>() {
+            return withConnectionSource(binding, new CallableWithSource<Long>() {
                 @Override
-                public Long call(final Connection connection) {
-                    validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                    return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()), DECODER,
-                            transformer(), getRetryReads());
+                public Long call(final ConnectionSource source) {
+                    return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
+                            getCommandCreator(binding.getSessionContext()), DECODER, transformer(), getRetryReads(),
+                            source.getConnection());
                 }
             });
         } else {
@@ -276,24 +278,11 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
             withConnection(binding, new AsyncCallableWithConnection() {
                 @Override
                 public void call(final AsyncConnection connection, final Throwable t) {
-                    SingleResultCallback<Long> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
                     if (t != null) {
-                        errHandlingCallback.onResult(null, t);
+                        callback.onResult(null, t);
                     } else {
-                        final SingleResultCallback<Long> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                        validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation,
-                                new AsyncCallableWithConnection() {
-                                    @Override
-                                    public void call(final AsyncConnection connection, final Throwable t) {
-                                        if (t != null) {
-                                            wrappedCallback.onResult(null, t);
-                                        } else {
-                                            executeCommandAsync(binding, namespace.getDatabaseName(),
-                                                    getCommandCreator(binding.getSessionContext()), DECODER, transformer(),
-                                                    retryReads, wrappedCallback);
-                                        }
-                                    }
-                                });
+                        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(binding.getSessionContext()),
+                                DECODER, asyncTransformer(), retryReads, connection, callback);
                     }
                 }
             });
@@ -350,14 +339,23 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
 
     private CommandReadOperation<BsonDocument> createExplainableOperation(final ExplainVerbosity explainVerbosity) {
         return new CommandReadOperation<BsonDocument>(namespace.getDatabaseName(),
-                                                      asExplainCommand(getCommand(NoOpSessionContext.INSTANCE), explainVerbosity),
-                                                      new BsonDocumentCodec());
+                asExplainCommand(getCommand(NoOpSessionContext.INSTANCE), explainVerbosity),
+                new BsonDocumentCodec());
     }
 
     private CommandTransformer<BsonDocument, Long> transformer() {
         return new CommandTransformer<BsonDocument, Long>() {
             @Override
-            public Long apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public Long apply(final BsonDocument result, final Connection connection) {
+                return (result.getNumber("n")).longValue();
+            }
+        };
+    }
+
+    private CommandTransformerAsync<BsonDocument, Long> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, Long>() {
+            @Override
+            public Long apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {
                 return (result.getNumber("n")).longValue();
             }
         };
@@ -367,7 +365,28 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(sessionContext);
+            }
+        };
+    }
+
+    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
+                        new AsyncCallableWithConnectionDescription() {
+                            @Override
+                            public void call(final ConnectionDescription description, final Throwable t) {
+                                if (t != null) {
+                                    callback.onResult(null, t);
+                                } else {
+                                    callback.onResult(getCommand(sessionContext), null);
+                                }
+                            }
+                        });
             }
         };
     }

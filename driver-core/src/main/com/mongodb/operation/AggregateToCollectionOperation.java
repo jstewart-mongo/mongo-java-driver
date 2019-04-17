@@ -47,6 +47,7 @@ import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConce
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -334,7 +335,7 @@ public class AggregateToCollectionOperation implements AsyncWriteOperation<Void>
                                 wrappedCallback.onResult(null, t);
                             } else {
                                 executeCommandAsync(binding, namespace.getDatabaseName(),
-                                        getCommand(connection.getDescription()), connection, writeConcernErrorTransformer(),
+                                        getCommand(connection.getDescription()), connection, writeConcernErrorTransformerAsync(),
                                         wrappedCallback);
                             }
                         }

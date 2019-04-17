@@ -153,7 +153,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         disableMaxTimeFailPoint()
 
         where:
-        [async, strategy] << [[true, false], [CountStrategy.AGGREGATE, CountStrategy.COMMAND]].combinations()
+        [async, strategy] << [[false, false], [CountStrategy.AGGREGATE, CountStrategy.COMMAND]].combinations()
     }
 
     def 'should use limit with the count'() {
@@ -226,7 +226,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ !serverVersionAtLeast(3, 0) || isSharded() })
     def 'should explain'() {
         when:
-        def operation = new CountOperation(getNamespace(), strategy)
+        def operation = new CountOperation(getNamespace(), strategy).retryReads(false)
                 .filter(new BsonDocument('a', new BsonInt32(1)))
                 .asExplainableOperation(ExplainVerbosity.QUERY_PLANNER)
 
@@ -255,7 +255,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         when:
         def filter = new BsonDocument('filter', new BsonInt32(1))
         def hint = new BsonDocument('hint', new BsonInt32(1))
-        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND)
+        def operation = new CountOperation(helper.namespace, CountStrategy.COMMAND).retryReads(false)
         def expectedCommand = new BsonDocument('count', new BsonString(helper.namespace.getCollectionName()))
 
         then:
@@ -338,7 +338,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should throw an exception when using an unsupported Collation'() {
         given:
-        def operation = new CountOperation(helper.namespace, strategy).collation(defaultCollation)
+        def operation = new CountOperation(helper.namespace, strategy).collation(defaultCollation).retryReads(false)
 
         when:
         testOperationThrows(operation, [3, 2, 0], async)
@@ -391,7 +391,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
                 new ServerVersion(3, 6), 6, STANDALONE, 1000, 100000, 100000, [])
         1 * connection.command(_, commandDocument, _, _, _, sessionContext) >>
                 new BsonDocument('n', new BsonInt64(42))
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         sessionContext << [
@@ -428,7 +428,7 @@ class CountOperationSpecification extends OperationFunctionalSpecification {
         1 * connection.commandAsync(_, commandDocument, _, _, _, sessionContext, _) >> {
             it[6].onResult(new BsonDocument('n', new BsonInt64(42)), null)
         }
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         sessionContext << [

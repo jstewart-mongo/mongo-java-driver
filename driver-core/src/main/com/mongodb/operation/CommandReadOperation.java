@@ -21,12 +21,12 @@ import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.codecs.Decoder;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 
 /**
@@ -56,10 +56,10 @@ public class CommandReadOperation<T> implements AsyncReadOperation<T>, ReadOpera
 
     @Override
     public T execute(final ReadBinding binding) {
-        return executeCommand(binding, databaseName, getCommandCreator(binding.getSessionContext()), decoder, false);
+        return executeCommand(binding, databaseName, getCommandCreator(), decoder, false);
     }
 
-    private CommandCreator getCommandCreator(final SessionContext sessionContext) {
+    private CommandCreator getCommandCreator() {
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
@@ -68,9 +68,19 @@ public class CommandReadOperation<T> implements AsyncReadOperation<T>, ReadOpera
         };
     }
 
+    private CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                callback.onResult(command, null);
+            }
+        };
+    }
+
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<T> callback) {
-        CommandOperationHelper.executeCommandAsync(binding, databaseName, getCommandCreator(binding.getSessionContext()), decoder,
+        CommandOperationHelper.executeCommandAsync(binding, databaseName, getCommandCreatorAsync(), decoder,
                 false, callback);
     }
 }

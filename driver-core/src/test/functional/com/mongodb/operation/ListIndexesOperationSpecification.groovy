@@ -279,7 +279,7 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
         then:
         _ * connection.getDescription() >> helper.threeZeroConnectionDescription
         1 * connection.command(_, _, _, readPreference, _, _) >> helper.commandResult
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         readPreference << [ReadPreference.primary(), ReadPreference.secondary()]

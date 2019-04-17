@@ -33,6 +33,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -56,6 +57,7 @@ import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotZero;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
@@ -259,8 +261,8 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
                     final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback = releasingCallback(errHandlingCallback,
                                                                                                         source, connection);
                     if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
-                        executeCommandAsync(binding, databaseName, getCommandCreator(), createCommandDecoder(),
-                                asyncTransformer(source, connection), retryReads,
+                        executeCommandAsync(binding, databaseName, getCommandCreatorAsync(), createCommandDecoder(),
+                                asyncTransformer(), retryReads,
                                 new SingleResultCallback<AsyncBatchCursor<T>>() {
                                     @Override
                                     public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {
@@ -301,11 +303,11 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
         return new MongoNamespace(databaseName, "$cmd.listCollections");
     }
 
-    private CommandTransformer<BsonDocument, AsyncBatchCursor<T>> asyncTransformer(final AsyncConnectionSource source,
-                                                                         final AsyncConnection connection) {
-        return new CommandTransformer<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
-            public AsyncBatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
+                                             final AsyncConnection connection) {
                 return cursorDocumentToAsyncBatchCursor(result.getDocument("cursor"), decoder, source, connection, batchSize);
             }
         };
@@ -314,7 +316,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
     private CommandTransformer<BsonDocument, BatchCursor<T>> commandTransformer(final ConnectionSource source) {
         return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
                 return cursorDocumentToBatchCursor(result.getDocument("cursor"), decoder, source, batchSize);
             }
         };
@@ -329,6 +331,16 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return getCommand();
+            }
+        };
+    }
+
+    private CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                                       final SingleResultCallback<BsonDocument> callback) {
+                callback.onResult(getCommand(), null);
             }
         };
     }

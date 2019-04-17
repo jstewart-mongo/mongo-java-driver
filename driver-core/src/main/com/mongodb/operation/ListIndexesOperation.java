@@ -19,7 +19,6 @@ package com.mongodb.operation;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerAddress;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
@@ -32,6 +31,8 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.OperationHelper.CallableWithSource;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
@@ -45,8 +46,9 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
 import static com.mongodb.operation.CursorHelper.getCursorDocumentFromBatchSize;
@@ -59,6 +61,7 @@ import static com.mongodb.operation.OperationHelper.cursorDocumentToBatchCursor;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotZero;
 import static com.mongodb.operation.OperationHelper.withConnection;
+import static com.mongodb.operation.OperationHelper.withConnectionSource;
 
 /**
  * An operation that lists the indexes that have been created on a collection.  For flexibility, the type of each document returned is
@@ -161,22 +164,27 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return withConnection(binding, new OperationHelper.CallableWithConnectionAndSource<BatchCursor<T>>() {
+        return withConnectionSource(binding, new CallableWithSource<BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
+            public BatchCursor<T> call(final ConnectionSource source) {
+                Connection connection = source.getConnection();
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
-                        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), createCommandDecoder(),
-                                transformer(source), getRetryReads());
+                        return executeCommandWithConnection(binding, source, namespace.getDatabaseName(), getCommandCreator(),
+                                createCommandDecoder(), transformer(source), getRetryReads(), connection);
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(namespace, decoder,
                                                                                     source.getServerDescription().getAddress(), batchSize));
                     }
                 } else {
-                    return new QueryBatchCursor<T>(connection.query(getIndexNamespace(),
-                            asQueryDocument(connection.getDescription(), binding.getReadPreference()), null, 0, 0, batchSize,
-                            binding.getReadPreference().isSlaveOk(), false, false, false, false, false, decoder), 0, batchSize, decoder,
-                            source);
+                    try {
+                        return new QueryBatchCursor<T>(connection.query(getIndexNamespace(),
+                                asQueryDocument(connection.getDescription(), binding.getReadPreference()), null, 0, 0, batchSize,
+                                binding.getReadPreference().isSlaveOk(), false, false, false, false, false, decoder), 0, batchSize, decoder,
+                                source);
+                    } finally {
+                        connection.release();
+                    }
                 }
             }
         });
@@ -187,29 +195,27 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         withConnection(binding, new AsyncCallableWithConnectionAndSource() {
             @Override
             public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
+                final SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
                 if (t != null) {
                     errHandlingCallback.onResult(null, t);
                 } else {
-                    final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback = releasingCallback(errHandlingCallback,
-                                                                                                        source, connection);
                     if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
-                        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(), createCommandDecoder(),
-                                asyncTransformer(source, connection), retryReads,
+                        executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(), getCommandCreatorAsync(),
+                                createCommandDecoder(), asyncTransformer(), retryReads, connection,
                                 new SingleResultCallback<AsyncBatchCursor<T>>() {
                                     @Override
                                     public void onResult(final AsyncBatchCursor<T> result,
                                                          final Throwable t) {
                                         if (t != null && !isNamespaceError(t)) {
-                                            wrappedCallback.onResult(null, t);
+                                            errHandlingCallback.onResult(null, t);
                                         } else {
-                                            wrappedCallback.onResult(result != null
-                                                                     ? result : emptyAsyncCursor(source),
-                                                                     null);
+                                            errHandlingCallback.onResult(result != null ? result : emptyAsyncCursor(source), null);
                                         }
                                     }
                                 });
                     } else {
+                        final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback = releasingCallback(errHandlingCallback,
+                                source, connection);
                         connection.queryAsync(getIndexNamespace(),
                                 asQueryDocument(connection.getDescription(), binding.getReadPreference()), null, 0, 0, batchSize,
                                 binding.getReadPreference().isSlaveOk(), false, false, false, false, false, decoder,
@@ -259,6 +265,16 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         };
     }
 
+    private CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                callback.onResult(getCommand(), null);
+            }
+        };
+    }
+
     private BsonDocument getCommand() {
         BsonDocument command = new BsonDocument("listIndexes", new BsonString(namespace.getCollectionName()))
                 .append("cursor", getCursorDocumentFromBatchSize(batchSize == 0 ? null : batchSize));
@@ -271,17 +287,17 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
     private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
         return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
                 return cursorDocumentToBatchCursor(result.getDocument("cursor"), decoder, source, batchSize);
             }
         };
     }
 
-    private CommandTransformer<BsonDocument, AsyncBatchCursor<T>> asyncTransformer(final AsyncConnectionSource source,
-                                                                         final AsyncConnection connection) {
-        return new CommandTransformer<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
-            public AsyncBatchCursor<T> apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
+                                             final AsyncConnection connection) {
                 return cursorDocumentToAsyncBatchCursor(result.getDocument("cursor"), decoder, source, connection, batchSize);
             }
         };

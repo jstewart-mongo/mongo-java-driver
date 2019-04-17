@@ -122,6 +122,7 @@ public class RetryableReadsTest {
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
+        boolean topologyFound = false;
         for (BsonValue info : runOn) {
             final BsonDocument document = info.asDocument();
             ServerVersion serverVersion = ClusterFixture.getServerVersion();
@@ -137,15 +138,24 @@ public class RetryableReadsTest {
                 for (BsonValue type : topologyTypes) {
                     String typeString = type.asString().getValue();
                     if (typeString.equals("sharded")) {
-                        assumeTrue(isSharded());
+                        topologyFound = isSharded();
                     } else if (typeString.equals("replicaset")) {
-                        assumeTrue(isDiscoverableReplicaSet());
+                        topologyFound = isDiscoverableReplicaSet();
                     } else if (typeString.equals("single")) {
-                        assumeTrue(isStandalone());
+                        topologyFound = isStandalone();
+                    }
+                    if (topologyFound) {
+                        break;
                     }
                 }
+                if (topologyFound) {
+                    break;
+                }
+            } else {
+                topologyFound = true;
             }
         }
+        assumeTrue("Topology for this test not found.", topologyFound);
 
         collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
 
@@ -162,11 +172,6 @@ public class RetryableReadsTest {
             if (documents.size() > 0) {
                 collectionHelper.insertDocuments(documents, WriteConcern.MAJORITY);
             }
-        }
-
-
-        if (definition.containsKey("failPoint")) {
-            collectionHelper.runAdminCommand(definition.getDocument("failPoint"));
         }
 
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
@@ -227,6 +232,10 @@ public class RetryableReadsTest {
         }
         helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class),
                 gridFSBucket, mongoClient);
+        if (definition.containsKey("failPoint")) {
+            collectionHelper.runAdminCommand(definition.getDocument("failPoint"));
+        }
+
     }
 
     private ReadConcern getReadConcern(final BsonDocument clientOptions) {
@@ -339,7 +348,7 @@ public class RetryableReadsTest {
         }
     }
 
-    @Parameterized.Parameters(name = "{0}: {1}")
+    @Parameterized.Parameters(name = "{0}: {2}")
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
         List<Object[]> data = new ArrayList<Object[]>();
         for (File file : JsonPoweredTestHelper.getTestFiles("/retryable-reads")) {

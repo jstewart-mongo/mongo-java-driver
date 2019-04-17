@@ -227,7 +227,6 @@ import static java.util.Collections.unmodifiableList;
  * <ul>
  * <li>{@code retryWrites=true|false}. If true the driver will retry supported write operations if they fail due to a network error.
  *  Defaults to true.</li>
- * </ul>
  * <li>{@code retryReads=true|false}. If true the driver will retry supported read operations if they fail due to a network error.
  *  Defaults to true.</li>
  * </ul>

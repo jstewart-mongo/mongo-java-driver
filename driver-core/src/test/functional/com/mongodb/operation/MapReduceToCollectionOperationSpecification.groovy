@@ -246,7 +246,7 @@ class MapReduceToCollectionOperationSpecification extends OperationFunctionalSpe
 
         then:
         testOperation(operation, serverVersion, expectedCommand, async, cannedResults, true, false,
-                ReadPreference.primary(), false, false)
+                ReadPreference.primary(), false)
 
         when:
         operation.action(action)
@@ -279,7 +279,7 @@ class MapReduceToCollectionOperationSpecification extends OperationFunctionalSpe
 
         then:
         testOperation(operation, serverVersion, expectedCommand, async, cannedResults, true, false,
-                ReadPreference.primary(), false, false)
+                ReadPreference.primary(), false)
 
         where:
         serverVersion | includeBypassValidation | includeWriteConcern | includeCollation | async

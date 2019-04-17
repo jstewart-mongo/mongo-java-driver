@@ -16,8 +16,8 @@
 
 package com.mongodb.operation;
 
-import com.mongodb.ServerAddress;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.connection.AsyncConnection;
@@ -25,6 +25,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.codecs.BsonDocumentCodec;
@@ -32,6 +33,7 @@ import org.bson.codecs.BsonDocumentCodec;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
@@ -105,8 +107,8 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
                     errHandlingCallback.onResult(null, t);
                 } else {
                     final SingleResultCallback<Boolean> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                    executeCommandAsync(binding, databaseName, getCommandCreator(), new BsonDocumentCodec(),
-                            transformer(), retryReads, wrappedCallback);
+                    executeCommandAsync(binding, databaseName, getCommandCreatorAsync(), new BsonDocumentCodec(),
+                            asyncTransformer(), retryReads, wrappedCallback);
                 }
             }
         });
@@ -115,7 +117,16 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
     private CommandTransformer<BsonDocument, Boolean> transformer() {
         return new CommandTransformer<BsonDocument, Boolean>() {
             @Override
-            public Boolean apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public Boolean apply(final BsonDocument result, final Connection connection) {
+                return result.get("users").isArray() && !result.getArray("users").isEmpty();
+            }
+        };
+    }
+
+    private CommandTransformerAsync<BsonDocument, Boolean> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, Boolean>() {
+            @Override
+            public Boolean apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {
                 return result.get("users").isArray() && !result.getArray("users").isEmpty();
             }
         };
@@ -126,6 +137,16 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return getCommand();
+            }
+        };
+    }
+
+    private CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                callback.onResult(getCommand(), null);
             }
         };
     }

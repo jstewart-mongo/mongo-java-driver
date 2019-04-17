@@ -119,6 +119,7 @@ public class RetryableReadsTest {
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
+        boolean topologyFound = false;
         for (BsonValue info : runOn) {
             final BsonDocument document = info.asDocument();
             ServerVersion serverVersion = ClusterFixture.getServerVersion();
@@ -134,15 +135,24 @@ public class RetryableReadsTest {
                 for (BsonValue type : topologyTypes) {
                     String typeString = type.asString().getValue();
                     if (typeString.equals("sharded")) {
-                        assumeTrue(isSharded());
+                        topologyFound = isSharded();
                     } else if (typeString.equals("replicaset")) {
-                        assumeTrue(isDiscoverableReplicaSet());
+                        topologyFound = isDiscoverableReplicaSet();
                     } else if (typeString.equals("single")) {
-                        assumeTrue(isStandalone());
+                        topologyFound = isStandalone();
+                    }
+                    if (topologyFound) {
+                        break;
                     }
                 }
+                if (topologyFound) {
+                    break;
+                }
+            } else {
+                topologyFound = true; // If no topologies are specified, then all topologies are valid.
             }
         }
+        assumeTrue("Topology for this test not found.", topologyFound);
 
         collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
@@ -294,7 +304,7 @@ public class RetryableReadsTest {
         }
     }
 
-    @Parameterized.Parameters(name = "{1}")
+    @Parameterized.Parameters(name = "{0}: {2}")
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
         List<Object[]> data = new ArrayList<Object[]>();
         for (File file : JsonPoweredTestHelper.getTestFiles("/retryable-reads")) {

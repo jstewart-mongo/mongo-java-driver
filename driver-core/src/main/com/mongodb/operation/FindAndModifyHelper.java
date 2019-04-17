@@ -17,9 +17,12 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoWriteConcernException;
-import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcernResult;
+import com.mongodb.binding.AsyncConnectionSource;
+import com.mongodb.connection.AsyncConnection;
+import com.mongodb.connection.Connection;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -33,11 +36,32 @@ final class FindAndModifyHelper {
         return new CommandTransformer<BsonDocument, T>() {
             @SuppressWarnings("unchecked")
             @Override
-            public T apply(final BsonDocument result, final ServerAddress serverAddress) {
+            public T apply(final BsonDocument result, final Connection connection) {
                 if (hasWriteConcernError(result)) {
                     throw new MongoWriteConcernException(
                             createWriteConcernError(result.getDocument("writeConcernError")),
-                            createWriteConcernResult(result.getDocument("lastErrorObject", new BsonDocument())), serverAddress);
+                            createWriteConcernResult(result.getDocument("lastErrorObject", new BsonDocument())),
+                            connection.getDescription().getServerAddress());
+                }
+
+                if (!result.isDocument("value")) {
+                    return null;
+                }
+                return BsonDocumentWrapperHelper.toDocument(result.getDocument("value", null));
+            }
+        };
+    }
+
+    static <T> CommandTransformerAsync<BsonDocument, T> asyncTransformer() {
+        return new CommandTransformerAsync<BsonDocument, T>() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public T apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {
+                if (hasWriteConcernError(result)) {
+                    throw new MongoWriteConcernException(
+                            createWriteConcernError(result.getDocument("writeConcernError")),
+                            createWriteConcernResult(result.getDocument("lastErrorObject", new BsonDocument())),
+                            connection.getDescription().getServerAddress());
                 }
 
                 if (!result.isDocument("value")) {

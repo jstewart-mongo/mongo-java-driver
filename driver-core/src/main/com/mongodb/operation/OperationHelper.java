@@ -67,6 +67,10 @@ final class OperationHelper {
         T call(Connection connection);
     }
 
+    interface CallableWithSource<T> {
+        T call(ConnectionSource source);
+    }
+
     interface CallableWithConnectionAndSource<T> {
         T call(ConnectionSource source, Connection connection);
     }
@@ -75,14 +79,26 @@ final class OperationHelper {
         void call(AsyncConnection connection, Throwable t);
     }
 
+    interface AsyncCallableWithConnectionDescription {
+        void call(ConnectionDescription description, Throwable t);
+    }
+
+    interface AsyncCallableWithSource {
+        void call(AsyncConnectionSource source, Throwable t);
+    }
+
     interface AsyncCallableWithConnectionAndSource {
         void call(AsyncConnectionSource source, AsyncConnection connection, Throwable t);
     }
 
     static void validateReadConcern(final Connection connection, final ReadConcern readConcern) {
-        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo(connection.getDescription()) && !readConcern.isServerDefault()) {
+        validateReadConcern(connection.getDescription(), readConcern);
+    }
+
+    static void validateReadConcern(final ConnectionDescription description, final ReadConcern readConcern) {
+        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo(description) && !readConcern.isServerDefault()) {
             throw new IllegalArgumentException(format("ReadConcern not supported by server version: %s",
-                    connection.getDescription().getServerVersion()));
+                    description.getServerVersion()));
         }
     }
 
@@ -94,6 +110,16 @@ final class OperationHelper {
                     connection.getDescription().getServerVersion()));
         }
         callable.call(connection, throwable);
+    }
+
+    static void validateReadConcern(final ConnectionDescription description, final ReadConcern readConcern,
+                                    final AsyncCallableWithConnectionDescription callable) {
+        Throwable throwable = null;
+        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo(description) && !readConcern.isServerDefault()) {
+            throwable = new IllegalArgumentException(format("ReadConcern not supported by server version: %s",
+                    description.getServerVersion()));
+        }
+        callable.call(description, throwable);
     }
 
     static void validateReadConcern(final AsyncConnectionSource source, final AsyncConnection connection, final ReadConcern readConcern,
@@ -135,6 +161,16 @@ final class OperationHelper {
                     connection.getDescription().getServerVersion()));
         }
         callable.call(connection, throwable);
+    }
+
+    static void validateCollation(final ConnectionDescription description, final Collation collation,
+                                  final AsyncCallableWithConnectionDescription callable) {
+        Throwable throwable = null;
+        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotFour(description) && collation != null) {
+            throwable = new IllegalArgumentException(format("Collation not supported by server version: %s",
+                    description.getServerVersion()));
+        }
+        callable.call(description, throwable);
     }
 
     static void validateCollation(final AsyncConnectionSource source, final AsyncConnection connection,
@@ -214,6 +250,12 @@ final class OperationHelper {
         validateCollation(connection, collation);
     }
 
+    static void validateReadConcernAndCollation(final ConnectionDescription description, final ReadConcern readConcern,
+                                                final Collation collation) {
+        validateReadConcern(description, readConcern);
+        validateCollation(description, collation);
+    }
+
     static void validateReadConcernAndCollation(final AsyncConnection connection, final ReadConcern readConcern,
                                                 final Collation collation,
                                                 final AsyncCallableWithConnection callable) {
@@ -224,6 +266,21 @@ final class OperationHelper {
                     callable.call(connection, t);
                 } else {
                     validateCollation(connection, collation, callable);
+                }
+            }
+        });
+    }
+
+    static void validateReadConcernAndCollation(final ConnectionDescription description, final ReadConcern readConcern,
+                                                final Collation collation,
+                                                final AsyncCallableWithConnectionDescription callable) {
+        validateReadConcern(description, readConcern, new AsyncCallableWithConnectionDescription(){
+            @Override
+            public void call(final ConnectionDescription description, final Throwable t) {
+                if (t != null) {
+                    callable.call(description, t);
+                } else {
+                    validateCollation(description, collation, callable);
                 }
             }
         });
@@ -296,7 +353,7 @@ final class OperationHelper {
     }
 
     static boolean canRetryRead(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                                 final SessionContext sessionContext) {
+                                final SessionContext sessionContext) {
         if (serverIsLessThanVersionThreeDotSix(connectionDescription)) {
             LOGGER.debug("retryReads set to true but the server does not support retryable reads.");
             return false;
@@ -314,8 +371,8 @@ final class OperationHelper {
     static <T> QueryBatchCursor<T> createEmptyBatchCursor(final MongoNamespace namespace, final Decoder<T> decoder,
                                                           final ServerAddress serverAddress, final int batchSize) {
         return new QueryBatchCursor<T>(new QueryResult<T>(namespace, Collections.<T>emptyList(), 0L,
-                                                          serverAddress),
-                                       0, batchSize, decoder);
+                serverAddress),
+                0, batchSize, decoder);
     }
 
     static <T> AsyncBatchCursor<T> createEmptyAsyncBatchCursor(final MongoNamespace namespace, final ServerAddress serverAddress) {
@@ -325,16 +382,16 @@ final class OperationHelper {
     static <T> BatchCursor<T> cursorDocumentToBatchCursor(final BsonDocument cursorDocument, final Decoder<T> decoder,
                                                           final ConnectionSource source, final int batchSize) {
         return new QueryBatchCursor<T>(OperationHelper.<T>cursorDocumentToQueryResult(cursorDocument,
-                                                                                      source.getServerDescription().getAddress()),
-                                       0, batchSize, decoder, source);
+                source.getServerDescription().getAddress()),
+                0, batchSize, decoder, source);
     }
 
     static <T> AsyncBatchCursor<T> cursorDocumentToAsyncBatchCursor(final BsonDocument cursorDocument, final Decoder<T> decoder,
                                                                     final AsyncConnectionSource source, final AsyncConnection connection,
                                                                     final int batchSize) {
         return new AsyncQueryBatchCursor<T>(OperationHelper.<T>cursorDocumentToQueryResult(cursorDocument,
-                                                                                           source.getServerDescription().getAddress()),
-                                            0, batchSize, 0, decoder, source, connection);
+                source.getServerDescription().getAddress()),
+                0, batchSize, 0, decoder, source, connection);
     }
 
 
@@ -347,11 +404,11 @@ final class OperationHelper {
     }
 
     private static <T> QueryResult<T> cursorDocumentToQueryResult(final BsonDocument cursorDocument, final ServerAddress serverAddress,
-                                                          final String fieldNameContainingBatch) {
+                                                                  final String fieldNameContainingBatch) {
         long cursorId = ((BsonInt64) cursorDocument.get("id")).getValue();
         MongoNamespace queryResultNamespace = new MongoNamespace(cursorDocument.getString("ns").getValue());
         return new QueryResult<T>(queryResultNamespace, BsonDocumentWrapperHelper.<T>toList(cursorDocument, fieldNameContainingBatch),
-                                  cursorId, serverAddress);
+                cursorId, serverAddress);
     }
 
     static <T> SingleResultCallback<T> releasingCallback(final SingleResultCallback<T> wrapped, final AsyncConnectionSource source) {
@@ -432,6 +489,15 @@ final class OperationHelper {
         ConnectionSource source = binding.getReadConnectionSource();
         try {
             return withConnectionSource(source, callable);
+        } finally {
+            source.release();
+        }
+    }
+
+    static <T> T withConnectionSource(final ReadBinding binding, final CallableWithSource<T> callable) {
+        ConnectionSource source = binding.getReadConnectionSource();
+        try {
+            return callable.call(source);
         } finally {
             source.release();
         }
@@ -525,6 +591,10 @@ final class OperationHelper {
         binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionCallback(callable), LOGGER));
     }
 
+    static void withConnection(final AsyncReadBinding binding, final AsyncCallableWithSource callable) {
+        binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithSourceCallback(callable), LOGGER));
+    }
+
     static void withConnection(final AsyncReadBinding binding, final AsyncCallableWithConnectionAndSource callable) {
         binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionAndSourceCallback(callable), LOGGER));
     }
@@ -532,6 +602,21 @@ final class OperationHelper {
     private static class AsyncCallableWithConnectionCallback implements SingleResultCallback<AsyncConnectionSource> {
         private final AsyncCallableWithConnection callable;
         AsyncCallableWithConnectionCallback(final AsyncCallableWithConnection callable) {
+            this.callable = callable;
+        }
+        @Override
+        public void onResult(final AsyncConnectionSource source, final Throwable t) {
+            if (t != null) {
+                callable.call(null, t);
+            } else {
+                withConnectionSource(source, callable);
+            }
+        }
+    }
+
+    private static class AsyncCallableWithSourceCallback implements SingleResultCallback<AsyncConnectionSource> {
+        private final AsyncCallableWithSource callable;
+        AsyncCallableWithSourceCallback(final AsyncCallableWithSource callable) {
             this.callable = callable;
         }
         @Override
@@ -556,6 +641,10 @@ final class OperationHelper {
                 }
             }
         });
+    }
+
+    private static void withConnectionSource(final AsyncConnectionSource source, final AsyncCallableWithSource callable) {
+        callable.call(source, null);
     }
 
     private static void withConnectionSource(final AsyncConnectionSource source, final AsyncCallableWithConnectionAndSource callable) {

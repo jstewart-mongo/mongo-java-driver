@@ -39,7 +39,8 @@ import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.IdentityTransformer;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
+import static com.mongodb.operation.CommandOperationHelper.IdentityTransformerAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
@@ -201,8 +202,8 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
                             if (t != null) {
                                 wrappedCallback.onResult(null, t);
                             } else {
-                                CommandOperationHelper.executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(),
-                                        new IdentityTransformer<BsonDocument>(), retryReads, wrappedCallback);
+                                CommandOperationHelper.executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
+                                        new IdentityTransformerAsync<BsonDocument>(), retryReads, wrappedCallback);
                             }
                         }
                     });
@@ -216,6 +217,16 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return getCommand();
+            }
+        };
+    }
+
+    private CommandCreatorAsync getCommandCreatorAsync() {
+        return new CommandCreatorAsync() {
+            @Override
+            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
+                               final SingleResultCallback<BsonDocument> callback) {
+                callback.onResult(getCommand(), null);
             }
         };
     }

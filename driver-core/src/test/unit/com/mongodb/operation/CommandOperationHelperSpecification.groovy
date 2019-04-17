@@ -185,14 +185,23 @@ class CommandOperationHelperSpecification extends Specification {
         given:
         def dbName = 'db'
         def command = BsonDocument.parse('''{findAndModify: "coll", query: {a: 1}, new: false, update: {$inc: {a :1}}, txnNumber: 1}''')
-        def commandCreator = { serverDescription, connectionDescription -> command }
+        def serverDescription = Mock(ServerDescription)
+        def connectionDescription = Mock(ConnectionDescription)
+        def commandCallback = new SingleResultCallback() {
+            @Override
+            void onResult(Object result, Throwable t) {
+                this.result = command
+                this.t = null
+            }
+        }
+        def commandCreator = Mock(CommandOperationHelper.CommandCreatorAsync) {
+            create(serverDescription, connectionDescription, commandCallback) >> { it[0].onResult(command, null) }
+        }
         def callback = new SingleResultCallback() {
-            def result
-            def throwable
             @Override
             void onResult(final Object result, final Throwable t) {
                 this.result = result
-                this.throwable = t
+                this.t = null
             }
         }
         def decoder = new BsonDocumentCodec()
@@ -223,8 +232,8 @@ class CommandOperationHelperSpecification extends Specification {
         }
 
         when:
-        executeRetryableCommand(asyncWriteBinding, dbName, primary(), new NoOpFieldNameValidator(), decoder, commandCreator,
-                FindAndModifyHelper.transformer(), callback)
+        executeRetryableCommand(asyncWriteBinding, dbName, primary(), new NoOpFieldNameValidator(), decoder,
+                commandCreator, FindAndModifyHelper.asyncTransformer(), callback)
 
         then:
         2 * connection.commandAsync(dbName, command, _, primary(), decoder, _, _) >> { it.last().onResult(results.poll(), null) }
@@ -269,7 +278,7 @@ class CommandOperationHelperSpecification extends Specification {
         def command = new BsonDocument()
         def decoder = Stub(Decoder)
         def callback = Stub(SingleResultCallback)
-        def function = Stub(CommandOperationHelper.CommandTransformer)
+        def function = Stub(CommandOperationHelper.CommandTransformerAsync)
         def connection = Mock(AsyncConnection)
         def connectionSource = Stub(AsyncConnectionSource) {
             getConnection(_) >> { it[0].onResult(connection, null) }
@@ -292,10 +301,10 @@ class CommandOperationHelperSpecification extends Specification {
         given:
         def dbName = 'db'
         def command = new BsonDocument()
-        def commandCreator = { serverDescription, connectionDescription -> command }
+        def commandCreator = { serverDescription, connectionDescription, callback -> command }
         def decoder = Stub(Decoder)
         def callback = Stub(SingleResultCallback)
-        def function = Stub(CommandOperationHelper.CommandTransformer)
+        def function = Stub(CommandOperationHelper.CommandTransformerAsync)
         def connection = Mock(AsyncConnection)
         def connectionSource = Stub(AsyncConnectionSource) {
             getConnection(_) >> { it[0].onResult(connection, null) }

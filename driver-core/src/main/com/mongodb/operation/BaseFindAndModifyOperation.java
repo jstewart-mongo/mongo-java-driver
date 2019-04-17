@@ -31,6 +31,7 @@ import org.bson.codecs.Decoder;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
+import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeRetryableCommand;
 import static com.mongodb.operation.OperationHelper.isRetryableWrite;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
@@ -77,8 +78,8 @@ public abstract class BaseFindAndModifyOperation<T> implements AsyncWriteOperati
     public void executeAsync(final AsyncWriteBinding binding, final SingleResultCallback<T> callback) {
         executeRetryableCommand(binding, getDatabaseName(), null, getFieldNameValidator(),
                 CommandResultDocumentCodec.create(getDecoder(), "value"),
-                getCommandCreator(binding.getSessionContext()),
-                FindAndModifyHelper.<T>transformer(), callback);
+                getCommandCreatorAsync(binding.getSessionContext()),
+                FindAndModifyHelper.<T>asyncTransformer(), callback);
     }
 
     protected abstract String getDatabaseName();
@@ -123,6 +124,8 @@ public abstract class BaseFindAndModifyOperation<T> implements AsyncWriteOperati
     }
 
     protected abstract CommandCreator getCommandCreator(SessionContext sessionContext);
+
+    protected abstract CommandCreatorAsync getCommandCreatorAsync(SessionContext sessionContext);
 
     protected void addTxnNumberToCommand(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
                                          final BsonDocument commandDocument, final SessionContext sessionContext) {
