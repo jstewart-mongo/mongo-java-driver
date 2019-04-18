@@ -31,7 +31,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -318,8 +318,8 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandReadTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
             public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
                                              final AsyncConnection connection) {

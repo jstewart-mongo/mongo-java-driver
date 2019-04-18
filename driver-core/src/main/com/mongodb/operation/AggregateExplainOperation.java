@@ -22,7 +22,6 @@ import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.client.model.Collation;
 import com.mongodb.connection.AsyncConnection;
-import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import org.bson.BsonArray;
@@ -43,7 +42,7 @@ import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.IdentityTransformerAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
-import static com.mongodb.operation.OperationHelper.CallableWithConnection;
+import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.validateCollation;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
@@ -177,13 +176,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
 
     @Override
     public BsonDocument execute(final ReadBinding binding) {
-        return withConnection(binding, new CallableWithConnection<BsonDocument>() {
-            @Override
-            public BsonDocument call(final Connection connection) {
-                validateCollation(connection, collation);
-                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), getRetryReads());
-            }
-        });
+        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), getRetryReads());
     }
 
     @Override
@@ -196,17 +189,8 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
                     errHandlingCallback.onResult(null, t);
                 } else {
                     final SingleResultCallback<BsonDocument> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                    validateCollation(connection, collation, new AsyncCallableWithConnection() {
-                        @Override
-                        public void call(final AsyncConnection connection, final Throwable t) {
-                            if (t != null) {
-                                wrappedCallback.onResult(null, t);
-                            } else {
-                                CommandOperationHelper.executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
-                                        new IdentityTransformerAsync<BsonDocument>(), retryReads, wrappedCallback);
-                            }
-                        }
-                    });
+                    CommandOperationHelper.executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
+                            new IdentityTransformerAsync<BsonDocument>(), retryReads, wrappedCallback);
                 }
             }
         });
@@ -216,6 +200,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateCollation(connectionDescription, collation);
                 return getCommand();
             }
         };
@@ -226,7 +211,16 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
             @Override
             public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
                                final SingleResultCallback<BsonDocument> callback) {
-                callback.onResult(getCommand(), null);
+                validateCollation(connectionDescription, collation, new AsyncCallableWithConnectionDescription() {
+                    @Override
+                    public void call(final ConnectionDescription description, final Throwable t) {
+                        if (t != null) {
+                            callback.onResult(null, t);
+                        } else {
+                            callback.onResult(getCommand(), null);
+                        }
+                    }
+                });
             }
         };
     }

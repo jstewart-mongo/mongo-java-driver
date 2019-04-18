@@ -22,7 +22,7 @@ import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -52,8 +52,8 @@ final class FindAndModifyHelper {
         };
     }
 
-    static <T> CommandTransformerAsync<BsonDocument, T> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, T>() {
+    static <T> CommandReadTransformerAsync<BsonDocument, T> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, T>() {
             @SuppressWarnings("unchecked")
             @Override
             public T apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {

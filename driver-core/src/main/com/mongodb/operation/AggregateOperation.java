@@ -348,7 +348,8 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
         return new AggregateExplainOperation(getNamespace(), getPipeline())
                .allowDiskUse(getAllowDiskUse())
                .maxTime(getMaxAwaitTime(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
-               .hint(wrapped.getHint());
+               .hint(wrapped.getHint())
+               .retryReads(getRetryReads());
     }
 
     /**
@@ -359,6 +360,7 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
      */
     public AsyncReadOperation<BsonDocument> asExplainableOperationAsync(final ExplainVerbosity explainVerbosity) {
         return new AggregateExplainOperation(getNamespace(), getPipeline())
+                .retryReads(getRetryReads())
                 .allowDiskUse(getAllowDiskUse())
                 .maxTime(getMaxAwaitTime(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
                 .hint(wrapped.getHint());

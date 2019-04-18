@@ -30,7 +30,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
@@ -204,8 +204,8 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, List<AsyncBatchCursor<T>>> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, List<AsyncBatchCursor<T>>>() {
+    private CommandReadTransformerAsync<BsonDocument, List<AsyncBatchCursor<T>>> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, List<AsyncBatchCursor<T>>>() {
             @Override
             public List<AsyncBatchCursor<T>> apply(final BsonDocument result, final AsyncConnectionSource source,
                                                    final AsyncConnection connection) {

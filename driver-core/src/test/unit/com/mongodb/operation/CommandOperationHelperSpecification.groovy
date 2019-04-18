@@ -273,7 +273,7 @@ class CommandOperationHelperSpecification extends Specification {
         def command = new BsonDocument()
         def decoder = Stub(Decoder)
         def callback = Stub(SingleResultCallback)
-        def function = Stub(CommandOperationHelper.CommandWriteTransformer)
+        def function = Stub(CommandOperationHelper.CommandWriteTransformerAsync)
         def connection = Mock(AsyncConnection)
         def connectionSource = Stub(AsyncConnectionSource) {
             getConnection(_) >> { it[0].onResult(connection, null) }
@@ -303,7 +303,7 @@ class CommandOperationHelperSpecification extends Specification {
         }
         def decoder = Stub(Decoder)
         def callback = Stub(SingleResultCallback)
-        def function = Stub(CommandOperationHelper.CommandTransformerAsync)
+        def function = Stub(CommandOperationHelper.CommandReadTransformerAsync)
         def connection = Mock(AsyncConnection)
         def connectionSource = Stub(AsyncConnectionSource) {
             getConnection(_) >> { it[0].onResult(connection, null) }

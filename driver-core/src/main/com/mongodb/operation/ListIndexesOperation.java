@@ -31,7 +31,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.operation.OperationHelper.CallableWithSource;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
@@ -293,8 +293,8 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandReadTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
             public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
                                              final AsyncConnection connection) {

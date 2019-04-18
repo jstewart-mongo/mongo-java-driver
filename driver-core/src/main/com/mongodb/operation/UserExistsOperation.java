@@ -25,7 +25,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.codecs.BsonDocumentCodec;
@@ -123,8 +123,8 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, Boolean> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, Boolean>() {
+    private CommandReadTransformerAsync<BsonDocument, Boolean> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, Boolean>() {
             @Override
             public Boolean apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {
                 return result.get("users").isArray() && !result.getArray("users").isEmpty();

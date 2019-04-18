@@ -67,7 +67,7 @@ import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeast
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import static com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import static com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
@@ -1152,8 +1152,8 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         return cursorType == CursorType.TailableAwait ? maxAwaitTimeMS : 0;
     }
 
-    private CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
+    private CommandReadTransformerAsync<BsonDocument, AsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, AsyncBatchCursor<T>>() {
             @Override
             public AsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
                                              final AsyncConnection connection) {

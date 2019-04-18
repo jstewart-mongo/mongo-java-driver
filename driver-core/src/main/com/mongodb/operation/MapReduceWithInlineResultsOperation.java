@@ -31,7 +31,7 @@ import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonBoolean;
@@ -435,8 +435,8 @@ public class MapReduceWithInlineResultsOperation<T> implements AsyncReadOperatio
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, MapReduceAsyncBatchCursor<T>> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, MapReduceAsyncBatchCursor<T>>() {
+    private CommandReadTransformerAsync<BsonDocument, MapReduceAsyncBatchCursor<T>> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, MapReduceAsyncBatchCursor<T>>() {
             @Override
             public MapReduceAsyncBatchCursor<T> apply(final BsonDocument result, final AsyncConnectionSource source,
                                                       final AsyncConnection connection) {

@@ -27,7 +27,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandWriteTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandWriteTransformerAsync;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonJavaScript;
@@ -580,8 +580,8 @@ MapReduceToCollectionOperation implements AsyncWriteOperation<MapReduceStatistic
         };
     }
 
-    private CommandWriteTransformer<BsonDocument, MapReduceStatistics> transformerAsync() {
-        return new CommandWriteTransformer<BsonDocument, MapReduceStatistics>() {
+    private CommandWriteTransformerAsync<BsonDocument, MapReduceStatistics> transformerAsync() {
+        return new CommandWriteTransformerAsync<BsonDocument, MapReduceStatistics>() {
             @SuppressWarnings("unchecked")
             @Override
             public MapReduceStatistics apply(final BsonDocument result, final AsyncConnection connection) {

@@ -32,7 +32,7 @@ import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.client.model.CountStrategy;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import com.mongodb.operation.OperationHelper.CallableWithSource;
@@ -352,8 +352,8 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, Long> asyncTransformer() {
-        return new CommandTransformerAsync<BsonDocument, Long>() {
+    private CommandReadTransformerAsync<BsonDocument, Long> asyncTransformer() {
+        return new CommandReadTransformerAsync<BsonDocument, Long>() {
             @Override
             public Long apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {
                 return (result.getNumber("n")).longValue();
