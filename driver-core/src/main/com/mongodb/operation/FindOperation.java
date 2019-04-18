@@ -1100,6 +1100,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         return new CommandOperationHelper.CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return wrapInExplainIfNecessary(getCommand(sessionContext));
             }
         };
