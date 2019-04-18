@@ -36,7 +36,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorWriteTransformer;
 import static com.mongodb.operation.DocumentHelper.putIfFalse;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -404,7 +404,7 @@ public class CreateCollectionOperation implements AsyncWriteOperation<Void>, Wri
                                 wrappedCallback.onResult(null, t);
                             } else {
                                 executeCommandAsync(binding, databaseName, getCommand(connection.getDescription()),
-                                        connection, writeConcernErrorTransformerAsync(), wrappedCallback);
+                                        connection, writeConcernErrorWriteTransformer(), wrappedCallback);
                             }
                         }
                     });

@@ -32,7 +32,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorWriteTransformer;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
@@ -139,7 +139,7 @@ public class RenameCollectionOperation implements AsyncWriteOperation<Void>, Wri
                     errHandlingCallback.onResult(null, t);
                 } else {
                     executeCommandAsync(binding, "admin", getCommand(connection.getDescription()), connection,
-                            writeConcernErrorTransformerAsync(), releasingCallback(errHandlingCallback, connection));
+                            writeConcernErrorWriteTransformer(), releasingCallback(errHandlingCallback, connection));
                 }
             }
         });

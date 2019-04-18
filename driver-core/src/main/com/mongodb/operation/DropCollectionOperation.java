@@ -36,7 +36,7 @@ import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
 import static com.mongodb.operation.CommandOperationHelper.rethrowIfNotNamespaceError;
-import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorWriteTransformer;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
@@ -114,7 +114,7 @@ public class DropCollectionOperation implements AsyncWriteOperation<Void>, Write
                 } else {
                     final SingleResultCallback<Void> releasingCallback = releasingCallback(errHandlingCallback, connection);
                     executeCommandAsync(binding, namespace.getDatabaseName(), getCommand(connection.getDescription()),
-                            connection, writeConcernErrorTransformerAsync(), new SingleResultCallback<Void>() {
+                            connection, writeConcernErrorWriteTransformer(), new SingleResultCallback<Void>() {
                                 @Override
                                 public void onResult(final Void result, final Throwable t) {
                                     if (t != null && !isNamespaceError(t)) {

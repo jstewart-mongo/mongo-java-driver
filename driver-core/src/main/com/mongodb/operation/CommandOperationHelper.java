@@ -76,6 +76,17 @@ final class CommandOperationHelper {
         R apply(T t, Connection connection);
     }
 
+    interface CommandWriteTransformer<T, R> {
+
+        /**
+         * Yield an appropriate result object for the input object.
+         *
+         * @param t the input object
+         * @return the function result
+         */
+        R apply(T t, AsyncConnection connection);
+    }
+
     interface CommandTransformerAsync<T, R> {
 
         /**
@@ -94,6 +105,13 @@ final class CommandOperationHelper {
         }
     }
 
+    static class IdentityWriteTransformer<T> implements CommandWriteTransformer<T, T> {
+        @Override
+        public T apply(final T t, final AsyncConnection connection) {
+            return t;
+        }
+    }
+
     static class IdentityTransformerAsync<T> implements CommandTransformerAsync<T, T> {
         @Override
         public T apply(final T t, final AsyncConnectionSource source, final AsyncConnection connection) {
@@ -105,6 +123,16 @@ final class CommandOperationHelper {
         return new CommandTransformer<BsonDocument, Void>() {
             @Override
             public Void apply(final BsonDocument result, final Connection connection) {
+                WriteConcernHelper.throwOnWriteConcernError(result, connection.getDescription().getServerAddress());
+                return null;
+            }
+        };
+    }
+
+    static CommandWriteTransformer<BsonDocument, Void> writeConcernErrorWriteTransformer() {
+        return new CommandWriteTransformer<BsonDocument, Void>() {
+            @Override
+            public Void apply(final BsonDocument result, final AsyncConnection connection) {
                 WriteConcernHelper.throwOnWriteConcernError(result, connection.getDescription().getServerAddress());
                 return null;
             }
@@ -504,13 +532,13 @@ final class CommandOperationHelper {
                                         final BsonDocument command,
                                         final Decoder<T> decoder,
                                         final SingleResultCallback<T> callback) {
-        executeCommandAsync(binding, database, command, decoder, new IdentityTransformerAsync<T>(), callback);
+        executeCommandAsync(binding, database, command, decoder, new IdentityWriteTransformer<T>(), callback);
     }
 
     static <T> void executeCommandAsync(final AsyncWriteBinding binding,
                                         final String database,
                                         final BsonDocument command,
-                                        final CommandTransformerAsync<BsonDocument, T> transformer,
+                                        final CommandWriteTransformer<BsonDocument, T> transformer,
                                         final SingleResultCallback<T> callback) {
         executeCommandAsync(binding, database, command, new BsonDocumentCodec(), transformer, callback);
     }
@@ -518,7 +546,7 @@ final class CommandOperationHelper {
     static <D, T> void executeCommandAsync(final AsyncWriteBinding binding,
                                            final String database, final BsonDocument command,
                                            final Decoder<D> decoder,
-                                           final CommandTransformerAsync<D, T> transformer,
+                                           final CommandWriteTransformer<D, T> transformer,
                                            final SingleResultCallback<T> callback) {
         executeCommandAsync(binding, database, command, new NoOpFieldNameValidator(), decoder, transformer, callback);
     }
@@ -528,7 +556,7 @@ final class CommandOperationHelper {
                                         final BsonDocument command,
                                         final Decoder<BsonDocument> decoder,
                                         final AsyncConnection connection,
-                                        final CommandTransformerAsync<BsonDocument, T> transformer,
+                                        final CommandWriteTransformer<BsonDocument, T> transformer,
                                         final SingleResultCallback<T> callback) {
         notNull("binding", binding);
         executeCommandAsync(database, command, decoder, connection, primary(), transformer, binding.getSessionContext(),
@@ -541,7 +569,7 @@ final class CommandOperationHelper {
                                         final FieldNameValidator fieldNameValidator,
                                         final Decoder<BsonDocument> decoder,
                                         final AsyncConnection connection,
-                                        final CommandTransformerAsync<BsonDocument, T> transformer,
+                                        final CommandWriteTransformer<BsonDocument, T> transformer,
                                         final SingleResultCallback<T> callback) {
         notNull("binding", binding);
         executeCommandAsync(database, command, fieldNameValidator, decoder, connection, primary(), transformer,
@@ -552,7 +580,7 @@ final class CommandOperationHelper {
                                            final String database, final BsonDocument command,
                                            final FieldNameValidator fieldNameValidator,
                                            final Decoder<D> decoder,
-                                           final CommandTransformerAsync<D, T> transformer,
+                                           final CommandWriteTransformer<D, T> transformer,
                                            final SingleResultCallback<T> callback) {
         binding.getWriteConnectionSource(new CommandProtocolExecutingCallback<D, T>(database, command, fieldNameValidator, decoder,
                 primary(), transformer, binding.getSessionContext(), errorHandlingCallback(callback, LOGGER)));
@@ -563,14 +591,14 @@ final class CommandOperationHelper {
                                     final BsonDocument command,
                                     final AsyncConnection connection,
                                     final SingleResultCallback<BsonDocument> callback) {
-        executeCommandAsync(binding, database, command, connection, new IdentityTransformerAsync<BsonDocument>(), callback);
+        executeCommandAsync(binding, database, command, connection, new IdentityWriteTransformer<BsonDocument>(), callback);
     }
 
     static <T> void executeCommandAsync(final AsyncWriteBinding binding,
                                         final String database,
                                         final BsonDocument command,
                                         final AsyncConnection connection,
-                                        final CommandTransformerAsync<BsonDocument, T> transformer,
+                                        final CommandWriteTransformer<BsonDocument, T> transformer,
                                         final SingleResultCallback<T> callback) {
         notNull("binding", binding);
         executeCommandAsync(database, command, new BsonDocumentCodec(), connection, primary(), transformer,
@@ -581,7 +609,7 @@ final class CommandOperationHelper {
     private static <D, T> void executeCommandAsync(final String database, final BsonDocument command,
                                                    final Decoder<D> decoder, final AsyncConnection connection,
                                                    final ReadPreference readPreference,
-                                                   final CommandTransformerAsync<D, T> transformer,
+                                                   final CommandWriteTransformer<D, T> transformer,
                                                    final SessionContext sessionContext,
                                                    final SingleResultCallback<T> callback) {
         connection.commandAsync(database, command, new NoOpFieldNameValidator(), readPreference, decoder, sessionContext,
@@ -592,7 +620,7 @@ final class CommandOperationHelper {
                             callback.onResult(null, t);
                         } else {
                             try {
-                                T transformedResult = transformer.apply(result, null, connection);
+                                T transformedResult = transformer.apply(result, connection);
                                 callback.onResult(transformedResult, null);
                             } catch (Exception e) {
                                 callback.onResult(null, e);
@@ -607,7 +635,7 @@ final class CommandOperationHelper {
                                                    final FieldNameValidator fieldNameValidator,
                                                    final Decoder<D> decoder, final AsyncConnection connection,
                                                    final ReadPreference readPreference,
-                                                   final CommandTransformerAsync<D, T> transformer,
+                                                   final CommandWriteTransformer<D, T> transformer,
                                                    final SessionContext sessionContext,
                                                    final SingleResultCallback<T> callback) {
         connection.commandAsync(database, command, fieldNameValidator, readPreference, decoder, sessionContext, true, null, null,
@@ -618,7 +646,7 @@ final class CommandOperationHelper {
                             callback.onResult(null, t);
                         } else {
                             try {
-                                T transformedResult = transformer.apply(result, null, connection);
+                                T transformedResult = transformer.apply(result, connection);
                                 callback.onResult(transformedResult, null);
                             } catch (Exception e) {
                                 callback.onResult(null, e);
@@ -881,13 +909,13 @@ final class CommandOperationHelper {
         private final Decoder<D> decoder;
         private final ReadPreference readPreference;
         private final FieldNameValidator fieldNameValidator;
-        private final CommandTransformerAsync<D, R> transformer;
+        private final CommandWriteTransformer<D, R> transformer;
         private final SingleResultCallback<R> callback;
         private final SessionContext sessionContext;
 
         CommandProtocolExecutingCallback(final String database, final BsonDocument command, final FieldNameValidator fieldNameValidator,
                                          final Decoder<D> decoder, final ReadPreference readPreference,
-                                         final CommandTransformerAsync<D, R> transformer, final SessionContext sessionContext,
+                                         final CommandWriteTransformer<D, R> transformer, final SessionContext sessionContext,
                                          final SingleResultCallback<R> callback) {
             this.database = database;
             this.command = command;
@@ -918,7 +946,7 @@ final class CommandOperationHelper {
                                             if (t != null) {
                                                 wrappedCallback.onResult(null, t);
                                             } else {
-                                                wrappedCallback.onResult(transformer.apply(response, source, connection), null);
+                                                wrappedCallback.onResult(transformer.apply(response, connection), null);
                                             }
                                         }
                                     });

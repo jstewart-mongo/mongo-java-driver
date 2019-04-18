@@ -31,7 +31,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorWriteTransformer;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -106,7 +106,7 @@ public class DropUserOperation implements AsyncWriteOperation<Void>, WriteOperat
                 } else {
                     final SingleResultCallback<Void> wrappedCallback = releasingCallback(errHandlingCallback, connection);
                     executeCommandAsync(binding, databaseName, getCommand(connection.getDescription()), connection,
-                            writeConcernErrorTransformerAsync(), userCommandCallback(wrappedCallback));
+                            writeConcernErrorWriteTransformer(), userCommandCallback(wrappedCallback));
 
                 }
             }

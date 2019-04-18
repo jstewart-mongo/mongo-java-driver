@@ -20,7 +20,6 @@ import com.mongodb.ExplainVerbosity;
 import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
 import com.mongodb.async.SingleResultCallback;
-import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncWriteBinding;
 import com.mongodb.binding.WriteBinding;
 import com.mongodb.client.model.Collation;
@@ -28,7 +27,7 @@ import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandWriteTransformer;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonJavaScript;
@@ -581,12 +580,11 @@ MapReduceToCollectionOperation implements AsyncWriteOperation<MapReduceStatistic
         };
     }
 
-    private CommandTransformerAsync<BsonDocument, MapReduceStatistics> transformerAsync() {
-        return new CommandTransformerAsync<BsonDocument, MapReduceStatistics>() {
+    private CommandWriteTransformer<BsonDocument, MapReduceStatistics> transformerAsync() {
+        return new CommandWriteTransformer<BsonDocument, MapReduceStatistics>() {
             @SuppressWarnings("unchecked")
             @Override
-            public MapReduceStatistics apply(final BsonDocument result, final AsyncConnectionSource source,
-                                             final AsyncConnection connection) {
+            public MapReduceStatistics apply(final BsonDocument result, final AsyncConnection connection) {
                 throwOnWriteConcernError(result, connection.getDescription().getServerAddress());
                 return MapReduceHelper.createStatistics(result);
             }

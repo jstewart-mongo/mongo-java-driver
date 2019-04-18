@@ -31,7 +31,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformerAsync;
+import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorWriteTransformer;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -125,7 +125,7 @@ public class CreateUserOperation implements AsyncWriteOperation<Void>, WriteOper
                 } else {
                     final SingleResultCallback<Void> wrappedCallback = releasingCallback(errHandlingCallback, connection);
                     executeCommandAsync(binding, credential.getSource(), getCommand(connection.getDescription()),
-                            connection, writeConcernErrorTransformerAsync(), userCommandCallback(wrappedCallback));
+                            connection, writeConcernErrorWriteTransformer(), userCommandCallback(wrappedCallback));
                 }
             }
         });

@@ -444,7 +444,9 @@ final class OperationHelper {
         @Override
         public void onResult(final T result, final Throwable t) {
             for (ReferenceCounted cur : referenceCounted) {
-                cur.release();
+                if (cur != null) {
+                    cur.release();
+                }
             }
             wrapped.onResult(result, t);
         }
