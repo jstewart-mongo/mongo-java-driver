@@ -167,7 +167,7 @@ class ConnectionStringSpecification extends Specification {
         new ConnectionString('mongodb://localhost/')                    | null
         new ConnectionString('mongodb://localhost/?retryReads=false')   | false
         new ConnectionString('mongodb://localhost/?retryReads=true')    | true
-        new ConnectionString('mongodb://localhost/?retryReads=foos')    | false
+        new ConnectionString('mongodb://localhost/?retryReads=foos')    | null
     }
 
     @Unroll

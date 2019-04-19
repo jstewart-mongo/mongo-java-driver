@@ -28,7 +28,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -44,10 +44,7 @@ import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
-import static com.mongodb.operation.OperationHelper.withConnection;
 
 
 /**
@@ -192,37 +189,22 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      */
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return withConnection(binding, new OperationHelper.CallableWithConnectionAndSource<BatchCursor<T>>() {
-            @Override
-            public BatchCursor<T> call(final ConnectionSource source, final Connection connection) {
-                return executeCommand(binding, (namespace != null ? namespace.getDatabaseName() : "admin"),
-                        getCommandCreator(), CommandResultDocumentCodec.create(decoder, "databases"),
-                        transformer(source), getRetryReads());
-            }
-        });
+        return executeCommand(binding, (namespace != null ? namespace.getDatabaseName() : "admin"),
+                getCommandCreator(), CommandResultDocumentCodec.create(decoder, "databases"),
+                transformer(), getRetryReads());
     }
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        withConnection(binding, new AsyncCallableWithConnectionAndSource() {
-            @Override
-            public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    errHandlingCallback.onResult(null, t);
-                } else {
-                    executeCommandAsync(binding,  "admin", getCommandCreatorAsync(),
-                            CommandResultDocumentCodec.create(decoder, "databases"), asyncTransformer(),
-                            retryReads, releasingCallback(errHandlingCallback, source, connection));
-                }
-            }
-        });
+        executeCommandAsync(binding, "admin", getCommandCreatorAsync(),
+                CommandResultDocumentCodec.create(decoder, "databases"), asyncTransformer(),
+                retryReads, errorHandlingCallback(callback, LOGGER));
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
+    private CommandReadTransformer<BsonDocument, BatchCursor<T>> transformer() {
+        return new CommandReadTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
+            public BatchCursor<T> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return new QueryBatchCursor<T>(createQueryResult(result, connection.getDescription()), 0, 0, decoder, source);
             }
         };

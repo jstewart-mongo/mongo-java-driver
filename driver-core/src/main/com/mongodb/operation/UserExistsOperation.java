@@ -19,12 +19,13 @@ package com.mongodb.operation;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
+import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
@@ -36,10 +37,8 @@ import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.LOGGER;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
 
 /**
@@ -99,25 +98,14 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<Boolean> callback) {
-        withConnection(binding, new AsyncCallableWithConnection() {
-            @Override
-            public void call(final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<Boolean> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    errHandlingCallback.onResult(null, t);
-                } else {
-                    final SingleResultCallback<Boolean> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                    executeCommandAsync(binding, databaseName, getCommandCreatorAsync(), new BsonDocumentCodec(),
-                            asyncTransformer(), retryReads, wrappedCallback);
-                }
-            }
-        });
+        executeCommandAsync(binding, databaseName, getCommandCreatorAsync(), new BsonDocumentCodec(),
+                asyncTransformer(), retryReads, errorHandlingCallback(callback, LOGGER));
     }
 
-    private CommandTransformer<BsonDocument, Boolean> transformer() {
-        return new CommandTransformer<BsonDocument, Boolean>() {
+    private CommandReadTransformer<BsonDocument, Boolean> transformer() {
+        return new CommandReadTransformer<BsonDocument, Boolean>() {
             @Override
-            public Boolean apply(final BsonDocument result, final Connection connection) {
+            public Boolean apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return result.get("users").isArray() && !result.getArray("users").isEmpty();
             }
         };

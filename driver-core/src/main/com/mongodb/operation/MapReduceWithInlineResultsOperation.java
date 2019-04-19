@@ -30,7 +30,7 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.NoOpSessionContext;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import com.mongodb.session.SessionContext;
@@ -375,7 +375,7 @@ public class MapReduceWithInlineResultsOperation<T> implements AsyncReadOperatio
                 }
                 return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
                         getCommandCreator(binding.getSessionContext()),
-                        CommandResultDocumentCodec.create(decoder, "results"), transformer(source),
+                        CommandResultDocumentCodec.create(decoder, "results"), transformer(),
                         false, connection);
             }
         });
@@ -425,10 +425,10 @@ public class MapReduceWithInlineResultsOperation<T> implements AsyncReadOperatio
                                                       new BsonDocumentCodec());
     }
 
-    private CommandTransformer<BsonDocument, MapReduceBatchCursor<T>> transformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, MapReduceBatchCursor<T>>() {
+    private CommandReadTransformer<BsonDocument, MapReduceBatchCursor<T>> transformer() {
+        return new CommandReadTransformer<BsonDocument, MapReduceBatchCursor<T>>() {
             @Override
-            public MapReduceBatchCursor<T> apply(final BsonDocument result, final Connection connection) {
+            public MapReduceBatchCursor<T> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return new MapReduceInlineResultsCursor<T>(createQueryResult(result, connection.getDescription()), decoder, source,
                                                            MapReduceHelper.createStatistics(result));
             }

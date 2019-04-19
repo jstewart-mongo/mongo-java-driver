@@ -18,11 +18,10 @@ package com.mongodb.operation;
 
 import com.mongodb.MongoWriteConcernException;
 import com.mongodb.WriteConcernResult;
-import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
-import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
+import com.mongodb.operation.CommandOperationHelper.CommandWriteTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandWriteTransformerAsync;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -32,8 +31,8 @@ import static com.mongodb.internal.operation.WriteConcernHelper.hasWriteConcernE
 
 final class FindAndModifyHelper {
 
-    static <T> CommandTransformer<BsonDocument, T> transformer() {
-        return new CommandTransformer<BsonDocument, T>() {
+    static <T> CommandWriteTransformer<BsonDocument, T> transformer() {
+        return new CommandWriteTransformer<BsonDocument, T>() {
             @SuppressWarnings("unchecked")
             @Override
             public T apply(final BsonDocument result, final Connection connection) {
@@ -52,11 +51,11 @@ final class FindAndModifyHelper {
         };
     }
 
-    static <T> CommandReadTransformerAsync<BsonDocument, T> asyncTransformer() {
-        return new CommandReadTransformerAsync<BsonDocument, T>() {
+    static <T> CommandWriteTransformerAsync<BsonDocument, T> asyncTransformer() {
+        return new CommandWriteTransformerAsync<BsonDocument, T>() {
             @SuppressWarnings("unchecked")
             @Override
-            public T apply(final BsonDocument result, final AsyncConnectionSource source, final AsyncConnection connection) {
+            public T apply(final BsonDocument result, final AsyncConnection connection) {
                 if (hasWriteConcernError(result)) {
                     throw new MongoWriteConcernException(
                             createWriteConcernError(result.getDocument("writeConcernError")),

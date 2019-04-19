@@ -30,7 +30,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.operation.OperationHelper.CallableWithSource;
 import org.bson.BsonDocument;
@@ -171,7 +171,7 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
                         return executeCommandWithConnection(binding, source, namespace.getDatabaseName(), getCommandCreator(),
-                                createCommandDecoder(), transformer(source), getRetryReads(), connection);
+                                createCommandDecoder(), transformer(), getRetryReads(), connection);
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(namespace, decoder,
                                                                                     source.getServerDescription().getAddress(), batchSize));
@@ -284,10 +284,10 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
         return command;
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
+    private CommandReadTransformer<BsonDocument, BatchCursor<T>> transformer() {
+        return new CommandReadTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
+            public BatchCursor<T> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return cursorDocumentToBatchCursor(result.getDocument("cursor"), decoder, source, batchSize);
             }
         };

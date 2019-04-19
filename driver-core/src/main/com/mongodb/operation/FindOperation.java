@@ -66,7 +66,7 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
-import static com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import static com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import static com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
@@ -731,7 +731,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                     try {
                         return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
                                 getCommandCreator(binding.getSessionContext()),
-                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(source),
+                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(),
                                 getRetryReads(), connection);
                     } catch (MongoCommandException e) {
                         throw new MongoQueryException(e);
@@ -1138,10 +1138,10 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         return cursorType == CursorType.TailableAwait;
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
+    private CommandReadTransformer<BsonDocument, BatchCursor<T>> transformer() {
+        return new CommandReadTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
+            public BatchCursor<T> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 QueryResult<T> queryResult = documentToQueryResult(result, connection.getDescription().getServerAddress());
                 return new QueryBatchCursor<T>(queryResult, limit, batchSize, getMaxTimeForCursor(), decoder, source, connection);
             }

@@ -31,11 +31,9 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.client.model.CountStrategy;
 import com.mongodb.internal.connection.NoOpSessionContext;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
-import com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
-import com.mongodb.operation.OperationHelper.CallableWithSource;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -53,13 +51,11 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.ExplainHelper.asExplainCommand;
 import static com.mongodb.operation.OperationHelper.validateReadConcernAndCollation;
-import static com.mongodb.operation.OperationHelper.withConnection;
-import static com.mongodb.operation.OperationHelper.withConnectionSource;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 /**
@@ -258,14 +254,8 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     @Override
     public Long execute(final ReadBinding binding) {
         if (countStrategy.equals(CountStrategy.COMMAND)) {
-            return withConnectionSource(binding, new CallableWithSource<Long>() {
-                @Override
-                public Long call(final ConnectionSource source) {
-                    return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
-                            getCommandCreator(binding.getSessionContext()), DECODER, transformer(), getRetryReads(),
-                            source.getConnection());
-                }
-            });
+            return executeCommand(binding, namespace.getDatabaseName(),
+                    getCommandCreator(binding.getSessionContext()), DECODER, transformer(), getRetryReads());
         } else {
             BatchCursor<BsonDocument> cursor = getAggregateOperation().execute(binding);
             return cursor.hasNext() ? getCountFromAggregateResults(cursor.next()) : 0;
@@ -275,17 +265,8 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<Long> callback) {
         if (countStrategy.equals(CountStrategy.COMMAND)) {
-            withConnection(binding, new AsyncCallableWithConnection() {
-                @Override
-                public void call(final AsyncConnection connection, final Throwable t) {
-                    if (t != null) {
-                        callback.onResult(null, t);
-                    } else {
-                        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(binding.getSessionContext()),
-                                DECODER, asyncTransformer(), retryReads, connection, callback);
-                    }
-                }
-            });
+            executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(binding.getSessionContext()),
+                    DECODER, asyncTransformer(), retryReads, callback);
         } else {
             getAggregateOperation().executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<BsonDocument>>(){
                 @Override
@@ -343,10 +324,10 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
                 new BsonDocumentCodec());
     }
 
-    private CommandTransformer<BsonDocument, Long> transformer() {
-        return new CommandTransformer<BsonDocument, Long>() {
+    private CommandReadTransformer<BsonDocument, Long> transformer() {
+        return new CommandReadTransformer<BsonDocument, Long>() {
             @Override
-            public Long apply(final BsonDocument result, final Connection connection) {
+            public Long apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return (result.getNumber("n")).longValue();
             }
         };

@@ -120,7 +120,7 @@ class CommandOperationHelperSpecification extends Specification {
         def command = new BsonDocument()
         def decoder = Stub(Decoder)
         def connection = Mock(Connection)
-        def function = Stub(CommandOperationHelper.CommandTransformer)
+        def function = Stub(CommandOperationHelper.CommandWriteTransformer)
         def connectionSource = Stub(ConnectionSource) {
             getConnection() >> connection
         }
@@ -244,7 +244,7 @@ class CommandOperationHelperSpecification extends Specification {
         def command = new BsonDocument()
         def commandCreator = { serverDescription, connectionDescription -> command }
         def decoder = Stub(Decoder)
-        def function = Stub(CommandOperationHelper.CommandTransformer)
+        def function = Stub(CommandOperationHelper.CommandReadTransformer)
         def connection = Mock(Connection)
         def connectionSource = Stub(ConnectionSource) {
             getConnection() >> connection

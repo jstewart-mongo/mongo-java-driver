@@ -32,7 +32,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -234,7 +234,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
                 if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
                     try {
                         return executeCommand(binding, databaseName, getCommandCreator(), createCommandDecoder(),
-                                commandTransformer(source), getRetryReads());
+                                commandTransformer(), getRetryReads());
                     } catch (MongoCommandException e) {
                         return rethrowIfNotNamespaceError(e, createEmptyBatchCursor(createNamespace(), decoder,
                                 source.getServerDescription().getAddress(), batchSize));
@@ -313,10 +313,10 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
         };
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> commandTransformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
+    private CommandReadTransformer<BsonDocument, BatchCursor<T>> commandTransformer() {
+        return new CommandReadTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
+            public BatchCursor<T> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return cursorDocumentToBatchCursor(result.getDocument("cursor"), decoder, source, batchSize);
             }
         };

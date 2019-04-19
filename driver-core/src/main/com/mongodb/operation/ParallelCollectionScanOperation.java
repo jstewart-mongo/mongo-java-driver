@@ -29,7 +29,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
@@ -49,14 +49,10 @@ import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
-import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.validateReadConcern;
-import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 /**
@@ -149,50 +145,23 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
 
     @Override
     public List<BatchCursor<T>> execute(final ReadBinding binding) {
-        return withConnection(binding, new CallableWithConnectionAndSource<List<BatchCursor<T>>>() {
-            @Override
-            public List<BatchCursor<T>> call(final ConnectionSource source, final Connection connection) {
-                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
-                        CommandResultDocumentCodec.create(decoder, "firstBatch"),
-                        transformer(source), getRetryReads());
-            }
-        });
+        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                CommandResultDocumentCodec.create(decoder, "firstBatch"),
+                transformer(), getRetryReads());
     }
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<List<AsyncBatchCursor<T>>> callback) {
-        withConnection(binding, new AsyncCallableWithConnectionAndSource() {
-            @Override
-            public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<List<AsyncBatchCursor<T>>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    errHandlingCallback.onResult(null, t);
-                } else {
-                    final SingleResultCallback<List<AsyncBatchCursor<T>>> wrappedCallback = releasingCallback(
-                            errHandlingCallback, source, connection);
-                    validateReadConcern(source, connection, binding.getSessionContext().getReadConcern(),
-                            new AsyncCallableWithConnectionAndSource() {
-                                @Override
-                                public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                                    if (t != null) {
-                                        wrappedCallback.onResult(null, t);
-                                    } else {
-                                        executeCommandAsync(binding, namespace.getDatabaseName(),
-                                                getCommandCreatorAsync(binding.getSessionContext()),
-                                                CommandResultDocumentCodec.create(decoder, "firstBatch"),
-                                                asyncTransformer(), retryReads, wrappedCallback);
-                                    }
-                                }
-                    });
-                }
-            }
-        });
+        executeCommandAsync(binding, namespace.getDatabaseName(),
+                getCommandCreatorAsync(binding.getSessionContext()),
+                CommandResultDocumentCodec.create(decoder, "firstBatch"),
+                asyncTransformer(), retryReads, errorHandlingCallback(callback, LOGGER));
     }
 
-    private CommandTransformer<BsonDocument, List<BatchCursor<T>>> transformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, List<BatchCursor<T>>>() {
+    private CommandReadTransformer<BsonDocument, List<BatchCursor<T>>> transformer() {
+        return new CommandReadTransformer<BsonDocument, List<BatchCursor<T>>>() {
             @Override
-            public List<BatchCursor<T>> apply(final BsonDocument result, final Connection connection) {
+            public List<BatchCursor<T>> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 List<BatchCursor<T>> cursors = new ArrayList<BatchCursor<T>>();
                 for (BsonValue cursorValue : getCursorDocuments(result)) {
                     cursors.add(new QueryBatchCursor<T>(createQueryResult(getCursorDocument(cursorValue.asDocument()),

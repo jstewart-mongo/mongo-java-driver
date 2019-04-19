@@ -29,7 +29,7 @@ import com.mongodb.connection.Connection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.operation.CommandOperationHelper.CommandTransformer;
+import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import org.bson.BsonDocument;
 import org.bson.BsonJavaScript;
@@ -42,13 +42,9 @@ import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
-import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.validateCollation;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
-import static com.mongodb.operation.OperationHelper.withConnection;
 
 /**
  * Groups documents in a collection by the specified key and performs simple aggregation functions, such as computing counts and sums. The
@@ -262,32 +258,16 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
      */
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return withConnection(binding, new CallableWithConnectionAndSource<BatchCursor<T>>() {
-            @Override
-            public BatchCursor<T> call(final ConnectionSource connectionSource, final Connection connection) {
-                return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(),
-                        CommandResultDocumentCodec.create(decoder, "retval"),
-                        transformer(connectionSource), getRetryReads());
-            }
-        });
+        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(),
+                CommandResultDocumentCodec.create(decoder, "retval"),
+                transformer(), getRetryReads());
     }
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        withConnection(binding, new AsyncCallableWithConnection() {
-            @Override
-            public void call(final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    errHandlingCallback.onResult(null, t);
-                } else {
-                    final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                    executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
-                            CommandResultDocumentCodec.create(decoder, "retval"), asyncTransformer(),
-                            retryReads, wrappedCallback);
-                }
-            }
-        });
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
+                CommandResultDocumentCodec.create(decoder, "retval"), asyncTransformer(),
+                retryReads, errorHandlingCallback(callback, LOGGER));
     }
 
     private CommandCreator getCommandCreator() {
@@ -344,10 +324,10 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
         return new BsonDocument("group", commandDocument);
     }
 
-    private CommandTransformer<BsonDocument, BatchCursor<T>> transformer(final ConnectionSource source) {
-        return new CommandTransformer<BsonDocument, BatchCursor<T>>() {
+    private CommandReadTransformer<BsonDocument, BatchCursor<T>> transformer() {
+        return new CommandReadTransformer<BsonDocument, BatchCursor<T>>() {
             @Override
-            public BatchCursor<T> apply(final BsonDocument result, final Connection connection) {
+            public BatchCursor<T> apply(final BsonDocument result, final ConnectionSource source, final Connection connection) {
                 return new QueryBatchCursor<T>(createQueryResult(result, connection.getDescription()), 0, 0, decoder, source);
 
             }
