@@ -142,7 +142,7 @@ class ParallelCollectionScanOperationSpecification extends OperationFunctionalSp
         then:
         _ * connection.getDescription() >> helper.connectionDescription
         1 * connection.command(helper.dbName, _, _, readPreference, _, _) >> helper.commandResult
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         readPreference << [ReadPreference.primary(), ReadPreference.secondary()]
@@ -171,7 +171,7 @@ class ParallelCollectionScanOperationSpecification extends OperationFunctionalSp
         _ * connection.getDescription() >> helper.connectionDescription
         1 * connection.commandAsync(helper.dbName, _, _, readPreference, _, _, _) >> {
             it[6].onResult(helper.commandResult, null) }
-        2 * connection.release()
+        1 * connection.release()
 
         where:
         readPreference << [ReadPreference.primary(), ReadPreference.secondary()]
@@ -204,7 +204,7 @@ class ParallelCollectionScanOperationSpecification extends OperationFunctionalSp
 
         then:
         1 * connection.command(helper.dbName, expectedCommand, _, _, _, _) >> { helper.commandResult }
-        2 * connection.release()
+        1 * connection.release()
 
         when:
         operation.batchSize(10)
@@ -213,7 +213,7 @@ class ParallelCollectionScanOperationSpecification extends OperationFunctionalSp
 
         then:
         1 * connection.command(helper.dbName, expectedCommand, _, _, _, _) >> { helper.commandResult }
-        2 * connection.release()
+        1 * connection.release()
     }
 
     def 'should create the expected command asynchronously'() {
@@ -242,7 +242,7 @@ class ParallelCollectionScanOperationSpecification extends OperationFunctionalSp
 
         then:
         1 * connection.commandAsync(helper.dbName, expectedCommand, _, _, _, _, _) >> { it[6].onResult(helper.commandResult, null) }
-        2 * connection.release()
+        1 * connection.release()
 
         when:
         operation.batchSize(10)
@@ -251,7 +251,7 @@ class ParallelCollectionScanOperationSpecification extends OperationFunctionalSp
 
         then:
         1 * connection.commandAsync(helper.dbName, expectedCommand, _, _, _, _, _) >> { it[6].onResult(helper.commandResult, null) }
-        2 * connection.release()
+        1 * connection.release()
     }
 
     def 'should validate the ReadConcern'() {
