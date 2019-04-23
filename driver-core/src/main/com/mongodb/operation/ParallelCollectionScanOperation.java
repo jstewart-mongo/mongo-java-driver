@@ -46,10 +46,8 @@ import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
 import static com.mongodb.operation.OperationHelper.validateReadConcern;
@@ -71,7 +69,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
                                                            ReadOperation<List<BatchCursor<T>>> {
     private final MongoNamespace namespace;
     private final int numCursors;
-    private Boolean retryReads;
+    private boolean retryReads;
     private int batchSize = 0;
     private final Decoder<T> decoder;
 
@@ -128,7 +126,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
      * @return this
      * @since 3.11
      */
-    public ParallelCollectionScanOperation<T> retryReads(final Boolean retryReads) {
+    public ParallelCollectionScanOperation<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -139,8 +137,8 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     @Override
@@ -152,8 +150,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<List<AsyncBatchCursor<T>>> callback) {
-        executeCommandAsync(binding, namespace.getDatabaseName(),
-                getCommandCreatorAsync(binding.getSessionContext()),
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
                 CommandResultDocumentCodec.create(decoder, "firstBatch"),
                 asyncTransformer(), retryReads, errorHandlingCallback(callback, LOGGER));
     }
@@ -209,26 +206,6 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateReadConcern(connectionDescription, sessionContext.getReadConcern());
                 return getCommand(sessionContext);
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateReadConcern(connectionDescription, sessionContext.getReadConcern(),
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(getCommand(sessionContext), null);
-                                }
-                            }
-                        });
             }
         };
     }

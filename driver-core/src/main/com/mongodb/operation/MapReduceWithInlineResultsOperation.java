@@ -32,7 +32,6 @@ import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
-import com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -49,18 +48,13 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
-import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
+import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.DocumentHelper.putIfTrue;
 import static com.mongodb.operation.ExplainHelper.asExplainCommand;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
-import static com.mongodb.operation.OperationHelper.CallableWithSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.validateReadConcernAndCollation;
-import static com.mongodb.operation.OperationHelper.withConnection;
-import static com.mongodb.operation.OperationHelper.withConnectionSource;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -363,40 +357,16 @@ public class MapReduceWithInlineResultsOperation<T> implements AsyncReadOperatio
     @Override
     @SuppressWarnings("unchecked")
     public MapReduceBatchCursor<T> execute(final ReadBinding binding) {
-        return withConnectionSource(binding, new CallableWithSource<MapReduceBatchCursor<T>>() {
-            @Override
-            public MapReduceBatchCursor<T> call(final ConnectionSource source) {
-                Connection connection = source.getConnection();
-                try {
-                    validateReadConcernAndCollation(connection, binding.getSessionContext().getReadConcern(), collation);
-                } catch (IllegalArgumentException e) {
-                    connection.release();
-                    throw e;
-                }
-                return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
-                        getCommandCreator(binding.getSessionContext()),
-                        CommandResultDocumentCodec.create(decoder, "results"), transformer(),
-                        false, connection);
-            }
-        });
+        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                CommandResultDocumentCodec.create(decoder, "results"), transformer(), false);
     }
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<MapReduceAsyncBatchCursor<T>> callback) {
-        withConnection(binding, new AsyncCallableWithConnection() {
-            @Override
-            public void call(final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<MapReduceAsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    errHandlingCallback.onResult(null, t);
-                } else {
-                    executeCommandAsync(binding, namespace.getDatabaseName(),
-                            getCommandCreatorAsync(binding.getSessionContext()),
-                            CommandResultDocumentCodec.create(decoder, "results"),
-                            asyncTransformer(), false, connection, errHandlingCallback);
-                }
-            }
-        });
+        SingleResultCallback<MapReduceAsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                CommandResultDocumentCodec.create(decoder, "results"),
+                asyncTransformer(), false, errHandlingCallback);
     }
 
     /**
@@ -450,27 +420,8 @@ public class MapReduceWithInlineResultsOperation<T> implements AsyncReadOperatio
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(sessionContext);
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(getCommand(sessionContext), null);
-                                }
-                            }
-                        });
             }
         };
     }

@@ -21,7 +21,6 @@ import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.client.model.Collation;
-import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import org.bson.BsonArray;
@@ -38,22 +37,18 @@ import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.IdentityTransformerAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.validateCollation;
-import static com.mongodb.operation.OperationHelper.releasingCallback;
-import static com.mongodb.operation.OperationHelper.withConnection;
 
 
 // an operation that executes an explain on an aggregation pipeline
 class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, ReadOperation<BsonDocument> {
     private final MongoNamespace namespace;
     private final List<BsonDocument> pipeline;
-    private Boolean retryReads;
+    private boolean retryReads;
     private Boolean allowDiskUse;
     private long maxTimeMS;
     private Collation collation;
@@ -100,7 +95,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
      * @mongodb.server.release 3.6
      * @since 3.11
      */
-    public AggregateExplainOperation retryReads(final Boolean retryReads) {
+    public AggregateExplainOperation retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -111,8 +106,8 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     /**
@@ -181,19 +176,9 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<BsonDocument> callback) {
-        withConnection(binding, new AsyncCallableWithConnection() {
-            @Override
-            public void call(final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<BsonDocument> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    errHandlingCallback.onResult(null, t);
-                } else {
-                    final SingleResultCallback<BsonDocument> wrappedCallback = releasingCallback(errHandlingCallback, connection);
-                    CommandOperationHelper.executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
-                            new IdentityTransformerAsync<BsonDocument>(), retryReads, wrappedCallback);
-                }
-            }
-        });
+        SingleResultCallback<BsonDocument> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(),
+                new IdentityTransformerAsync<BsonDocument>(), retryReads, errHandlingCallback);
     }
 
     private CommandCreator getCommandCreator() {
@@ -202,25 +187,6 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateCollation(connectionDescription, collation);
                 return getCommand();
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync() {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateCollation(connectionDescription, collation, new AsyncCallableWithConnectionDescription() {
-                    @Override
-                    public void call(final ConnectionDescription description, final Throwable t) {
-                        if (t != null) {
-                            callback.onResult(null, t);
-                        } else {
-                            callback.onResult(getCommand(), null);
-                        }
-                    }
-                });
             }
         };
     }

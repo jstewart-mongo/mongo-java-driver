@@ -269,7 +269,7 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
      * @since 3.11
      * @mongodb.server.release 3.6
      */
-    public AggregateOperation<T> retryReads(final Boolean retryReads) {
+    public AggregateOperation<T> retryReads(final boolean retryReads) {
         wrapped.retryReads(retryReads);
         return this;
     }
@@ -280,7 +280,7 @@ public class AggregateOperation<T> implements AsyncReadOperation<AsyncBatchCurso
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
+    public boolean getRetryReads() {
         return wrapped.getRetryReads();
     }
 

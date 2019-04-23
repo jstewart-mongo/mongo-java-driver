@@ -18,7 +18,6 @@ package com.mongodb.operation;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
-import com.mongodb.async.SingleResultCallback;
 import com.mongodb.client.model.Collation;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
@@ -34,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.operation.OperationHelper.validateCollation;
@@ -223,17 +221,6 @@ public class FindAndDeleteOperation<T> extends BaseFindAndModifyOperation<T> {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return createCommand(sessionContext, serverDescription, connectionDescription);
-            }
-        };
-    }
-
-    @Override
-    protected CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                callback.onResult(createCommand(sessionContext, serverDescription, connectionDescription), null);
             }
         };
     }

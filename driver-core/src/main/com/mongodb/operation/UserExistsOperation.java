@@ -34,7 +34,6 @@ import org.bson.codecs.BsonDocumentCodec;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.CallableWithConnection;
@@ -51,7 +50,7 @@ import static com.mongodb.operation.OperationHelper.withConnection;
 public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOperation<Boolean> {
     private final String databaseName;
     private final String userName;
-    private Boolean retryReads;
+    private boolean retryReads;
 
     /**
      * Construct a new instance.
@@ -71,7 +70,7 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
      * @return this
      * @since 3.11
      */
-    public UserExistsOperation retryReads(final Boolean retryReads) {
+    public UserExistsOperation retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -82,8 +81,8 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     @Override
@@ -98,7 +97,7 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<Boolean> callback) {
-        executeCommandAsync(binding, databaseName, getCommandCreatorAsync(), new BsonDocumentCodec(),
+        executeCommandAsync(binding, databaseName, getCommandCreator(), new BsonDocumentCodec(),
                 asyncTransformer(), retryReads, errorHandlingCallback(callback, LOGGER));
     }
 
@@ -125,16 +124,6 @@ public class UserExistsOperation implements AsyncReadOperation<Boolean>, ReadOpe
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return getCommand();
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync() {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                callback.onResult(getCommand(), null);
             }
         };
     }

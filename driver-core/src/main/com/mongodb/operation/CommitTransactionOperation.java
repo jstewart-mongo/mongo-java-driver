@@ -30,7 +30,6 @@ import com.mongodb.binding.WriteBinding;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import org.bson.BsonDocument;
 
 import java.util.List;
@@ -156,65 +155,6 @@ public class CommitTransactionOperation extends TransactionOperation {
                         return creator.create(serverDescription, connectionDescription).append("recoveryToken", recoveryToken);
                     }
                 };
-        }
-        return creator;
-    }
-
-    @Override
-    protected CommandCreatorAsync getCommandCreatorAsync() {
-        final CommandCreatorAsync creator = super.getCommandCreatorAsync();
-        if (alreadyCommitted) {
-            return new CommandCreatorAsync() {
-                @Override
-                public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                                   final SingleResultCallback<BsonDocument> callback) {
-                    creator.create(serverDescription, connectionDescription, new SingleResultCallback<BsonDocument>() {
-                        @Override
-                        public void onResult(final BsonDocument result, final Throwable t) {
-                            if (t != null) {
-                                callback.onResult(null, t);
-                            } else {
-                                creator.create(serverDescription, connectionDescription, new SingleResultCallback<BsonDocument>() {
-                                            @Override
-                                            public void onResult(final BsonDocument result, final Throwable t) {
-                                                if (t != null) {
-                                                    callback.onResult(null, t);
-                                                } else {
-                                                    callback.onResult(getRetryCommandModifier().apply(result), null);
-                                                }
-                                            }
-                                        });
-                            }
-                        }
-                    });
-                }
-            };
-        } else if (recoveryToken != null) {
-            return new CommandCreatorAsync() {
-                @Override
-                public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                                   final SingleResultCallback<BsonDocument> callback) {
-                    creator.create(serverDescription, connectionDescription, new SingleResultCallback<BsonDocument>() {
-                        @Override
-                        public void onResult(final BsonDocument result, final Throwable t) {
-                            if (t != null) {
-                                callback.onResult(null, t);
-                            } else {
-                                creator.create(serverDescription, connectionDescription, new SingleResultCallback<BsonDocument>() {
-                                    @Override
-                                    public void onResult(final BsonDocument result, final Throwable t) {
-                                        if (t != null) {
-                                            callback.onResult(null, t);
-                                        } else {
-                                            callback.onResult(result.append("recoveryToken", recoveryToken), null);
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    });
-                }
-            };
         }
         return creator;
     }

@@ -24,6 +24,7 @@ import org.bson.codecs.Decoder;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 
 /**
  * An operation that executes an arbitrary command that writes to the server.
@@ -57,6 +58,6 @@ public class CommandWriteOperation<T> implements AsyncWriteOperation<T>, WriteOp
 
     @Override
     public void executeAsync(final AsyncWriteBinding binding, final SingleResultCallback<T> callback) {
-        CommandOperationHelper.executeCommandAsync(binding, databaseName, command, decoder, callback);
+        executeCommandAsync(binding, databaseName, command, decoder, callback);
     }
 }

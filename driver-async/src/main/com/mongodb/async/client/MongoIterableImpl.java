@@ -36,7 +36,7 @@ abstract class MongoIterableImpl<TResult> implements MongoIterable<TResult> {
     private final ReadConcern readConcern;
     private final OperationExecutor executor;
     private final ReadPreference readPreference;
-    private final Boolean retryReads;
+    private final boolean retryReads;
     private Integer batchSize;
 
     MongoIterableImpl(@Nullable final ClientSession clientSession, final OperationExecutor executor, final ReadConcern readConcern,
@@ -66,7 +66,7 @@ abstract class MongoIterableImpl<TResult> implements MongoIterable<TResult> {
         return readConcern;
     }
 
-    Boolean getRetryReads() {
+    boolean getRetryReads() {
         return retryReads;
     }
 

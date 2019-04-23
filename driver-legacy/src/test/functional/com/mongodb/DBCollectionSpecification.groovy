@@ -712,7 +712,8 @@ class DBCollectionSpecification extends Specification {
 
         then:
         expect executor.getReadOperation(), isTheSameAs(new AggregateOperation(collection.getNamespace(), bsonPipeline,
-                collection.getDefaultDBObjectCodec()).collation(collation).asExplainableOperation(ExplainVerbosity.QUERY_PLANNER))
+                collection.getDefaultDBObjectCodec()).retryReads(true).collation(collation)
+                .asExplainableOperation(ExplainVerbosity.QUERY_PLANNER))
 
         when: // Inherits from DB
         db.setReadConcern(ReadConcern.MAJORITY)
@@ -720,7 +721,7 @@ class DBCollectionSpecification extends Specification {
 
         then:
         expect executor.getReadOperation(), isTheSameAs(new AggregateOperation(collection.getNamespace(), bsonPipeline,
-                collection.getDefaultDBObjectCodec()).collation(collation)
+                collection.getDefaultDBObjectCodec()).retryReads(true).collation(collation)
                 .asExplainableOperation(ExplainVerbosity.QUERY_PLANNER))
 
         when:
@@ -729,7 +730,7 @@ class DBCollectionSpecification extends Specification {
 
         then:
         expect executor.getReadOperation(), isTheSameAs(new AggregateOperation(collection.getNamespace(), bsonPipeline,
-                collection.getDefaultDBObjectCodec()).useCursor(false).collation(collation)
+                collection.getDefaultDBObjectCodec()).retryReads(true).useCursor(false).collation(collation)
                 .asExplainableOperation(ExplainVerbosity.QUERY_PLANNER))
     }
 

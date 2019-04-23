@@ -33,7 +33,7 @@ class Java8ChangeStreamIterableImpl<TResult> extends ChangeStreamIterableImpl<TR
     Java8ChangeStreamIterableImpl(@Nullable final ClientSession clientSession, final String databaseName, final CodecRegistry codecRegistry,
                                   final ReadPreference readPreference, final ReadConcern readConcern, final OperationExecutor executor,
                                   final List<? extends Bson> pipeline, final Class<TResult> resultClass,
-                                  final ChangeStreamLevel changeStreamLevel, final Boolean retryReads) {
+                                  final ChangeStreamLevel changeStreamLevel, final boolean retryReads) {
         super(clientSession, databaseName, codecRegistry, readPreference, readConcern, executor, pipeline, resultClass,
                 changeStreamLevel, retryReads);
     }
@@ -41,7 +41,7 @@ class Java8ChangeStreamIterableImpl<TResult> extends ChangeStreamIterableImpl<TR
     Java8ChangeStreamIterableImpl(@Nullable final ClientSession clientSession, final MongoNamespace namespace,
                                   final CodecRegistry codecRegistry, final ReadPreference readPreference, final ReadConcern readConcern,
                                   final OperationExecutor executor, final List<? extends Bson> pipeline, final Class<TResult> resultClass,
-                                  final ChangeStreamLevel changeStreamLevel, final Boolean retryReads) {
+                                  final ChangeStreamLevel changeStreamLevel, final boolean retryReads) {
         super(clientSession, namespace, codecRegistry, readPreference, readConcern, executor, pipeline, resultClass,
                 changeStreamLevel, retryReads);
     }

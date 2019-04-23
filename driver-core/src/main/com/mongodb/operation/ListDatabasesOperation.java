@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -57,7 +56,7 @@ import static com.mongodb.operation.OperationHelper.LOGGER;
 public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
-    private Boolean retryReads;
+    private boolean retryReads;
 
     private long maxTimeMS;
     private BsonDocument filter;
@@ -154,7 +153,7 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      * @return this
      * @since 3.11
      */
-    public ListDatabasesOperation<T> retryReads(final Boolean retryReads) {
+    public ListDatabasesOperation<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -165,8 +164,8 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     /**
@@ -196,7 +195,7 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        executeCommandAsync(binding, "admin", getCommandCreatorAsync(),
+        executeCommandAsync(binding, "admin", getCommandCreator(),
                 CommandResultDocumentCodec.create(decoder, "databases"), asyncTransformer(),
                 retryReads, errorHandlingCallback(callback, LOGGER));
     }
@@ -232,16 +231,6 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return getCommand();
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync() {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                callback.onResult(getCommand(), null);
             }
         };
     }

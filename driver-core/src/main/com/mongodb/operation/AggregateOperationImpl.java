@@ -51,15 +51,11 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotSix;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
-import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
+import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
 import static com.mongodb.operation.OperationHelper.validateReadConcernAndCollation;
-import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
@@ -74,7 +70,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
     private final AggregateTarget aggregateTarget;
     private final PipelineCreator pipelineCreator;
 
-    private Boolean retryReads;
+    private boolean retryReads;
     private Boolean allowDiskUse;
     private Integer batchSize;
     private Collation collation;
@@ -180,13 +176,13 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
         return this;
     }
 
-    AggregateOperationImpl<T> retryReads(final Boolean retryReads) {
+    AggregateOperationImpl<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
 
-    Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    boolean getRetryReads() {
+        return retryReads;
     }
 
     BsonValue getHint() {
@@ -207,20 +203,9 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        withConnection(binding, new AsyncCallableWithConnectionAndSource() {
-            @Override
-            public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
-                SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
-                if (t != null) {
-                    callback.onResult(null, t);
-                } else {
-                    executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(),
-                            getCommandCreatorAsync(binding.getSessionContext()),
-                            CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT),
-                            asyncTransformer(), retryReads, connection, errHandlingCallback);
-                }
-            }
-        });
+        SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
+                CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT), asyncTransformer(), retryReads, errHandlingCallback);
     }
 
     private boolean isInline(final ConnectionDescription description) {
@@ -233,26 +218,6 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(connectionDescription, sessionContext);
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(getCommand(description, sessionContext), null);
-                                }
-                            }
-                        });
             }
         };
     }

@@ -33,7 +33,6 @@ import com.mongodb.internal.client.model.CountStrategy;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
-import com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -49,7 +48,6 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.DocumentHelper.putIfNotNull;
@@ -68,7 +66,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     private static final Decoder<BsonDocument> DECODER = new BsonDocumentCodec();
     private final MongoNamespace namespace;
     private final CountStrategy countStrategy;
-    private Boolean retryReads;
+    private boolean retryReads;
     private BsonDocument filter;
     private BsonValue hint;
     private long skip;
@@ -125,7 +123,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
      * @return this
      * @since 3.11
      */
-    public CountOperation retryReads(final Boolean retryReads) {
+    public CountOperation retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -136,8 +134,8 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     /**
@@ -265,7 +263,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<Long> callback) {
         if (countStrategy.equals(CountStrategy.COMMAND)) {
-            executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(binding.getSessionContext()),
+            executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
                     DECODER, asyncTransformer(), retryReads, callback);
         } else {
             getAggregateOperation().executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<BsonDocument>>(){
@@ -348,26 +346,6 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(sessionContext);
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(getCommand(sessionContext), null);
-                                }
-                            }
-                        });
             }
         };
     }

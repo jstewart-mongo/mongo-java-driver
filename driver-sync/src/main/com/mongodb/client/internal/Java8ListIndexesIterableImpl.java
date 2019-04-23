@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 class Java8ListIndexesIterableImpl<TResult> extends ListIndexesIterableImpl<TResult> {
     Java8ListIndexesIterableImpl(final @Nullable ClientSession clientSession, final MongoNamespace namespace,
                                  final Class<TResult> resultClass, final CodecRegistry codecRegistry,
-                                 final ReadPreference readPreference, final OperationExecutor executor, final Boolean retryReads) {
+                                 final ReadPreference readPreference, final OperationExecutor executor, final boolean retryReads) {
         super(clientSession, namespace, resultClass, codecRegistry, readPreference, executor, retryReads);
     }
 

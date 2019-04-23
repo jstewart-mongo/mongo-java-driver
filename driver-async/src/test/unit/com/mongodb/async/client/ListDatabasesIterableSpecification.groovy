@@ -50,7 +50,7 @@ class ListDatabasesIterableSpecification extends Specification {
         }
         def executor = new TestOperationExecutor([cursor, cursor]);
         def listDatabasesIterable = new ListDatabasesIterableImpl<Document>(null, Document, codecRegistry, readPreference,
-                executor, false)
+                executor, true)
                 .maxTime(1000, MILLISECONDS)
                 .batchSize(1) // batchSize should be silently ignored
 
@@ -62,7 +62,7 @@ class ListDatabasesIterableSpecification extends Specification {
 
         then:
         expect operation, isTheSameAs(new ListDatabasesOperation<Document>(new DocumentCodec()).maxTime(1000, MILLISECONDS)
-                .retryReads(false))
+                .retryReads(true))
         readPreference == secondary()
 
         when: 'overriding initial options'
@@ -72,7 +72,7 @@ class ListDatabasesIterableSpecification extends Specification {
 
         then: 'should use the overrides'
         expect operation, isTheSameAs(new ListDatabasesOperation<Document>(new DocumentCodec()).maxTime(999, MILLISECONDS)
-                .filter(BsonDocument.parse('{a: 1}')).nameOnly(true).retryReads(false))
+                .filter(BsonDocument.parse('{a: 1}')).nameOnly(true).retryReads(true))
     }
 
     def 'should follow the MongoIterable interface as expected'() {
@@ -94,7 +94,7 @@ class ListDatabasesIterableSpecification extends Specification {
             }
         }
         def executor = new TestOperationExecutor([cursor(), cursor(), cursor(), cursor(), cursor()]);
-        def mongoIterable = new ListDatabasesIterableImpl<Document>(null, Document, codecRegistry, readPreference, executor, false)
+        def mongoIterable = new ListDatabasesIterableImpl<Document>(null, Document, codecRegistry, readPreference, executor, true)
 
         when:
         def results = new FutureResultCallback()
@@ -157,7 +157,7 @@ class ListDatabasesIterableSpecification extends Specification {
     def 'should check variables using notNull'() {
         given:
         def mongoIterable = new ListDatabasesIterableImpl<Document>(null, Document, codecRegistry, readPreference,
-                Stub(OperationExecutor), false)
+                Stub(OperationExecutor), true)
         def callback = Stub(SingleResultCallback)
         def block = Stub(Block)
         def target = Stub(List)
@@ -203,7 +203,7 @@ class ListDatabasesIterableSpecification extends Specification {
         when:
         def batchSize = 5
         def mongoIterable = new ListDatabasesIterableImpl<Document>(null, Document, codecRegistry, readPreference,
-                Stub(OperationExecutor), false)
+                Stub(OperationExecutor), true)
 
         then:
         mongoIterable.getBatchSize() == null

@@ -35,7 +35,7 @@ class Java8AggregateIterableImpl<TDocument, TResult> extends AggregateIterableIm
                                final Class<TDocument> documentClass, final Class<TResult> resultClass, final CodecRegistry codecRegistry,
                                final ReadPreference readPreference, final ReadConcern readConcern, final WriteConcern writeConcern,
                                final OperationExecutor executor, final List<? extends Bson> pipeline,
-                               final AggregationLevel aggregationLevel, final Boolean retryReads) {
+                               final AggregationLevel aggregationLevel, final boolean retryReads) {
         super(clientSession, databaseName, documentClass, resultClass, codecRegistry, readPreference, readConcern, writeConcern, executor,
                 pipeline, aggregationLevel, retryReads);
     }
@@ -44,7 +44,7 @@ class Java8AggregateIterableImpl<TDocument, TResult> extends AggregateIterableIm
                                final Class<TDocument> documentClass, final Class<TResult> resultClass, final CodecRegistry codecRegistry,
                                final ReadPreference readPreference, final ReadConcern readConcern, final WriteConcern writeConcern,
                                final OperationExecutor executor, final List<? extends Bson> pipeline,
-                               final AggregationLevel aggregationLevel, final Boolean retryReads) {
+                               final AggregationLevel aggregationLevel, final boolean retryReads) {
         super(clientSession, namespace, documentClass, resultClass, codecRegistry, readPreference, readConcern, writeConcern, executor,
                 pipeline, aggregationLevel, retryReads);
     }

@@ -39,10 +39,8 @@ import org.bson.codecs.Decoder;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.validateCollation;
 
@@ -60,7 +58,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
     private final Decoder<T> decoder;
     private final BsonJavaScript reduceFunction;
     private final BsonDocument initial;
-    private Boolean retryReads;
+    private boolean retryReads;
     private BsonDocument key;
     private BsonJavaScript keyFunction;
     private BsonDocument filter;
@@ -235,7 +233,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
      * @return this
      * @since 3.11
      */
-    public GroupOperation<T> retryReads(final Boolean retryReads) {
+    public GroupOperation<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -246,8 +244,8 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     /**
@@ -265,7 +263,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreatorAsync(),
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(),
                 CommandResultDocumentCodec.create(decoder, "retval"), asyncTransformer(),
                 retryReads, errorHandlingCallback(callback, LOGGER));
     }
@@ -276,26 +274,6 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateCollation(connectionDescription, collation);
                 return getCommand();
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync() {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateCollation(connectionDescription, collation,
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(getCommand(), null);
-                                }
-                            }
-                        });
             }
         };
     }

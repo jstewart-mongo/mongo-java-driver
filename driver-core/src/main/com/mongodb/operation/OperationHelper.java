@@ -112,16 +112,6 @@ final class OperationHelper {
         callable.call(connection, throwable);
     }
 
-    static void validateReadConcern(final ConnectionDescription description, final ReadConcern readConcern,
-                                    final AsyncCallableWithConnectionDescription callable) {
-        Throwable throwable = null;
-        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo(description) && !readConcern.isServerDefault()) {
-            throwable = new IllegalArgumentException(format("ReadConcern not supported by server version: %s",
-                    description.getServerVersion()));
-        }
-        callable.call(description, throwable);
-    }
-
     static void validateReadConcern(final AsyncConnectionSource source, final AsyncConnection connection, final ReadConcern readConcern,
                                     final AsyncCallableWithConnectionAndSource callable) {
         validateReadConcern(connection, readConcern, new AsyncCallableWithConnection(){
@@ -161,16 +151,6 @@ final class OperationHelper {
                     connection.getDescription().getServerVersion()));
         }
         callable.call(connection, throwable);
-    }
-
-    static void validateCollation(final ConnectionDescription description, final Collation collation,
-                                  final AsyncCallableWithConnectionDescription callable) {
-        Throwable throwable = null;
-        if (!ServerVersionHelper.serverIsAtLeastVersionThreeDotFour(description) && collation != null) {
-            throwable = new IllegalArgumentException(format("Collation not supported by server version: %s",
-                    description.getServerVersion()));
-        }
-        callable.call(description, throwable);
     }
 
     static void validateCollation(final AsyncConnectionSource source, final AsyncConnection connection,
@@ -266,21 +246,6 @@ final class OperationHelper {
                     callable.call(connection, t);
                 } else {
                     validateCollation(connection, collation, callable);
-                }
-            }
-        });
-    }
-
-    static void validateReadConcernAndCollation(final ConnectionDescription description, final ReadConcern readConcern,
-                                                final Collation collation,
-                                                final AsyncCallableWithConnectionDescription callable) {
-        validateReadConcern(description, readConcern, new AsyncCallableWithConnectionDescription(){
-            @Override
-            public void call(final ConnectionDescription description, final Throwable t) {
-                if (t != null) {
-                    callable.call(description, t);
-                } else {
-                    validateCollation(description, collation, callable);
                 }
             }
         });

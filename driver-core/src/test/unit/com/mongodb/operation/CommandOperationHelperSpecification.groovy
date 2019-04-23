@@ -190,11 +190,7 @@ class CommandOperationHelperSpecification extends Specification {
             getMaxWireVersion() >> getMaxWireVersionForServerVersion([4, 0, 0])
             getServerType() >> ServerType.REPLICA_SET_PRIMARY
         }
-        def commandCreator = Mock(CommandOperationHelper.CommandCreatorAsync) {
-            create(serverDescription, connectionDescription, _) >> {
-                it[2].onResult(command, null)
-            }
-        }
+        def commandCreator = { serverDesc, connectionDesc -> command }
         def callback = new SingleResultCallback() {
             def result
             def throwable
@@ -296,11 +292,7 @@ class CommandOperationHelperSpecification extends Specification {
         given:
         def dbName = 'db'
         def command = new BsonDocument()
-        def commandCreator = Mock(CommandOperationHelper.CommandCreatorAsync) {
-            create(_, _, _) >> {
-                it[2].onResult(command, null)
-            }
-        }
+        def commandCreator = { serverDescription, connectionDescription -> command }
         def decoder = Stub(Decoder)
         def callback = Stub(SingleResultCallback)
         def function = Stub(CommandOperationHelper.CommandReadTransformerAsync)

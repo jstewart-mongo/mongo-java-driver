@@ -65,14 +65,12 @@ import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import static com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
-import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToQueryResult;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
@@ -93,7 +91,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
 
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
-    private Boolean retryReads;
+    private boolean retryReads;
     private BsonDocument filter;
     private int batchSize;
     private int limit;
@@ -706,7 +704,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      * @return this
      * @since 3.11
      */
-    public FindOperation<T> retryReads(final Boolean retryReads) {
+    public FindOperation<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -717,8 +715,8 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     @Override
@@ -774,8 +772,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                         final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback =
                                 exceptionTransformingCallback(errHandlingCallback);
                         executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(),
-                                getCommandCreatorAsync(binding.getSessionContext()),
-                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH),
+                                getCommandCreator(binding.getSessionContext()), CommandResultDocumentCodec.create(decoder, FIRST_BATCH),
                                 asyncTransformer(), retryReads, connection, wrappedCallback);
                     } else {
                         final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback =
@@ -1102,26 +1099,6 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return wrapInExplainIfNecessary(getCommand(sessionContext));
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(wrapInExplainIfNecessary(getCommand(sessionContext)), null);
-                                }
-                            }
-                        });
             }
         };
     }

@@ -41,11 +41,11 @@ public abstract class MongoIterableImpl<TResult> implements MongoIterable<TResul
     private final ReadConcern readConcern;
     private final OperationExecutor executor;
     private final ReadPreference readPreference;
-    private final Boolean retryReads;
+    private final boolean retryReads;
     private Integer batchSize;
 
     public MongoIterableImpl(@Nullable final ClientSession clientSession, final OperationExecutor executor, final ReadConcern readConcern,
-                             final ReadPreference readPreference, final Boolean retryReads) {
+                             final ReadPreference readPreference, final boolean retryReads) {
         this.clientSession = clientSession;
         this.executor = notNull("executor", executor);
         this.readConcern = notNull("readConcern", readConcern);
@@ -72,7 +72,7 @@ public abstract class MongoIterableImpl<TResult> implements MongoIterable<TResul
         return readConcern;
     }
 
-    protected Boolean getRetryReads() {
+    protected boolean getRetryReads() {
         return retryReads;
     }
 

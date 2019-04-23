@@ -46,7 +46,6 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandWithConnection;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsyncWithConnection;
 import static com.mongodb.operation.CommandOperationHelper.isNamespaceError;
@@ -75,7 +74,7 @@ import static com.mongodb.operation.OperationHelper.withConnectionSource;
 public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
     private final MongoNamespace namespace;
     private final Decoder<T> decoder;
-    private Boolean retryReads;
+    private boolean retryReads;
     private int batchSize;
     private long maxTimeMS;
 
@@ -147,7 +146,7 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
      * @return this
      * @since 3.11
      */
-    public ListIndexesOperation<T> retryReads(final Boolean retryReads) {
+    public ListIndexesOperation<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -158,8 +157,8 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     @Override
@@ -200,7 +199,7 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
                     errHandlingCallback.onResult(null, t);
                 } else {
                     if (serverIsAtLeastVersionThreeDotZero(connection.getDescription())) {
-                        executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(), getCommandCreatorAsync(),
+                        executeCommandAsyncWithConnection(binding, source, namespace.getDatabaseName(), getCommandCreator(),
                                 createCommandDecoder(), asyncTransformer(), retryReads, connection,
                                 new SingleResultCallback<AsyncBatchCursor<T>>() {
                                     @Override
@@ -261,16 +260,6 @@ public class ListIndexesOperation<T> implements AsyncReadOperation<AsyncBatchCur
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 return getCommand();
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync() {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                callback.onResult(getCommand(), null);
             }
         };
     }

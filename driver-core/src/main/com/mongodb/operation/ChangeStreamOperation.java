@@ -302,7 +302,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
      * @mongodb.driver.manual reference/method/db.collection.find/ Filter
      * @since 3.11
      */
-    public ChangeStreamOperation<T> retryReads(final Boolean retryReads) {
+    public ChangeStreamOperation<T> retryReads(final boolean retryReads) {
         wrapped.retryReads(retryReads);
         return this;
     }
@@ -313,7 +313,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
+    public boolean getRetryReads() {
         return wrapped.getRetryReads();
     }
 

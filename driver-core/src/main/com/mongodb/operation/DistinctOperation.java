@@ -31,7 +31,6 @@ import com.mongodb.connection.QueryResult;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformer;
 import com.mongodb.operation.CommandOperationHelper.CommandReadTransformerAsync;
-import com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionDescription;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
-import static com.mongodb.operation.CommandOperationHelper.CommandCreatorAsync;
 import static com.mongodb.operation.CommandOperationHelper.executeCommand;
 import static com.mongodb.operation.CommandOperationHelper.executeCommandAsync;
 import static com.mongodb.operation.DocumentHelper.putIfNotNullOrEmpty;
@@ -68,7 +66,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
     private final MongoNamespace namespace;
     private final String fieldName;
     private final Decoder<T> decoder;
-    private Boolean retryReads;
+    private boolean retryReads;
     private BsonDocument filter;
     private long maxTimeMS;
     private Collation collation;
@@ -116,7 +114,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
      * @mongodb.driver.manual reference/method/db.collection.find/ Filter
      * @since 3.11
      */
-    public DistinctOperation<T> retryReads(final Boolean retryReads) {
+    public DistinctOperation<T> retryReads(final boolean retryReads) {
         this.retryReads = retryReads;
         return this;
     }
@@ -127,8 +125,8 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
      * @return the retryable reads value
      * @since 3.11
      */
-    public Boolean getRetryReads() {
-        return (this.retryReads == null ? Boolean.TRUE : retryReads);
+    public boolean getRetryReads() {
+        return retryReads;
     }
 
     /**
@@ -188,8 +186,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        executeCommandAsync(binding, namespace.getDatabaseName(),
-                getCommandCreatorAsync(binding.getSessionContext()), createCommandDecoder(),
+        executeCommandAsync(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()), createCommandDecoder(),
                 asyncTransformer(), retryReads, errorHandlingCallback(callback, LOGGER));
     }
 
@@ -229,26 +226,6 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
                 validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(sessionContext);
-            }
-        };
-    }
-
-    private CommandCreatorAsync getCommandCreatorAsync(final SessionContext sessionContext) {
-        return new CommandCreatorAsync() {
-            @Override
-            public void create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription,
-                               final SingleResultCallback<BsonDocument> callback) {
-                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation,
-                        new AsyncCallableWithConnectionDescription() {
-                            @Override
-                            public void call(final ConnectionDescription description, final Throwable t) {
-                                if (t != null) {
-                                    callback.onResult(null, t);
-                                } else {
-                                    callback.onResult(getCommand(sessionContext), null);
-                                }
-                            }
-                        });
             }
         };
     }
