@@ -43,7 +43,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
     FindIterable<TResult> findOf(final @Nullable ClientSession clientSession, final MongoNamespace namespace,
                                  final Class<TDocument> documentClass, final Class<TResult> resultClass, final CodecRegistry codecRegistry,
                                  final ReadPreference readPreference, final ReadConcern readConcern, final OperationExecutor executor,
-                                 final Bson filter, final Boolean retryReads) {
+                                 final Bson filter, final boolean retryReads) {
         return new FindIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
                 readPreference, readConcern, executor, filter, retryReads);
     }
@@ -55,7 +55,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
                                                                        final ReadPreference readPreference, final ReadConcern readConcern,
                                                                        final WriteConcern writeConcern, final OperationExecutor executor,
                                                                        final List<? extends Bson> pipeline,
-                                                                       final AggregationLevel aggregationLevel, final Boolean retryReads) {
+                                                                       final AggregationLevel aggregationLevel, final boolean retryReads) {
         return new AggregateIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
                 readPreference, readConcern, writeConcern, executor, pipeline, aggregationLevel, retryReads);
     }
@@ -67,7 +67,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
                                                                        final ReadPreference readPreference, final ReadConcern readConcern,
                                                                        final WriteConcern writeConcern, final OperationExecutor executor,
                                                                        final List<? extends Bson> pipeline,
-                                                                       final AggregationLevel aggregationLevel, final Boolean retryReads) {
+                                                                       final AggregationLevel aggregationLevel, final boolean retryReads) {
         return new AggregateIterableImpl<TDocument, TResult>(clientSession, databaseName, documentClass, resultClass, codecRegistry,
                 readPreference, readConcern, writeConcern, executor, pipeline, aggregationLevel, retryReads);
     }
@@ -78,7 +78,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
                                                  final CodecRegistry codecRegistry, final ReadPreference readPreference,
                                                  final ReadConcern readConcern, final OperationExecutor executor,
                                                  final List<? extends Bson> pipeline, final Class<TResult> resultClass,
-                                                 final ChangeStreamLevel changeStreamLevel, final Boolean retryReads) {
+                                                 final ChangeStreamLevel changeStreamLevel, final boolean retryReads) {
         return new ChangeStreamIterableImpl<TResult>(clientSession, databaseName, codecRegistry, readPreference, readConcern, executor,
                 pipeline, resultClass, changeStreamLevel, retryReads);
     }
@@ -89,7 +89,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
                                                  final CodecRegistry codecRegistry, final ReadPreference readPreference,
                                                  final ReadConcern readConcern, final OperationExecutor executor,
                                                  final List<? extends Bson> pipeline, final Class<TResult> resultClass,
-                                                 final ChangeStreamLevel changeStreamLevel, final Boolean retryReads) {
+                                                 final ChangeStreamLevel changeStreamLevel, final boolean retryReads) {
         return new ChangeStreamIterableImpl<TResult>(clientSession, namespace, codecRegistry, readPreference, readConcern, executor,
                 pipeline, resultClass, changeStreamLevel, retryReads);
     }
@@ -101,7 +101,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
                                          final Class<TDocument> documentClass, final Class<TResult> resultClass,
                                          final CodecRegistry codecRegistry, final ReadPreference readPreference,
                                          final ReadConcern readConcern, final OperationExecutor executor, final String fieldName,
-                                         final Bson filter, final Boolean retryReads) {
+                                         final Bson filter, final boolean retryReads) {
         return new DistinctIterableImpl<TDocument, TResult>(clientSession, namespace, documentClass, resultClass, codecRegistry,
                 readPreference, readConcern, executor, fieldName, filter, retryReads);
     }
@@ -110,7 +110,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
     public <TResult>
     ListDatabasesIterable<TResult> listDatabasesOf(final @Nullable ClientSession clientSession, final Class<TResult> resultClass,
                                                    final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                                                   final OperationExecutor executor, final Boolean retryReads) {
+                                                   final OperationExecutor executor, final boolean retryReads) {
         return new ListDatabasesIterableImpl<TResult>(clientSession, resultClass, codecRegistry, readPreference, executor, retryReads);
     }
 
@@ -119,7 +119,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
     ListCollectionsIterable<TResult> listCollectionsOf(final @Nullable ClientSession clientSession, final String databaseName,
                                                        final boolean collectionNamesOnly, final Class<TResult> resultClass,
                                                        final CodecRegistry codecRegistry, final ReadPreference readPreference,
-                                                       final OperationExecutor executor, final Boolean retryReads) {
+                                                       final OperationExecutor executor, final boolean retryReads) {
         return new ListCollectionsIterableImpl<TResult>(clientSession, databaseName, collectionNamesOnly, resultClass, codecRegistry,
                 readPreference, executor, retryReads);
     }
@@ -129,7 +129,7 @@ class FallbackMongoIterableFactory implements MongoIterableFactory {
     ListIndexesIterable<TResult> listIndexesOf(final @Nullable ClientSession clientSession, final MongoNamespace namespace,
                                                final Class<TResult> resultClass, final CodecRegistry codecRegistry,
                                                final ReadPreference readPreference, final OperationExecutor executor,
-                                               final Boolean retryReads) {
+                                               final boolean retryReads) {
         return new ListIndexesIterableImpl<TResult>(clientSession, namespace, resultClass, codecRegistry, readPreference,
                 executor, retryReads);
     }

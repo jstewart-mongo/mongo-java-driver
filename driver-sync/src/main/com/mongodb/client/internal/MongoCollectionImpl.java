@@ -840,59 +840,6 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases() {
-        return listDatabases(Document.class);
-    }
-
-    @Override
-    public <TResult> ListDatabasesIterable<TResult> listDatabases(final Class<TResult> resultClass) {
-        return createListDatabasesIterable(null, resultClass);
-    }
-
-    @Override
-    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
-        return listDatabases(clientSession, Document.class);
-    }
-
-    @Override
-    public <TResult> ListDatabasesIterable<TResult> listDatabases(final ClientSession clientSession, final Class<TResult> resultClass) {
-        notNull("clientSession", clientSession);
-        return createListDatabasesIterable(clientSession, resultClass);
-    }
-
-    private <TResult> ListDatabasesIterable<TResult> createListDatabasesIterable(@Nullable final ClientSession clientSession,
-                                                                             final Class<TResult> resultClass) {
-        return MongoIterables.listDatabasesOf(clientSession, resultClass, codecRegistry, ReadPreference.primary(), executor, retryReads);
-    }
-
-    @Override
-    public ListCollectionsIterable<Document> listCollections() {
-        return listCollections(Document.class);
-    }
-
-    @Override
-    public <TResult> ListCollectionsIterable<TResult> listCollections(final Class<TResult> resultClass) {
-        return createListCollectionsIterable(null, resultClass);
-    }
-
-    @Override
-    public ListCollectionsIterable<Document> listCollections(final ClientSession clientSession) {
-        return listCollections(clientSession, Document.class);
-    }
-
-    @Override
-    public <TResult> ListCollectionsIterable<TResult> listCollections(final ClientSession clientSession, final Class<TResult> resultClass) {
-        notNull("clientSession", clientSession);
-        return createListCollectionsIterable(clientSession, resultClass);
-    }
-
-    private <TResult> ListCollectionsIterable<TResult> createListCollectionsIterable(@Nullable final ClientSession clientSession,
-                                                                                     final Class<TResult> resultClass) {
-        return MongoIterables.listCollectionsOf(clientSession, namespace.getDatabaseName(), false, resultClass,
-                codecRegistry, ReadPreference.primary(), executor, retryReads);
-    }
-
-    @Override
     public void dropIndex(final String indexName) {
         dropIndex(indexName, new DropIndexOptions());
     }

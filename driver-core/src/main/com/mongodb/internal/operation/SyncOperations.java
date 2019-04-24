@@ -62,7 +62,7 @@ public final class SyncOperations<TDocument> {
     }
 
     public SyncOperations(final Class<TDocument> documentClass, final ReadPreference readPreference,
-                          final CodecRegistry codecRegistry, final Boolean retryReads) {
+                          final CodecRegistry codecRegistry, final boolean retryReads) {
         this(null, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true, retryReads);
     }
 
@@ -72,7 +72,7 @@ public final class SyncOperations<TDocument> {
     }
 
     public SyncOperations(final MongoNamespace namespace, final Class<TDocument> documentClass, final ReadPreference readPreference,
-                          final CodecRegistry codecRegistry, final Boolean retryReads) {
+                          final CodecRegistry codecRegistry, final boolean retryReads) {
         this(namespace, documentClass, readPreference, codecRegistry, WriteConcern.ACKNOWLEDGED, true, retryReads);
     }
 

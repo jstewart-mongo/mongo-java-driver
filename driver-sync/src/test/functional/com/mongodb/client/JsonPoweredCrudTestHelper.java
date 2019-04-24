@@ -350,44 +350,44 @@ public class JsonPoweredCrudTestHelper {
         return toResult((int) getCollection(collectionOptions).estimatedDocumentCount());
     }
 
-    BsonDocument getClientListDatabasesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+    BsonDocument getClientListDatabasesResult(final BsonDocument databaseOptions, final BsonDocument arguments,
                                               @Nullable final ClientSession clientSession) {
         ListDatabasesIterable<BsonDocument> iterable;
         if (clientSession == null) {
-            iterable = getCollection(collectionOptions).listDatabases(BsonDocument.class);
+            iterable = mongoClient.listDatabases(BsonDocument.class);
         } else {
-            iterable = getCollection(collectionOptions).listDatabases(clientSession, BsonDocument.class);
+            iterable = mongoClient.listDatabases(clientSession, BsonDocument.class);
         }
         return toResult(iterable);
     }
 
-    BsonDocument getClientListDatabaseObjectsResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+    BsonDocument getClientListDatabaseObjectsResult(final BsonDocument databaseOptions, final BsonDocument arguments,
                                                     @Nullable final ClientSession clientSession) {
-        return getClientListDatabasesResult(collectionOptions, arguments, clientSession);
+        return getClientListDatabasesResult(databaseOptions, arguments, clientSession);
     }
 
-    BsonDocument getClientListDatabaseNamesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+    BsonDocument getClientListDatabaseNamesResult(final BsonDocument databaseOptions, final BsonDocument arguments,
                                                   @Nullable final ClientSession clientSession) {
-        return getClientListDatabasesResult(collectionOptions, arguments, clientSession);
+        return getClientListDatabasesResult(databaseOptions, arguments, clientSession);
     }
 
-    BsonDocument getDatabaseListCollectionObjectsResult(final BsonDocument collectionOptions, final BsonDocument arguments,
-                                                         @Nullable final ClientSession clientSession) {
-        return getDatabaseListCollectionsResult(collectionOptions, arguments, clientSession);
+    BsonDocument getDatabaseListCollectionObjectsResult(final BsonDocument databaseOptions, final BsonDocument arguments,
+                                                        @Nullable final ClientSession clientSession) {
+        return getDatabaseListCollectionsResult(databaseOptions, arguments, clientSession);
     }
 
-    BsonDocument getDatabaseListCollectionNamesResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+    BsonDocument getDatabaseListCollectionNamesResult(final BsonDocument databaseOptions, final BsonDocument arguments,
                                                       @Nullable final ClientSession clientSession) {
-        return getDatabaseListCollectionsResult(collectionOptions, arguments, clientSession);
+        return getDatabaseListCollectionsResult(databaseOptions, arguments, clientSession);
     }
 
-    BsonDocument getDatabaseListCollectionsResult(final BsonDocument collectionOptions, final BsonDocument arguments,
+    BsonDocument getDatabaseListCollectionsResult(final BsonDocument databaseOptions, final BsonDocument arguments,
         @Nullable final ClientSession clientSession) {
         ListCollectionsIterable<BsonDocument> iterable;
         if (clientSession == null) {
-            iterable = getCollection(collectionOptions).listCollections(BsonDocument.class);
+            iterable = database.listCollections(BsonDocument.class);
         } else {
-            iterable = getCollection(collectionOptions).listCollections(clientSession, BsonDocument.class);
+            iterable = database.listCollections(clientSession, BsonDocument.class);
         }
         return toResult(iterable);
     }

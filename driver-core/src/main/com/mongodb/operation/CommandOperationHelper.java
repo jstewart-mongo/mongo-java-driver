@@ -198,7 +198,7 @@ final class CommandOperationHelper {
     }
 
     static <D, T> T executeCommand(final ReadBinding binding, final String database, final CommandCreator commandCreator,
-                                   final Decoder<D> decoder, final CommandReadTransformer<D, T> transformer, final Boolean retryReads) {
+                                   final Decoder<D> decoder, final CommandReadTransformer<D, T> transformer, final boolean retryReads) {
         return withConnectionSource(binding, new CallableWithSource<T>() {
             @Override
             public T call(final ConnectionSource source) {
