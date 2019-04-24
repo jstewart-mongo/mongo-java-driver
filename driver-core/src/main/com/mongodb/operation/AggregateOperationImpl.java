@@ -198,7 +198,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
-                CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT), transformer(), getRetryReads());
+                CommandResultDocumentCodec.create(decoder, FIELD_NAMES_WITH_RESULT), transformer(), retryReads);
     }
 
     @Override

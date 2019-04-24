@@ -328,11 +328,11 @@ public final class MongoClientSettings {
         }
 
         /**
-         * Sets whether writes should be retried if they fail due to a network error.
+         * Sets whether writes should be retried if they fail due to a network error or other retryable error.
          *
          * <p>Starting with the 3.11.0 release, the default value is true</p>
          *
-         * @param retryWrites sets if writes should be retried if they fail due to a network error.
+         * @param retryWrites sets if writes should be retried if they fail due to a network error or other retryable error.
          * @return this
          * @see #getRetryWrites()
          * @since 3.6
@@ -344,9 +344,9 @@ public final class MongoClientSettings {
         }
 
         /**
-         * Sets whether reads should be retried if they fail due to a network error.
+         * Sets whether reads should be retried if they fail due to a network error or other retryable error.
          *
-         * @param retryReads sets if reads should be retried if they fail due to a network error.
+         * @param retryReads sets if reads should be retried if they fail due to a network error or other retryable error.
          * @return this
          * @see #getRetryReads()
          * @since 3.11
@@ -528,7 +528,7 @@ public final class MongoClientSettings {
     }
 
     /**
-     * Returns true if writes should be retried if they fail due to a network error.
+     * Returns true if writes should be retried if they fail due to a network error or other retryable error.
      *
      * <p>Starting with the 3.11.0 release, the default value is true</p>
      *
@@ -541,7 +541,7 @@ public final class MongoClientSettings {
     }
 
     /**
-     * Returns true if reads should be retried if they fail due to a network error. The default value is true.
+     * Returns true if reads should be retried if they fail due to a network error or other retryable error. The default value is true.
      *
      * @return the retryReads value
      * @since 3.11

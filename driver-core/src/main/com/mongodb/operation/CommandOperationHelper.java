@@ -50,7 +50,6 @@ import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
-import static com.mongodb.operation.OperationHelper.CallableWithConnection;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithSource;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -294,15 +293,14 @@ final class CommandOperationHelper {
     static <D, T> T executeCommand(final WriteBinding binding, final String database, final BsonDocument command,
                                    final FieldNameValidator fieldNameValidator, final Decoder<D> decoder,
                                    final CommandWriteTransformer<D, T> transformer) {
-        return withConnection(binding, new CallableWithConnection<T>() {
+        return withReleasableConnection(binding, new CallableWithConnectionAndSource<T>() {
             @Override
-            public T call(final Connection connection) {
-                ConnectionSource source = binding.getWriteConnectionSource();
+            public T call(final ConnectionSource source, final Connection connection) {
                 try {
                     return transformer.apply(executeCommand(database, command, fieldNameValidator, decoder,
                             source, connection, primary()), connection);
                 } finally {
-                    source.release();
+                    connection.release();
                 }
             }
         });

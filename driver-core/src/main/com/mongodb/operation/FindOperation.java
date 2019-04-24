@@ -729,8 +729,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                     try {
                         return executeCommandWithConnection(binding, source, namespace.getDatabaseName(),
                                 getCommandCreator(binding.getSessionContext()),
-                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(),
-                                getRetryReads(), connection);
+                                CommandResultDocumentCodec.create(decoder, FIRST_BATCH), transformer(), retryReads, connection);
                     } catch (MongoCommandException e) {
                         throw new MongoQueryException(e);
                     }

@@ -16,7 +16,6 @@
 
 package com.mongodb.operation;
 
-import com.mongodb.MongoNamespace;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
@@ -54,7 +53,6 @@ import static com.mongodb.operation.OperationHelper.LOGGER;
  */
 @Deprecated
 public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>, ReadOperation<BatchCursor<T>> {
-    private final MongoNamespace namespace;
     private final Decoder<T> decoder;
     private boolean retryReads;
 
@@ -68,17 +66,6 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      * @param decoder the decoder to use for the results
      */
     public ListDatabasesOperation(final Decoder<T> decoder) {
-        this(null, decoder);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param decoder the decoder to use for the results
-     */
-    public ListDatabasesOperation(final MongoNamespace namespace, final Decoder<T> decoder) {
-        this.namespace = namespace;
         this.decoder = notNull("decoder", decoder);
     }
 
@@ -188,9 +175,8 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      */
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return executeCommand(binding, (namespace != null ? namespace.getDatabaseName() : "admin"),
-                getCommandCreator(), CommandResultDocumentCodec.create(decoder, "databases"),
-                transformer(), getRetryReads());
+        return executeCommand(binding, "admin", getCommandCreator(),
+                CommandResultDocumentCodec.create(decoder, "databases"), transformer(), retryReads);
     }
 
     @Override

@@ -171,7 +171,7 @@ class AggregateExplainOperation implements AsyncReadOperation<BsonDocument>, Rea
 
     @Override
     public BsonDocument execute(final ReadBinding binding) {
-        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), getRetryReads());
+        return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(), retryReads);
     }
 
     @Override

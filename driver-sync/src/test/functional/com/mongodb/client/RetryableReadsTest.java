@@ -64,7 +64,6 @@ import static com.mongodb.ClusterFixture.getMultiMongosConnectionString;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.isStandalone;
-import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
@@ -115,7 +114,6 @@ public class RetryableReadsTest {
 
     @Before
     public void setUp() {
-        assumeTrue(canRunTests());
         assumeTrue("Skipping test: " + definition.getString("skipReason", new BsonString("")).getValue(),
                 !definition.containsKey("skipReason"));
 
@@ -325,10 +323,6 @@ public class RetryableReadsTest {
             }
         }
         return data;
-    }
-
-    private boolean canRunTests() {
-        return serverVersionAtLeast(3, 6);
     }
 
     private ServerVersion getServerVersion(final String fieldName, final BsonDocument document) {

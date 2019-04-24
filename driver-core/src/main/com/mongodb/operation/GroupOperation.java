@@ -258,7 +258,7 @@ public class GroupOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>
     public BatchCursor<T> execute(final ReadBinding binding) {
         return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(),
                 CommandResultDocumentCodec.create(decoder, "retval"),
-                transformer(), getRetryReads());
+                transformer(), retryReads);
     }
 
     @Override

@@ -476,7 +476,7 @@ public final class MongoClientSettings {
     }
 
     /**
-     * Returns true if writes should be retried if they fail due to a network error.
+     * Returns true if writes should be retried if they fail due to a network error or other retryable error.
      *
      * <p>Starting with the 3.11.0 release, the default value is true</p>
      *
@@ -488,7 +488,7 @@ public final class MongoClientSettings {
     }
 
     /**
-     * Returns true if reads should be retried if they fail due to a network error. The default value is true.
+     * Returns true if reads should be retried if they fail due to a network error or other retryable error. The default value is true.
      *
      * @return the retryReads value
      * @since 3.11

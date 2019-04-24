@@ -476,7 +476,7 @@ final class Operations<TDocument> {
 
     <TResult> ListDatabasesOperation<TResult> listDatabases(final Class<TResult> resultClass, final Bson filter,
                                                                    final Boolean nameOnly, final long maxTimeMS) {
-        return new ListDatabasesOperation<TResult>(namespace, codecRegistry.get(resultClass)).maxTime(maxTimeMS, MILLISECONDS)
+        return new ListDatabasesOperation<TResult>(codecRegistry.get(resultClass)).maxTime(maxTimeMS, MILLISECONDS)
                 .retryReads(retryReads)
                 .filter(toBsonDocumentOrNull(filter))
                 .nameOnly(nameOnly);

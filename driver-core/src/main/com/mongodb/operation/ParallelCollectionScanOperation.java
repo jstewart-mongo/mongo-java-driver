@@ -145,7 +145,7 @@ ParallelCollectionScanOperation<T> implements AsyncReadOperation<List<AsyncBatch
     public List<BatchCursor<T>> execute(final ReadBinding binding) {
         return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()),
                 CommandResultDocumentCodec.create(decoder, "firstBatch"),
-                transformer(), getRetryReads());
+                transformer(), retryReads);
     }
 
     @Override

@@ -329,7 +329,6 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
     def 'should throw execution timeout exception from execute'() {
         given:
         def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec()).maxTime(1, SECONDS)
-                .retryReads(false)
         enableMaxTimeFailPoint()
 
         when:
@@ -347,7 +346,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should be able to explain an empty pipeline'() {
         given:
-        def operation = new AggregateOperation(getNamespace(), [], new BsonDocumentCodec()).retryReads(false)
+        def operation = new AggregateOperation(getNamespace(), [], new BsonDocumentCodec())
         operation = async ? operation.asExplainableOperationAsync(ExplainVerbosity.QUERY_PLANNER) :
                             operation.asExplainableOperation(ExplainVerbosity.QUERY_PLANNER)
 
@@ -387,7 +386,6 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
         def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
                 .hint(hint)
-                .retryReads(false)
 
         when:
         execute(operation, async)

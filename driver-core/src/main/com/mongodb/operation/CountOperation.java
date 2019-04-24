@@ -253,7 +253,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
     public Long execute(final ReadBinding binding) {
         if (countStrategy.equals(CountStrategy.COMMAND)) {
             return executeCommand(binding, namespace.getDatabaseName(),
-                    getCommandCreator(binding.getSessionContext()), DECODER, transformer(), getRetryReads());
+                    getCommandCreator(binding.getSessionContext()), DECODER, transformer(), retryReads);
         } else {
             BatchCursor<BsonDocument> cursor = getAggregateOperation().execute(binding);
             return cursor.hasNext() ? getCountFromAggregateResults(cursor.next()) : 0;

@@ -79,10 +79,6 @@ final class OperationHelper {
         void call(AsyncConnection connection, Throwable t);
     }
 
-    interface AsyncCallableWithConnectionDescription {
-        void call(ConnectionDescription description, Throwable t);
-    }
-
     interface AsyncCallableWithSource {
         void call(AsyncConnectionSource source, Throwable t);
     }

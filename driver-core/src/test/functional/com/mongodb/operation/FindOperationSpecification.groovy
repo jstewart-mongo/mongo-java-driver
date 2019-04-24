@@ -298,7 +298,6 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         given:
         def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
                 .filter(new BsonDocument('x', new BsonDocument('$thisIsNotAnOperator', BsonBoolean.TRUE)))
-                .retryReads(false)
 
         when:
         execute(operation, async)

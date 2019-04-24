@@ -166,7 +166,7 @@ class MongoClientOptionsSpecification extends Specification {
                                         .applicationName('appName')
                                         .readPreference(ReadPreference.secondary())
                                         .retryWrites(true)
-                                        .retryReads(true)
+                                        .retryReads(false)
                                         .writeConcern(WriteConcern.JOURNALED)
                                         .minConnectionsPerHost(30)
                                         .connectionsPerHost(500)
@@ -202,7 +202,7 @@ class MongoClientOptionsSpecification extends Specification {
         options.getWriteConcern() == WriteConcern.JOURNALED
         options.getServerSelector() == serverSelector
         options.getRetryWrites()
-        options.getRetryReads()
+        !options.getRetryReads()
         options.getServerSelectionTimeout() == 150
         options.getMaxWaitTime() == 200
         options.getMaxConnectionIdleTime() == 300

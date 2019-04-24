@@ -206,7 +206,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should use the ReadBindings readPreference to set slaveOK'() {
         when:
-        def operation = new DistinctOperation(helper.namespace, 'name', helper.decoder).retryReads(false)
+        def operation = new DistinctOperation(helper.namespace, 'name', helper.decoder)
 
         then:
         testOperationSlaveOk(operation, [3, 4, 0], readPreference, async, helper.commandResult)
@@ -299,7 +299,6 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
         appendReadConcernToCommand(sessionContext, commandDocument)
 
         def operation = new DistinctOperation<String>(getNamespace(), 'str', new StringCodec())
-                .retryReads(false)
 
         when:
         operation.execute(binding)

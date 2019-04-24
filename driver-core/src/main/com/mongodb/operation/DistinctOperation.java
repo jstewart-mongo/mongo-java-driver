@@ -181,7 +181,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
         return executeCommand(binding, namespace.getDatabaseName(), getCommandCreator(binding.getSessionContext()), createCommandDecoder(),
-                transformer(), getRetryReads());
+                transformer(), retryReads);
     }
 
     @Override
