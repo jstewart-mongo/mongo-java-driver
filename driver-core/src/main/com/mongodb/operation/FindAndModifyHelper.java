@@ -17,6 +17,7 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoWriteConcernException;
+import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcernResult;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.Connection;
@@ -36,17 +37,7 @@ final class FindAndModifyHelper {
             @SuppressWarnings("unchecked")
             @Override
             public T apply(final BsonDocument result, final Connection connection) {
-                if (hasWriteConcernError(result)) {
-                    throw new MongoWriteConcernException(
-                            createWriteConcernError(result.getDocument("writeConcernError")),
-                            createWriteConcernResult(result.getDocument("lastErrorObject", new BsonDocument())),
-                            connection.getDescription().getServerAddress());
-                }
-
-                if (!result.isDocument("value")) {
-                    return null;
-                }
-                return BsonDocumentWrapperHelper.toDocument(result.getDocument("value", null));
+                return transformDocument(result, connection.getDescription().getServerAddress());
             }
         };
     }
@@ -56,19 +47,21 @@ final class FindAndModifyHelper {
             @SuppressWarnings("unchecked")
             @Override
             public T apply(final BsonDocument result, final AsyncConnection connection) {
-                if (hasWriteConcernError(result)) {
-                    throw new MongoWriteConcernException(
-                            createWriteConcernError(result.getDocument("writeConcernError")),
-                            createWriteConcernResult(result.getDocument("lastErrorObject", new BsonDocument())),
-                            connection.getDescription().getServerAddress());
-                }
-
-                if (!result.isDocument("value")) {
-                    return null;
-                }
-                return BsonDocumentWrapperHelper.toDocument(result.getDocument("value", null));
+                return transformDocument(result, connection.getDescription().getServerAddress());
             }
         };
+    }
+
+    private static <T> T transformDocument(final BsonDocument result, final ServerAddress serverAddress) {
+        if (hasWriteConcernError(result)) {
+            throw new MongoWriteConcernException(createWriteConcernError(result.getDocument("writeConcernError")),
+                    createWriteConcernResult(result.getDocument("lastErrorObject", new BsonDocument())), serverAddress);
+        }
+
+        if (!result.isDocument("value")) {
+            return null;
+        }
+        return BsonDocumentWrapperHelper.toDocument(result.getDocument("value", null));
     }
 
     private static WriteConcernResult createWriteConcernResult(final BsonDocument result) {
