@@ -614,7 +614,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getPipelineFromArray(arguments.getArray("arrayFilters"))));
         }
 
         BsonDocument result;
@@ -623,8 +623,8 @@ public class JsonPoweredCrudTestHelper {
                 result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getDocument("update"),
                         options);
             } else {  // update is a pipeline
-                result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getArray("update"),
-                        options);
+                result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"),
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -632,7 +632,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 result = getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
-                        arguments.getArray("update"), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         }
 
@@ -722,7 +722,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getPipelineFromArray(arguments.getArray("arrayFilters"))));
         }
 
         UpdateResult updateResult;
@@ -731,8 +731,8 @@ public class JsonPoweredCrudTestHelper {
                 updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getDocument("update"),
                         options);
             } else {  // update is a pipeline
-                updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getArray("update"),
-                        options);
+                updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"),
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -740,7 +740,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"),
-                        arguments.getArray("update"), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         }
 
@@ -758,7 +758,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getPipelineFromArray(arguments.getArray("arrayFilters"))));
         }
 
         UpdateResult updateResult;
@@ -767,8 +767,8 @@ public class JsonPoweredCrudTestHelper {
                 updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getDocument("update"),
                         options);
             } else {  // update is a pipeline
-                updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getArray("update"),
-                        options);
+                updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"),
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -776,7 +776,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"),
-                        arguments.getArray("update"), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         }
 
@@ -987,7 +987,7 @@ public class JsonPoweredCrudTestHelper {
             options.upsert(true);
         }
         if (requestArguments.containsKey("arrayFilters")) {
-            options.arrayFilters(getArrayFilters(requestArguments.getArray("arrayFilters")));
+            options.arrayFilters(getPipelineFromArray(requestArguments.getArray("arrayFilters")));
         }
         if (requestArguments.containsKey("collation")) {
             options.collation(getCollation(requestArguments.getDocument("collation")));
@@ -1015,15 +1015,15 @@ public class JsonPoweredCrudTestHelper {
     }
 
     @Nullable
-    private List<BsonDocument> getArrayFilters(@Nullable final BsonArray bsonArray) {
+    private List<BsonDocument> getPipelineFromArray(@Nullable final BsonArray bsonArray) {
         if (bsonArray == null) {
             return null;
         }
-        List<BsonDocument> arrayFilters = new ArrayList<BsonDocument>(bsonArray.size());
+        List<BsonDocument> pipeline = new ArrayList<BsonDocument>(bsonArray.size());
         for (BsonValue cur : bsonArray) {
-            arrayFilters.add(cur.asDocument());
+            pipeline.add(cur.asDocument());
         }
-        return arrayFilters;
+        return pipeline;
     }
 
     private MongoCollection<BsonDocument> getCollection(final BsonDocument collectionOptions) {

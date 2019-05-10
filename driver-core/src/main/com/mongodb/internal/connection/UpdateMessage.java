@@ -62,10 +62,6 @@ class UpdateMessage extends LegacyMessage {
             BsonValue update = updateRequest.getUpdate();
             if (update.isDocument()) {
                 addDocument(update.asDocument(), bsonOutput, new UpdateFieldNameValidator());
-            } else if (update.isArray()) {
-                for (BsonValue updateElement : update.asArray()) {
-                    addDocument(updateElement.asDocument(), bsonOutput, new NoOpFieldNameValidator());
-                }
             } else {
                 throw new IllegalArgumentException("Invalid update type in update request");
             }

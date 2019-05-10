@@ -69,6 +69,7 @@ import com.mongodb.operation.MapReduceToCollectionOperation;
 import com.mongodb.operation.MapReduceWithInlineResultsOperation;
 import com.mongodb.operation.MixedBulkWriteOperation;
 import com.mongodb.operation.RenameCollectionOperation;
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
 import org.bson.BsonJavaScript;
@@ -304,7 +305,7 @@ final class Operations<TDocument> {
                 .arrayFilters(toBsonDocumentList(options.getArrayFilters()));
     }
 
-    FindAndUpdateOperation<TDocument> findOneAndUpdate(final Bson filter, final List<? extends BsonValue> update,
+    FindAndUpdateOperation<TDocument> findOneAndUpdate(final Bson filter, final List<? extends Bson> update,
                                                        final FindOneAndUpdateOptions options) {
         return new FindAndUpdateOperation<TDocument>(namespace, writeConcern, retryWrites, getCodec(), update)
                 .filter(toBsonDocument(filter))
@@ -343,7 +344,7 @@ final class Operations<TDocument> {
                 new BulkWriteOptions().bypassDocumentValidation(updateOptions.getBypassDocumentValidation()));
     }
 
-    MixedBulkWriteOperation updateOne(final Bson filter, final List<? extends BsonValue> update, final UpdateOptions updateOptions) {
+    MixedBulkWriteOperation updateOne(final Bson filter, final List<? extends Bson> update, final UpdateOptions updateOptions) {
         return bulkWrite(singletonList(new UpdateOneModel<TDocument>(filter, update, updateOptions)),
                 new BulkWriteOptions().bypassDocumentValidation(updateOptions.getBypassDocumentValidation()));
     }
@@ -353,7 +354,7 @@ final class Operations<TDocument> {
                 new BulkWriteOptions().bypassDocumentValidation(updateOptions.getBypassDocumentValidation()));
     }
 
-    MixedBulkWriteOperation updateMany(final Bson filter, final List<? extends BsonValue> update, final UpdateOptions updateOptions) {
+    MixedBulkWriteOperation updateMany(final Bson filter, final List<? extends Bson> update, final UpdateOptions updateOptions) {
         return bulkWrite(singletonList(new UpdateManyModel<TDocument>(filter, update, updateOptions)),
                 new BulkWriteOptions().bypassDocumentValidation(updateOptions.getBypassDocumentValidation()));
     }
@@ -401,7 +402,7 @@ final class Operations<TDocument> {
             } else if (writeModel instanceof UpdateOneModel) {
                 UpdateOneModel<TDocument> updateOneModel = (UpdateOneModel<TDocument>) writeModel;
                 BsonValue update = updateOneModel.getUpdate() != null ? toBsonDocument(updateOneModel.getUpdate())
-                        : updateOneModel.getUpdatePipeline();
+                        : new BsonArray(toBsonDocumentList(updateOneModel.getUpdatePipeline()));
                 writeRequest = new UpdateRequest(toBsonDocument(updateOneModel.getFilter()), update, WriteRequest.Type.UPDATE)
                         .multi(false)
                         .upsert(updateOneModel.getOptions().isUpsert())
@@ -410,7 +411,7 @@ final class Operations<TDocument> {
             } else if (writeModel instanceof UpdateManyModel) {
                 UpdateManyModel<TDocument> updateManyModel = (UpdateManyModel<TDocument>) writeModel;
                 BsonValue update = updateManyModel.getUpdate() != null ? toBsonDocument(updateManyModel.getUpdate())
-                        : updateManyModel.getUpdatePipeline();
+                        : new BsonArray(toBsonDocumentList(updateManyModel.getUpdatePipeline()));
                 writeRequest = new UpdateRequest(toBsonDocument(updateManyModel.getFilter()), update, WriteRequest.Type.UPDATE)
                         .multi(true)
                         .upsert(updateManyModel.getOptions().isUpsert())

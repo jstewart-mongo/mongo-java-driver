@@ -17,8 +17,6 @@
 package com.mongodb.client.model;
 
 import com.mongodb.lang.Nullable;
-import org.bson.BsonArray;
-import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
 import java.util.List;
@@ -38,7 +36,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 public final class UpdateManyModel<T> extends WriteModel<T> {
     private final Bson filter;
     private final Bson update;
-    private final BsonArray updatePipeline;
+    private final List<? extends Bson> updatePipeline;
     private final UpdateOptions options;
 
     /**
@@ -76,7 +74,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      * @since 3.11
      * @mongodb.server.release 4.2
      */
-    public UpdateManyModel(final Bson filter, final List<? extends BsonValue> update) {
+    public UpdateManyModel(final Bson filter, final List<? extends Bson> update) {
         this(filter, update, new UpdateOptions());
     }
 
@@ -90,10 +88,10 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      * @since 3.11
      * @mongodb.server.release 4.2
      */
-    public UpdateManyModel(final Bson filter, final List<? extends BsonValue> update, final UpdateOptions options) {
+    public UpdateManyModel(final Bson filter, final List<? extends Bson> update, final UpdateOptions options) {
         this.filter = notNull("filter", filter);
         this.update = null;
-        this.updatePipeline = new BsonArray(notNull("update", update));
+        this.updatePipeline = update;
         this.options = notNull("options", options);
     }
 
@@ -125,7 +123,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      * @since 3.11
      * @mongodb.server.release 4.2
      */
-    public BsonArray getUpdatePipeline() {
+    public List<? extends Bson> getUpdatePipeline() {
         return updatePipeline;
     }
 
@@ -142,7 +140,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
     public String toString() {
         return "UpdateManyModel{"
                 + "filter=" + filter
-                + ", update=" + (update != null ? update : updatePipeline)
+                + ", update=" + (update != null ? update : getUpdatePipeline())
                 + ", options=" + options
                 + '}';
     }

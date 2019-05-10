@@ -42,7 +42,6 @@ import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.Nullable;
-import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -1191,7 +1190,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateOne(Bson filter, List<? extends BsonValue> update);
+    UpdateResult updateOne(Bson filter, List<? extends Bson> update);
 
     /**
      * Update a single document in the collection according to the specified arguments.
@@ -1209,7 +1208,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateOne(Bson filter, List<? extends BsonValue> update, UpdateOptions updateOptions);
+    UpdateResult updateOne(Bson filter, List<? extends Bson> update, UpdateOptions updateOptions);
 
     /**
      * Update a single document in the collection according to the specified arguments.
@@ -1227,7 +1226,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateOne(ClientSession clientSession, Bson filter, List<? extends BsonValue> update);
+    UpdateResult updateOne(ClientSession clientSession, Bson filter, List<? extends Bson> update);
 
     /**
      * Update a single document in the collection according to the specified arguments.
@@ -1246,7 +1245,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateOne(ClientSession clientSession, Bson filter, List<? extends BsonValue> update, UpdateOptions updateOptions);
+    UpdateResult updateOne(ClientSession clientSession, Bson filter, List<? extends Bson> update, UpdateOptions updateOptions);
 
     /**
      * Update all documents in the collection according to the specified arguments.
@@ -1326,7 +1325,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateMany(Bson filter, List<? extends BsonValue> update);
+    UpdateResult updateMany(Bson filter, List<? extends Bson> update);
 
     /**
      * Update all documents in the collection according to the specified arguments.
@@ -1343,7 +1342,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateMany(Bson filter, List<? extends BsonValue> update, UpdateOptions updateOptions);
+    UpdateResult updateMany(Bson filter, List<? extends Bson> update, UpdateOptions updateOptions);
 
     /**
      * Update all documents in the collection according to the specified arguments.
@@ -1360,7 +1359,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateMany(ClientSession clientSession, Bson filter, List<? extends BsonValue> update);
+    UpdateResult updateMany(ClientSession clientSession, Bson filter, List<? extends Bson> update);
 
     /**
      * Update all documents in the collection according to the specified arguments.
@@ -1378,7 +1377,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
      */
-    UpdateResult updateMany(ClientSession clientSession, Bson filter, List<? extends BsonValue> update, UpdateOptions updateOptions);
+    UpdateResult updateMany(ClientSession clientSession, Bson filter, List<? extends Bson> update, UpdateOptions updateOptions);
 
     /**
      * Atomically find a document and remove it.
@@ -1558,7 +1557,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 4.2
      */
     @Nullable
-    TDocument findOneAndUpdate(Bson filter, List<? extends BsonValue> update);
+    TDocument findOneAndUpdate(Bson filter, List<? extends Bson> update);
 
     /**
      * Atomically find a document and update it.
@@ -1574,7 +1573,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 4.2
      */
     @Nullable
-    TDocument findOneAndUpdate(Bson filter, List<? extends BsonValue> update, FindOneAndUpdateOptions options);
+    TDocument findOneAndUpdate(Bson filter, List<? extends Bson> update, FindOneAndUpdateOptions options);
 
     /**
      * Atomically find a document and update it.
@@ -1589,7 +1588,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 4.2
      */
     @Nullable
-    TDocument findOneAndUpdate(ClientSession clientSession, Bson filter, List<? extends BsonValue> update);
+    TDocument findOneAndUpdate(ClientSession clientSession, Bson filter, List<? extends Bson> update);
 
     /**
      * Atomically find a document and update it.
@@ -1606,7 +1605,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 4.2
      */
     @Nullable
-    TDocument findOneAndUpdate(ClientSession clientSession, Bson filter, List<? extends BsonValue> update, FindOneAndUpdateOptions options);
+    TDocument findOneAndUpdate(ClientSession clientSession, Bson filter, List<? extends Bson> update, FindOneAndUpdateOptions options);
 
     /**
      * Drops this collection from the Database.

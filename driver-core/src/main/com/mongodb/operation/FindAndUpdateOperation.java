@@ -24,15 +24,17 @@ import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.validator.MappedFieldNameValidator;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import com.mongodb.internal.validator.UpdateFieldNameValidator;
+import com.mongodb.lang.Nullable;
 import com.mongodb.session.SessionContext;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.BsonValue;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
+import org.bson.conversions.Bson;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +60,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @Deprecated
 public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
     private final BsonDocument update;
-    private final BsonArray updatePipeline;
+    private final List<? extends Bson> updatePipeline;
     private BsonDocument filter;
     private BsonDocument projection;
     private BsonDocument sort;
@@ -127,9 +129,9 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
      * @mongodb.server.release 4.2
      */
     public FindAndUpdateOperation(final MongoNamespace namespace, final WriteConcern writeConcern, final boolean retryWrites,
-                                  final Decoder<T> decoder, final List<? extends BsonValue> update) {
+                                  final Decoder<T> decoder, final List<? extends Bson> update) {
         super(namespace, writeConcern, retryWrites, decoder);
-        this.updatePipeline = new BsonArray(notNull("decoder", update));
+        this.updatePipeline = update;
         this.update = null;
     }
 
@@ -149,7 +151,8 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
      * @since 3.11
      * @mongodb.server.release 4.2
      */
-    public BsonArray getUpdatePipeline() {
+    @Nullable
+    public List<? extends Bson> getUpdatePipeline() {
         return updatePipeline;
     }
 
@@ -382,6 +385,21 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         };
     }
 
+    private List<BsonDocument> toBsonDocumentList(final List<? extends Bson> bsonList) {
+        if (bsonList == null) {
+            return null;
+        }
+        List<BsonDocument> bsonDocumentList = new ArrayList<BsonDocument>(bsonList.size());
+        for (Bson cur : bsonList) {
+            bsonDocumentList.add(toBsonDocument(cur));
+        }
+        return bsonDocumentList;
+    }
+
+    private BsonDocument toBsonDocument(final Bson document) {
+        return document == null ? null : document.toBsonDocument(BsonDocument.class, null);
+    }
+
     private BsonDocument createCommand(final SessionContext sessionContext, final ServerDescription serverDescription,
                                        final ConnectionDescription connectionDescription) {
         validateCollation(connectionDescription, collation);
@@ -393,8 +411,8 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         putIfTrue(commandDocument, "upsert", isUpsert());
         putIfNotZero(commandDocument, "maxTimeMS", getMaxTime(MILLISECONDS));
         putIfNotNull(commandDocument, "update", getUpdate());
-        if (serverIsAtLeastVersionFourDotTwo(connectionDescription)) {
-            putIfNotNull(commandDocument, "update", getUpdatePipeline());
+        if (serverIsAtLeastVersionFourDotTwo(connectionDescription) && updatePipeline != null) {
+            commandDocument.put("update", new BsonArray(toBsonDocumentList(updatePipeline)));
         }
         if (bypassDocumentValidation != null && serverIsAtLeastVersionThreeDotTwo(connectionDescription)) {
             commandDocument.put("bypassDocumentValidation", BsonBoolean.valueOf(bypassDocumentValidation));

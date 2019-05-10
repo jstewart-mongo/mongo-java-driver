@@ -631,22 +631,22 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     @Override
-    public UpdateResult updateOne(final Bson filter, final List<? extends BsonValue> update) {
+    public UpdateResult updateOne(final Bson filter, final List<? extends Bson> update) {
         return updateOne(filter, update, new UpdateOptions());
     }
 
     @Override
-    public UpdateResult updateOne(final Bson filter, final List<? extends BsonValue> update, final UpdateOptions updateOptions) {
+    public UpdateResult updateOne(final Bson filter, final List<? extends Bson> update, final UpdateOptions updateOptions) {
         return executeUpdate(null, filter, update, updateOptions, false);
     }
 
     @Override
-    public UpdateResult updateOne(final ClientSession clientSession, final Bson filter, final List<? extends BsonValue> update) {
+    public UpdateResult updateOne(final ClientSession clientSession, final Bson filter, final List<? extends Bson> update) {
         return updateOne(clientSession, filter, update, new UpdateOptions());
     }
 
     @Override
-    public UpdateResult updateOne(final ClientSession clientSession, final Bson filter, final List<? extends BsonValue> update,
+    public UpdateResult updateOne(final ClientSession clientSession, final Bson filter, final List<? extends Bson> update,
                                   final UpdateOptions updateOptions) {
         notNull("clientSession", clientSession);
         return executeUpdate(clientSession, filter, update, updateOptions, false);
@@ -676,22 +676,22 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     @Override
-    public UpdateResult updateMany(final Bson filter, final List<? extends BsonValue> update) {
+    public UpdateResult updateMany(final Bson filter, final List<? extends Bson> update) {
         return updateMany(filter, update, new UpdateOptions());
     }
 
     @Override
-    public UpdateResult updateMany(final Bson filter, final List<? extends BsonValue> update, final UpdateOptions updateOptions) {
+    public UpdateResult updateMany(final Bson filter, final List<? extends Bson> update, final UpdateOptions updateOptions) {
         return executeUpdate(null, filter, update, updateOptions, true);
     }
 
     @Override
-    public UpdateResult updateMany(final ClientSession clientSession, final Bson filter, final List<? extends BsonValue> update) {
+    public UpdateResult updateMany(final ClientSession clientSession, final Bson filter, final List<? extends Bson> update) {
         return updateMany(clientSession, filter, update, new UpdateOptions());
     }
 
     @Override
-    public UpdateResult updateMany(final ClientSession clientSession, final Bson filter, final List<? extends BsonValue> update,
+    public UpdateResult updateMany(final ClientSession clientSession, final Bson filter, final List<? extends Bson> update,
                                    final UpdateOptions updateOptions) {
         notNull("clientSession", clientSession);
         return executeUpdate(clientSession, filter, update, updateOptions, true);
@@ -794,25 +794,25 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
 
     @Override
     @Nullable
-    public TDocument findOneAndUpdate(final Bson filter, final List<? extends BsonValue> update) {
+    public TDocument findOneAndUpdate(final Bson filter, final List<? extends Bson> update) {
         return findOneAndUpdate(filter, update, new FindOneAndUpdateOptions());
     }
 
     @Override
     @Nullable
-    public TDocument findOneAndUpdate(final Bson filter, final List<? extends BsonValue> update, final FindOneAndUpdateOptions options) {
+    public TDocument findOneAndUpdate(final Bson filter, final List<? extends Bson> update, final FindOneAndUpdateOptions options) {
         return executeFindOneAndUpdate(null, filter, update, options);
     }
 
     @Override
     @Nullable
-    public TDocument findOneAndUpdate(final ClientSession clientSession, final Bson filter, final List<? extends BsonValue> update) {
+    public TDocument findOneAndUpdate(final ClientSession clientSession, final Bson filter, final List<? extends Bson> update) {
         return findOneAndUpdate(clientSession, filter, update, new FindOneAndUpdateOptions());
     }
 
     @Override
     @Nullable
-    public TDocument findOneAndUpdate(final ClientSession clientSession, final Bson filter, final List<? extends BsonValue> update,
+    public TDocument findOneAndUpdate(final ClientSession clientSession, final Bson filter, final List<? extends Bson> update,
                                       final FindOneAndUpdateOptions options) {
         notNull("clientSession", clientSession);
         return executeFindOneAndUpdate(clientSession, filter, update, options);
@@ -820,7 +820,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
 
     @Nullable
     private TDocument executeFindOneAndUpdate(@Nullable final ClientSession clientSession, final Bson filter,
-                                              final List<? extends BsonValue> update, final FindOneAndUpdateOptions options) {
+                                              final List<? extends Bson> update, final FindOneAndUpdateOptions options) {
         return executor.execute(operations.findOneAndUpdate(filter, update, options), readConcern, clientSession);
     }
 
@@ -1035,7 +1035,7 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     private UpdateResult executeUpdate(@Nullable final ClientSession clientSession, final Bson filter,
-                                       final List<? extends BsonValue> update, final UpdateOptions updateOptions, final boolean multi) {
+                                       final List<? extends Bson> update, final UpdateOptions updateOptions, final boolean multi) {
         return toUpdateResult(executeSingleWriteRequest(clientSession,
                 multi ? operations.updateMany(filter, update, updateOptions) : operations.updateOne(filter, update, updateOptions),
                 UPDATE));
