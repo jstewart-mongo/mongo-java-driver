@@ -45,6 +45,7 @@ import com.mongodb.operation.MapReduceBatchCursor;
 import com.mongodb.operation.MapReduceStatistics;
 import com.mongodb.operation.ReadOperation;
 import com.mongodb.operation.WriteOperation;
+import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -159,6 +160,11 @@ public final class SyncOperations<TDocument> {
         return operations.findOneAndUpdate(filter, update, options);
     }
 
+    public WriteOperation<TDocument> findOneAndUpdate(final Bson filter, final List<? extends BsonValue> update,
+                                                      final FindOneAndUpdateOptions options) {
+        return operations.findOneAndUpdate(filter, update, options);
+    }
+
     public WriteOperation<BulkWriteResult> insertOne(final TDocument document, final InsertOneOptions options) {
         return operations.insertOne(document, options);
     }
@@ -180,7 +186,17 @@ public final class SyncOperations<TDocument> {
         return operations.updateOne(filter, update, updateOptions);
     }
 
+    public WriteOperation<BulkWriteResult> updateOne(final Bson filter, final List<? extends BsonValue> update,
+                                                     final UpdateOptions updateOptions) {
+        return operations.updateOne(filter, update, updateOptions);
+    }
+
     public WriteOperation<BulkWriteResult> updateMany(final Bson filter, final Bson update, final UpdateOptions updateOptions) {
+        return operations.updateMany(filter, update, updateOptions);
+    }
+
+    public WriteOperation<BulkWriteResult> updateMany(final Bson filter, final List<? extends BsonValue> update,
+                                                      final UpdateOptions updateOptions) {
         return operations.updateMany(filter, update, updateOptions);
     }
 

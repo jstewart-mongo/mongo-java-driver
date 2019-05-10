@@ -387,12 +387,23 @@ final class BulkWriteBatch {
                 writer.writeStartDocument();
                 writer.writeName("q");
                 getCodec(update.getFilter()).encode(writer, update.getFilter(), EncoderContext.builder().build());
-                writer.writeName("u");
 
-                if (update.getType() == WriteRequest.Type.UPDATE && update.getUpdate().isEmpty()) {
-                    throw new IllegalArgumentException("Invalid BSON document for an update");
+                if (update.getUpdate().isDocument()) {
+                    if (update.getUpdate().asDocument().isEmpty()) {
+                        throw new IllegalArgumentException("Invalid BSON document for an update");
+                    }
+                    writer.writeName("u");
+                    getCodec(update.getUpdate().asDocument()).encode(writer, update.getUpdate().asDocument(),
+                            EncoderContext.builder().build());
+                } else if (update.getType() == WriteRequest.Type.UPDATE && update.getUpdate().isArray()) {
+                    writer.writeStartArray("u");
+                    for (BsonValue cur : update.getUpdate().asArray()) {
+                        getCodec(cur.asDocument()).encode(writer, cur.asDocument(), EncoderContext.builder().build());
+                    }
+                    writer.writeEndArray();
+                } else {
+                    throw new IllegalArgumentException("Invalid BSON value for an update");
                 }
-                getCodec(update.getUpdate()).encode(writer, update.getUpdate(), EncoderContext.builder().build());
 
                 if (update.isMulti()) {
                     writer.writeBoolean("multi", update.isMulti());

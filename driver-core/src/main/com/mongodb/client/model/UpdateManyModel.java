@@ -16,7 +16,12 @@
 
 package com.mongodb.client.model;
 
+import com.mongodb.lang.Nullable;
+import org.bson.BsonArray;
+import org.bson.BsonValue;
 import org.bson.conversions.Bson;
+
+import java.util.List;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -33,6 +38,7 @@ import static com.mongodb.assertions.Assertions.notNull;
 public final class UpdateManyModel<T> extends WriteModel<T> {
     private final Bson filter;
     private final Bson update;
+    private final BsonArray updatePipeline;
     private final UpdateOptions options;
 
     /**
@@ -57,6 +63,37 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
     public UpdateManyModel(final Bson filter, final Bson update, final UpdateOptions options) {
         this.filter = notNull("filter", filter);
         this.update = notNull("update", update);
+        this.updatePipeline = null;
+        this.options = notNull("options", options);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param filter a document describing the query filter, which may not be null.
+     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update
+     *               operators.
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public UpdateManyModel(final Bson filter, final List<? extends BsonValue> update) {
+        this(filter, update, new UpdateOptions());
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param filter a document describing the query filter, which may not be null.
+     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update
+     * operators.
+     * @param options the options to apply
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public UpdateManyModel(final Bson filter, final List<? extends BsonValue> update, final UpdateOptions options) {
+        this.filter = notNull("filter", filter);
+        this.update = null;
+        this.updatePipeline = new BsonArray(notNull("update", update));
         this.options = notNull("options", options);
     }
 
@@ -75,8 +112,21 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      *
      * @return the document specifying the updates to apply
      */
+    @Nullable
     public Bson getUpdate() {
         return update;
+    }
+
+    /**
+     * Gets the pipeline specifying the updates to apply to the matching document.  The update to apply must include only update
+     * operators.
+     *
+     * @return the pipeline specifying the updates to apply
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public BsonArray getUpdatePipeline() {
+        return updatePipeline;
     }
 
     /**
@@ -92,7 +142,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
     public String toString() {
         return "UpdateManyModel{"
                 + "filter=" + filter
-                + ", update=" + update
+                + ", update=" + (update != null ? update : updatePipeline)
                 + ", options=" + options
                 + '}';
     }

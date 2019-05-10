@@ -619,11 +619,21 @@ public class JsonPoweredCrudTestHelper {
 
         BsonDocument result;
         if (clientSession == null) {
-            result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getDocument("update"),
-                    options);
+            if (arguments.isDocument("update")) {
+                result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getDocument("update"),
+                        options);
+            } else {  // update is a pipeline
+                result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getArray("update"),
+                        options);
+            }
         } else {
-            result = getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
-                    arguments.getDocument("update"), options);
+            if (arguments.isDocument("update")) {
+                result = getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
+                        arguments.getDocument("update"), options);
+            } else {  // update is a pipeline
+                result = getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
+                        arguments.getArray("update"), options);
+            }
         }
 
         return toResult(result);
@@ -717,11 +727,21 @@ public class JsonPoweredCrudTestHelper {
 
         UpdateResult updateResult;
         if (clientSession == null) {
-            updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getDocument("update"),
-                    options);
+            if (arguments.isDocument("update")) {
+                updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getDocument("update"),
+                        options);
+            } else {  // update is a pipeline
+                updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getArray("update"),
+                        options);
+            }
         } else {
-            updateResult = getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"),
-                    arguments.getDocument("update"), options);
+            if (arguments.isDocument("update")) {
+                updateResult = getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"),
+                        arguments.getDocument("update"), options);
+            } else {  // update is a pipeline
+                updateResult = getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"),
+                        arguments.getArray("update"), options);
+            }
         }
 
         return toResult(updateResult);
@@ -743,11 +763,21 @@ public class JsonPoweredCrudTestHelper {
 
         UpdateResult updateResult;
         if (clientSession == null) {
-            updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getDocument("update"),
-                    options);
+            if (arguments.isDocument("update")) {
+                updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getDocument("update"),
+                        options);
+            } else {  // update is a pipeline
+                updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getArray("update"),
+                        options);
+            }
         } else {
-            updateResult = getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"),
-                    arguments.getDocument("update"), options);
+            if (arguments.isDocument("update")) {
+                updateResult = getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"),
+                        arguments.getDocument("update"), options);
+            } else {  // update is a pipeline
+                updateResult = getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"),
+                        arguments.getArray("update"), options);
+            }
         }
 
         return toResult(updateResult);

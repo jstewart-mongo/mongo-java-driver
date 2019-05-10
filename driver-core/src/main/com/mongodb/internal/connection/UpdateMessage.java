@@ -20,6 +20,7 @@ import com.mongodb.bulk.UpdateRequest;
 import com.mongodb.internal.validator.CollectibleDocumentFieldNameValidator;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import com.mongodb.internal.validator.UpdateFieldNameValidator;
+import org.bson.BsonValue;
 import org.bson.io.BsonOutput;
 
 import static com.mongodb.bulk.WriteRequest.Type.REPLACE;
@@ -55,10 +56,19 @@ class UpdateMessage extends LegacyMessage {
 
         addDocument(updateRequest.getFilter(), bsonOutput, new NoOpFieldNameValidator());
         if (updateRequest.getType() == REPLACE) {
-            addDocument(updateRequest.getUpdate(), bsonOutput, new CollectibleDocumentFieldNameValidator());
+            addDocument(updateRequest.getUpdate().asDocument(), bsonOutput, new CollectibleDocumentFieldNameValidator());
         } else {
             int bufferPosition = bsonOutput.getPosition();
-            addDocument(updateRequest.getUpdate(), bsonOutput, new UpdateFieldNameValidator());
+            BsonValue update = updateRequest.getUpdate();
+            if (update.isDocument()) {
+                addDocument(update.asDocument(), bsonOutput, new UpdateFieldNameValidator());
+            } else if (update.isArray()) {
+                for (BsonValue updateElement : update.asArray()) {
+                    addDocument(updateElement.asDocument(), bsonOutput, new NoOpFieldNameValidator());
+                }
+            } else {
+                throw new IllegalArgumentException("Invalid update type in update request");
+            }
             if (bsonOutput.getPosition() == bufferPosition + 5) {
                 throw new IllegalArgumentException("Invalid BSON document for an update");
             }

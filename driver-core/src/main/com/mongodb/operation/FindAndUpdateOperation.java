@@ -29,6 +29,7 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
 
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
+import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionFourDotTwo;
 import static com.mongodb.operation.CommandOperationHelper.CommandCreator;
 import static com.mongodb.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.operation.DocumentHelper.putIfNotZero;
@@ -56,6 +58,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @Deprecated
 public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
     private final BsonDocument update;
+    private final BsonArray updatePipeline;
     private BsonDocument filter;
     private BsonDocument projection;
     private BsonDocument sort;
@@ -109,6 +112,25 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
                                   final Decoder<T> decoder, final BsonDocument update) {
         super(namespace, writeConcern, retryWrites, decoder);
         this.update = notNull("decoder", update);
+        this.updatePipeline = null;
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param namespace    the database and collection namespace for the operation.
+     * @param writeConcern the writeConcern for the operation
+     * @param retryWrites  if writes should be retried if they fail due to a network error.
+     * @param decoder      the decoder for the result documents.
+     * @param update       the pipeline containing update operators.
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public FindAndUpdateOperation(final MongoNamespace namespace, final WriteConcern writeConcern, final boolean retryWrites,
+                                  final Decoder<T> decoder, final List<? extends BsonValue> update) {
+        super(namespace, writeConcern, retryWrites, decoder);
+        this.updatePipeline = new BsonArray(notNull("decoder", update));
+        this.update = null;
     }
 
     /**
@@ -118,6 +140,17 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
      */
     public BsonDocument getUpdate() {
         return update;
+    }
+
+    /**
+     * Gets the pipeline containing update operators
+     *
+     * @return the update pipeline
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public BsonArray getUpdatePipeline() {
+        return updatePipeline;
     }
 
     /**
@@ -359,7 +392,10 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         commandDocument.put("new", new BsonBoolean(!isReturnOriginal()));
         putIfTrue(commandDocument, "upsert", isUpsert());
         putIfNotZero(commandDocument, "maxTimeMS", getMaxTime(MILLISECONDS));
-        commandDocument.put("update", getUpdate());
+        putIfNotNull(commandDocument, "update", getUpdate());
+        if (serverIsAtLeastVersionFourDotTwo(connectionDescription)) {
+            putIfNotNull(commandDocument, "update", getUpdatePipeline());
+        }
         if (bypassDocumentValidation != null && serverIsAtLeastVersionThreeDotTwo(connectionDescription)) {
             commandDocument.put("bypassDocumentValidation", BsonBoolean.valueOf(bypassDocumentValidation));
         }
