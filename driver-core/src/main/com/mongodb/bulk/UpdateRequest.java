@@ -18,6 +18,7 @@ package com.mongodb.bulk;
 
 import com.mongodb.client.model.Collation;
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 import java.util.List;
 
@@ -30,7 +31,7 @@ import static com.mongodb.assertions.Assertions.notNull;
  */
 @Deprecated
 public final class UpdateRequest extends WriteRequest {
-    private final BsonDocument update;
+    private final BsonValue update;
     private final Type updateType;
     private final BsonDocument filter;
     private boolean isMulti = true;
@@ -44,7 +45,7 @@ public final class UpdateRequest extends WriteRequest {
      * @param update the non-null update operations
      * @param updateType the update type, which must be either UPDATE or REPLACE
      */
-    public UpdateRequest(final BsonDocument filter, final BsonDocument update, final Type updateType) {
+    public UpdateRequest(final BsonDocument filter, final BsonValue update, final Type updateType) {
         if (updateType != Type.UPDATE && updateType != Type.REPLACE) {
             throw new IllegalArgumentException("Update type must be UPDATE or REPLACE");
         }
@@ -71,10 +72,11 @@ public final class UpdateRequest extends WriteRequest {
 
     /**
      * Gets the update.
+     * Note: Starting with server version 4.2+, the update can be either a document or a pipeline.
      *
      * @return the update
      */
-    public BsonDocument getUpdate() {
+    public BsonValue getUpdate() {
         return update;
     }
 

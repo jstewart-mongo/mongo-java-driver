@@ -82,8 +82,19 @@ public class CrudTest extends DatabaseTestCase {
     @Test
     public void shouldPassAllOutcomes() {
         BsonDocument expectedOutcome = definition.getDocument("outcome");
-        BsonDocument outcome = helper.getOperationResults(definition.getDocument("operation"));
+        // check if v1 test
+        if (definition.containsKey("operation")) {
+            runOperationV1(expectedOutcome, helper.getOperationResults(definition.getDocument("operation")));
+        } else {  // v2 test
+            BsonArray operations = definition.getArray("operations");
+            for (BsonValue operation : operations) {
+                runOperationV2(expectedOutcome, helper.getOperationResults(operation.asDocument()),
+                        operation.asDocument().containsKey("result") ? operation.asDocument().getDocument("result") : null);
+            }
+        }
+    }
 
+    private void runOperationV1(final BsonDocument expectedOutcome, final BsonDocument outcome) {
         if (expectedOutcome.containsKey("error")) {
             assertEquals("Expected error", expectedOutcome.getBoolean("error"), outcome.get("error"));
         }
@@ -104,6 +115,34 @@ public class CrudTest extends DatabaseTestCase {
         }
 
         assertEquals(description, expectedResult, actualResult);
+
+        if (expectedOutcome.containsKey("collection")) {
+            assertCollectionEquals(expectedOutcome.getDocument("collection"));
+        }
+    }
+
+    private void runOperationV2(final BsonDocument expectedOutcome, final BsonDocument outcome, final BsonDocument expectedResult) {
+        if (expectedOutcome.containsKey("error")) {
+            assertEquals("Expected error", expectedOutcome.getBoolean("error"), outcome.get("error"));
+        }
+
+        if (expectedResult != null) {
+            // Hack to workaround the lack of upsertedCount
+            BsonValue actualResult = outcome.get("result");
+            if (actualResult.isDocument()
+                    && actualResult.asDocument().containsKey("upsertedCount")
+                    && actualResult.asDocument().getNumber("upsertedCount").intValue() == 0
+                    && !expectedResult.asDocument().containsKey("upsertedCount")) {
+                expectedResult.asDocument().append("upsertedCount", actualResult.asDocument().get("upsertedCount"));
+            }
+            // Hack to workaround the lack of insertedIds
+            if (expectedResult.isDocument()
+                    && !expectedResult.asDocument().containsKey("insertedIds")) {
+                actualResult.asDocument().remove("insertedIds");
+            }
+
+            assertEquals(description, expectedResult, actualResult);
+        }
 
         if (expectedOutcome.containsKey("collection")) {
             assertCollectionEquals(expectedOutcome.getDocument("collection"));

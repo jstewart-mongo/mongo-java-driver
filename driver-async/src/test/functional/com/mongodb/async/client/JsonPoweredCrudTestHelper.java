@@ -642,8 +642,14 @@ public class JsonPoweredCrudTestHelper {
 
         FutureResultCallback<BsonDocument> futureResultCallback = new FutureResultCallback<BsonDocument>();
         if (clientSession == null) {
-            getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getDocument("update"), options,
-                    futureResultCallback);
+            if (arguments.isDocument("update")) {
+                getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"), arguments.getDocument("update"), options,
+                        futureResultCallback);
+            } else {
+                getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"),
+                        getPipelineFromArray(arguments.getArray("update")), options,
+                        futureResultCallback);
+            }
         } else {
             getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
                     arguments.getDocument("update"), options, futureResultCallback);
@@ -747,8 +753,13 @@ public class JsonPoweredCrudTestHelper {
         }
         FutureResultCallback<UpdateResult> futureResultCallback = new FutureResultCallback<UpdateResult>();
         if (clientSession == null) {
-            getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getDocument("update"), options,
-                    futureResultCallback);
+            if (arguments.isDocument("update")) {
+                getCollection(collectionOptions).updateMany(arguments.getDocument("filter"), arguments.getDocument("update"), options,
+                        futureResultCallback);
+            } else {
+                getCollection(collectionOptions).updateMany(arguments.getDocument("filter"),
+                        getPipelineFromArray(arguments.getArray("update")), options, futureResultCallback);
+            }
         } else {
             getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"), arguments.getDocument("update"),
                     options, futureResultCallback);
@@ -771,8 +782,13 @@ public class JsonPoweredCrudTestHelper {
         }
         FutureResultCallback<UpdateResult> futureResultCallback = new FutureResultCallback<UpdateResult>();
         if (clientSession == null) {
-            getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getDocument("update"), options,
-                    futureResultCallback);
+            if (arguments.isDocument("update")) {
+                getCollection(collectionOptions).updateOne(arguments.getDocument("filter"), arguments.getDocument("update"), options,
+                        futureResultCallback);
+            } else {
+                getCollection(collectionOptions).updateOne(arguments.getDocument("filter"),
+                        getPipelineFromArray(arguments.getArray("update")), options, futureResultCallback);
+            }
         } else {
             getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"), arguments.getDocument("update"),
                     options, futureResultCallback);
@@ -1067,6 +1083,11 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(requestArguments.getDocument("collation")));
         }
         return options;
+    }
+
+    @Nullable
+    private List<BsonDocument> getPipelineFromArray(@Nullable final BsonArray bsonArray) {
+        return getArrayFilters(bsonArray);
     }
 
     @Nullable
