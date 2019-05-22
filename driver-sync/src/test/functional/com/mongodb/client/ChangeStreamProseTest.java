@@ -98,6 +98,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //
     @Test
     public void testResumeOneTimeOnError() {
+        assumeTrue(serverVersionAtLeast(4, 0));
         setFailPoint("getMore", 10107);
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         try {
@@ -128,6 +129,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //
     @Test
     public void testNoResumeErrors() {
+        assumeTrue(serverVersionAtLeast(4, 0));
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         collection.insertOne(Document.parse("{ x: 1 }"));
 
