@@ -46,7 +46,7 @@ import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeast
 import static com.mongodb.operation.QueryHelper.translateCommandException;
 import static java.util.Collections.singletonList;
 
-class QueryBatchCursor<T> implements BatchCursor<T> {
+class QueryBatchCursor<T> implements ChangeStreamCursor<T> {
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
     private final MongoNamespace namespace;
     private final ServerAddress serverAddress;
@@ -59,6 +59,7 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
     private List<T> nextBatch;
     private int count;
     private volatile boolean closed;
+    private BsonDocument postBatchResumeToken;
 
     QueryBatchCursor(final QueryResult<T> firstQueryResult, final int limit, final int batchSize, final Decoder<T> decoder) {
         this(firstQueryResult, limit, batchSize, decoder, null);
@@ -214,6 +215,11 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
         return serverAddress;
     }
 
+    @Override
+    public BsonDocument getPostBatchResumeToken() {
+        return postBatchResumeToken;
+    }
+
     private void getMore() {
         Connection connection = connectionSource.getConnection();
         try {
@@ -264,6 +270,7 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
         serverCursor = queryResult.getCursor();
         nextBatch = queryResult.getResults().isEmpty() ? null : queryResult.getResults();
         count += queryResult.getResults().size();
+        postBatchResumeToken = queryResult.getPostBatchResumeToken();
     }
 
     private void initFromCommandResult(final BsonDocument getMoreCommandResultDocument) {

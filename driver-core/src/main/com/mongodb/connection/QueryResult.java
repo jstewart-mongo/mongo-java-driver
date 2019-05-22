@@ -19,6 +19,7 @@ package com.mongodb.connection;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
+import org.bson.BsonDocument;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ public class QueryResult<T> {
     private final MongoNamespace namespace;
     private final List<T> results;
     private final long cursorId;
+    private final BsonDocument postBatchResumeToken;
     private final ServerAddress serverAddress;
 
     /**
@@ -44,9 +46,24 @@ public class QueryResult<T> {
      * @param serverAddress the server address
      */
     public QueryResult(final MongoNamespace namespace, final List<T> results, final long cursorId, final ServerAddress serverAddress) {
+        this(namespace, results, cursorId, null, serverAddress);
+    }
+
+    /**
+     * Construct an instance.
+     *
+     * @param namespace            the namespace
+     * @param results              the query results
+     * @param cursorId             the cursor id
+     * @param postBatchResumeToken the postBatchResumeToken
+     * @param serverAddress        the server address
+     */
+    public QueryResult(final MongoNamespace namespace, final List<T> results, final long cursorId, final BsonDocument postBatchResumeToken,
+        final ServerAddress serverAddress) {
         this.namespace = namespace;
         this.results = results;
         this.cursorId = cursorId;
+        this.postBatchResumeToken = postBatchResumeToken;
         this.serverAddress = serverAddress;
     }
 
@@ -75,6 +92,16 @@ public class QueryResult<T> {
      */
     public List<T> getResults() {
         return results;
+    }
+
+    /**
+     * Gets the postBatchResumeToken.
+     *
+     * @return the postBatchResumeToken
+     * @since 3.11
+     */
+    public BsonDocument getPostBatchResumeToken() {
+        return postBatchResumeToken;
     }
 
     /**

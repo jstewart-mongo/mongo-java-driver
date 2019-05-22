@@ -61,6 +61,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     private final ChangeStreamLevel changeStreamLevel;
 
     private BsonDocument resumeToken;
+    private BsonDocument resumeAfter;
     private BsonDocument startAfter;
     private BsonTimestamp startAtOperationTime;
     private BsonTimestamp startAtOperationTimeForResume;
@@ -122,11 +123,22 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     }
 
     /**
-     * Returns the logical starting point for the new change stream.
+     * Cache the logical starting point for the new change stream.
+     *
+     * @param resumeToken the resumeToken
+     * @return this
+     */
+    public ChangeStreamOperation<T> resumeToken(final BsonDocument resumeToken) {
+        this.resumeToken = resumeToken;
+        return this;
+    }
+
+    /**
+     * Returns the cached logical starting point for the new change stream.
      *
      * <p>A null value represents the server default.</p>
      *
-     * @return the resumeAfter
+     * @return the resumeToken
      */
     public BsonDocument getResumeToken() {
         return resumeToken;
@@ -139,7 +151,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
      * @return this
      */
     public ChangeStreamOperation<T> resumeAfter(final BsonDocument resumeToken) {
-        this.resumeToken = resumeToken;
+        this.resumeAfter = resumeToken;
         return this;
     }
 
@@ -319,7 +331,8 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, wrapped.execute(binding), binding);
+        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this,
+                (ChangeStreamCursor<RawBsonDocument>) wrapped.execute(binding), binding);
     }
 
     @Override
@@ -358,9 +371,9 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 }
 
                 boolean hasResumeSetting = false;
-                if (resumeToken != null) {
+                if (resumeAfter != null) {
                     hasResumeSetting = true;
-                    changeStream.append("resumeAfter", resumeToken);
+                    changeStream.append("resumeAfter", resumeAfter);
                 }
                 if (startAfter != null) {
                     hasResumeSetting = true;
