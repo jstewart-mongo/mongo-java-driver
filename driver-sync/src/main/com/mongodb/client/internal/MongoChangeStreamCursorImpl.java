@@ -18,25 +18,28 @@ package com.mongodb.client.internal;
 
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
-import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.BatchCursor;
+import org.bson.BsonDocument;
+import org.bson.RawBsonDocument;
+import org.bson.codecs.Decoder;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 
-/**
- * This class is not part of the public API and may be removed or changed at any time.
- *
- * @param <T> the result type
- */
-public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
-    private final BatchCursor<T> batchCursor;
-    private List<T> curBatch;
+public class MongoChangeStreamCursorImpl<T> implements MongoChangeStreamCursor<T> {
+    private final BatchCursor<RawBsonDocument> batchCursor;
+    private final Decoder<T> decoder;
+    private List<RawBsonDocument> curBatch;
     private int curPos;
+    private BsonDocument resumeToken;
 
-    public MongoBatchCursorAdapter(final BatchCursor<T> batchCursor) {
+    public MongoChangeStreamCursorImpl(final BatchCursor<RawBsonDocument> batchCursor, final Decoder<T> decoder,
+                                       @Nullable final BsonDocument initialResumeToken) {
         this.batchCursor = batchCursor;
+        this.decoder = decoder;
+        this.resumeToken = initialResumeToken;
     }
 
     @Override
@@ -74,6 +77,10 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
             curBatch = batchCursor.tryNext();
         }
 
+        if (curBatch == null) {
+            resumeToken = batchCursor.getPostBatchResumeToken();
+        }
+
         return curBatch == null ? null : getNextInBatch();
     }
 
@@ -89,14 +96,23 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
     }
 
     private T getNextInBatch() {
-        T nextInBatch = curBatch.get(curPos);
+        RawBsonDocument nextInBatch = curBatch.get(curPos);
+        resumeToken = nextInBatch.getDocument("_id");
         if (curPos < curBatch.size() - 1) {
             curPos++;
         } else {
             curBatch = null;
             curPos = 0;
+            if (batchCursor.getPostBatchResumeToken() != null) {
+                resumeToken = batchCursor.getPostBatchResumeToken();
+            }
         }
 
-        return nextInBatch;
+        return nextInBatch.decode(decoder);
+    }
+
+    @Nullable
+    public BsonDocument getResumeToken() {
+        return resumeToken;
     }
 }

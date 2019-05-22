@@ -59,6 +59,7 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
     private List<T> nextBatch;
     private int count;
     private volatile boolean closed;
+    private BsonDocument postBatchResumeToken;
 
     QueryBatchCursor(final QueryResult<T> firstQueryResult, final int limit, final int batchSize, final Decoder<T> decoder) {
         this(firstQueryResult, limit, batchSize, decoder, null);
@@ -214,6 +215,11 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
         return serverAddress;
     }
 
+    @Override
+    public BsonDocument getPostBatchResumeToken() {
+        return postBatchResumeToken;
+    }
+
     private void getMore() {
         Connection connection = connectionSource.getConnection();
         try {
@@ -269,6 +275,7 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
     private void initFromCommandResult(final BsonDocument getMoreCommandResultDocument) {
         QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(getMoreCommandResultDocument.getDocument("cursor"),
                                                                         connectionSource.getServerDescription().getAddress());
+        postBatchResumeToken = getMoreCommandResultDocument.getDocument("cursor").getDocument("postBatchResumeToken", null);
         initFromQueryResult(queryResult);
     }
 

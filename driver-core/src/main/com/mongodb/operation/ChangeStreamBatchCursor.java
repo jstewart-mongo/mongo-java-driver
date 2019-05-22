@@ -34,18 +34,21 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
     private final ReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
-    private BsonDocument resumeToken;
     private BatchCursor<RawBsonDocument> wrapped;
+    private BsonDocument resumeToken;
 
     ChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
                             final BatchCursor<RawBsonDocument> wrapped,
                             final ReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
-        this.resumeToken = changeStreamOperation.getResumeToken();
         if (changeStreamOperation.getStartAfter() != null) {
-            this.resumeToken = changeStreamOperation.getStartAfter();
+            resumeToken = changeStreamOperation.getStartAfter();
+        } else if (changeStreamOperation.getResumeAfter() != null) {
+            resumeToken = changeStreamOperation.getResumeAfter();
+        } else if (wrapped.getPostBatchResumeToken() != null) {
+            resumeToken = wrapped.getPostBatchResumeToken();
         }
-        if (this.resumeToken == null) {
+        if (resumeToken == null) {
             changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
         }
         this.wrapped = wrapped;
@@ -71,7 +74,9 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
         return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, List<T>>() {
             @Override
             public List<T> apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
-                return convertResults(queryBatchCursor.next());
+                List<T> results = convertResults(queryBatchCursor.next());
+                cachePostBatchResumeToken(queryBatchCursor);
+                return results;
             }
         });
     }
@@ -81,7 +86,9 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
         return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, List<T>>() {
             @Override
             public List<T> apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
-                return convertResults(queryBatchCursor.tryNext());
+                List<T> results = convertResults(queryBatchCursor.tryNext());
+                cachePostBatchResumeToken(queryBatchCursor);
+                return results;
             }
         });
     }
@@ -117,6 +124,17 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
         throw new UnsupportedOperationException("Not implemented!");
     }
 
+    @Override
+    public BsonDocument getPostBatchResumeToken() {
+        return resumeToken;
+    }
+
+    private void cachePostBatchResumeToken(final BatchCursor<RawBsonDocument> queryBatchCursor) {
+        if (queryBatchCursor.getPostBatchResumeToken() != null) {
+            resumeToken = queryBatchCursor.getPostBatchResumeToken();
+        }
+    }
+
     private List<T> convertResults(final List<RawBsonDocument> rawDocuments) {
         List<T> results = null;
         if (rawDocuments != null) {
@@ -125,9 +143,9 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
                 if (!rawDocument.containsKey("_id")) {
                     throw new MongoChangeStreamException("Cannot provide resume functionality when the resume token is missing.");
                 }
-                resumeToken = rawDocument.getDocument("_id");
                 results.add(rawDocument.decode(changeStreamOperation.getDecoder()));
             }
+            resumeToken = rawDocuments.get(rawDocuments.size() - 1).getDocument("_id");
         }
         return results;
     }
@@ -143,11 +161,16 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
             }
             wrapped.close();
 
+            changeStreamOperation.startAfter(null);
             if (resumeToken != null) {
-                changeStreamOperation.startAfter(null);
                 changeStreamOperation.startAtOperationTime(null);
-                changeStreamOperation.startOperationTimeForResume(null);
                 changeStreamOperation.resumeAfter(resumeToken);
+            } else if (changeStreamOperation.getStartAtOperationTime() != null
+                    && binding.getReadConnectionSource().getServerDescription().getMaxWireVersion() >= 7) {
+                changeStreamOperation.resumeAfter(null);
+            } else {
+                changeStreamOperation.resumeAfter(null);
+                changeStreamOperation.startAtOperationTime(null);
             }
             wrapped = ((ChangeStreamBatchCursor<T>) changeStreamOperation.execute(binding)).getWrapped();
             binding.release(); // release the new change stream batch cursor's reference to the binding

@@ -40,12 +40,14 @@ class ChangeStreamBatchCursorSpecification extends Specification {
 
         then:
         1 * wrapped.tryNext()
+        1 * wrapped.getPostBatchResumeToken()
 
         when:
         cursor.next()
 
         then:
         1 * wrapped.next()
+        1 * wrapped.getPostBatchResumeToken()
 
         when:
         cursor.close()

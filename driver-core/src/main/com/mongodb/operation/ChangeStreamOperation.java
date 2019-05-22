@@ -60,7 +60,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     private final Decoder<T> decoder;
     private final ChangeStreamLevel changeStreamLevel;
 
-    private BsonDocument resumeToken;
+    private BsonDocument resumeAfter;
     private BsonDocument startAfter;
     private BsonTimestamp startAtOperationTime;
     private BsonTimestamp startAtOperationTimeForResume;
@@ -127,19 +127,34 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
      * <p>A null value represents the server default.</p>
      *
      * @return the resumeAfter
+     * @deprecated use {@link #getResumeAfter()} instead
      */
+    @Deprecated
     public BsonDocument getResumeToken() {
-        return resumeToken;
+        return resumeAfter;
+    }
+
+    /**
+     * Returns the logical starting point for the new change stream.
+     *
+     * <p>A null value represents the server default.</p>
+     *
+     * @return the resumeAfter resumeToken
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public BsonDocument getResumeAfter() {
+        return resumeAfter;
     }
 
     /**
      * Sets the logical starting point for the new change stream.
      *
-     * @param resumeToken the resumeToken
+     * @param resumeAfter the resumeToken
      * @return this
      */
-    public ChangeStreamOperation<T> resumeAfter(final BsonDocument resumeToken) {
-        this.resumeToken = resumeToken;
+    public ChangeStreamOperation<T> resumeAfter(final BsonDocument resumeAfter) {
+        this.resumeAfter = resumeAfter;
         return this;
     }
 
@@ -358,9 +373,9 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 }
 
                 boolean hasResumeSetting = false;
-                if (resumeToken != null) {
+                if (resumeAfter != null) {
                     hasResumeSetting = true;
-                    changeStream.append("resumeAfter", resumeToken);
+                    changeStream.append("resumeAfter", resumeAfter);
                 }
                 if (startAfter != null) {
                     hasResumeSetting = true;

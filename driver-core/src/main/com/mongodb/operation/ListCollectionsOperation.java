@@ -444,6 +444,10 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
             return delegate.getServerAddress();
         }
 
+        @Override
+        public BsonDocument getPostBatchResumeToken() {
+            return delegate.getPostBatchResumeToken();
+        }
     }
 
     private final class ProjectingAsyncBatchCursor implements AsyncBatchCursor<T> {

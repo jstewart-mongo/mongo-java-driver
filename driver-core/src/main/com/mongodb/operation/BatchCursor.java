@@ -19,6 +19,7 @@ package com.mongodb.operation;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.annotations.NotThreadSafe;
+import org.bson.BsonDocument;
 
 import java.io.Closeable;
 import java.util.Iterator;
@@ -94,4 +95,11 @@ public interface BatchCursor<T> extends Iterator<List<T>>, Closeable {
      * @return ServerAddress
      */
     ServerAddress getServerAddress();
+
+    /**
+     * Returns the postBatchResumeToken.
+     *
+     * @return the postBatchResumeToken
+     */
+    BsonDocument getPostBatchResumeToken();
 }
