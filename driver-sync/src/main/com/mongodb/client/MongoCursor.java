@@ -20,6 +20,7 @@ import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.annotations.NotThreadSafe;
 import com.mongodb.lang.Nullable;
+import org.bson.BsonDocument;
 
 import java.io.Closeable;
 import java.util.Iterator;
@@ -78,4 +79,12 @@ public interface MongoCursor<TResult> extends Iterator<TResult>, Closeable {
      * @return ServerAddress
      */
     ServerAddress getServerAddress();
+
+    /**
+     * Returns the postBatchResumeToken
+     *
+     * @return the postBatchResumeToken, which can be null.
+     */
+    @Nullable
+    BsonDocument getPostBatchResumeToken();
 }

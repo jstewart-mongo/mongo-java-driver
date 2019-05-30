@@ -147,11 +147,11 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     /**
      * Sets the logical starting point for the new change stream.
      *
-     * @param resumeToken the resumeToken
+     * @param resumeAfter the resumeToken
      * @return this
      */
-    public ChangeStreamOperation<T> resumeAfter(final BsonDocument resumeToken) {
-        this.resumeAfter = resumeToken;
+    public ChangeStreamOperation<T> resumeAfter(final BsonDocument resumeAfter) {
+        this.resumeAfter = resumeAfter;
         return this;
     }
 

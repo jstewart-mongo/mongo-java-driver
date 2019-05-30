@@ -21,6 +21,7 @@ import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.lang.Nullable;
+import org.bson.BsonDocument;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -73,5 +74,10 @@ class MongoMappingCursor<T, U> implements MongoCursor<U> {
     @Override
     public ServerAddress getServerAddress() {
         return proxied.getServerAddress();
+    }
+
+    @Override
+    public BsonDocument getPostBatchResumeToken() {
+        return null;
     }
 }

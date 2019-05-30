@@ -39,10 +39,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
-// See https://github.com/mongodb/specifications/tree/master/source/transactions-convenient-api/tests/README.rst#prose-tests
+// See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
 public class ChangeStreamProseTest extends DatabaseTestCase {
     private static final long START_TIME_MS = 1L;
     private static final long ERROR_GENERATING_INTERVAL = 121000L;
+
+    private BsonDocument failPointDocument;
 
     @Before
     @Override
@@ -101,10 +103,12 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         assumeTrue(serverVersionAtLeast(4, 0));
         setFailPoint("getMore", 10107);
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        assertNull(cursor.tryNext());
         try {
             collection.insertOne(Document.parse("{ x: 1 }"));
             assertNotNull(cursor.next());
         } finally {
+            disableFailPoint();
             cursor.close();
         }
     }
@@ -139,6 +143,8 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
                 cursor.next();
             } catch (MongoException e) {
                 assertEquals(errCode, e.getCode());
+            } finally {
+                disableFailPoint();
             }
         }
         cursor.close();
@@ -168,6 +174,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
             collection.insertOne(Document.parse("{ x: 1 }"));
             assertNotNull(cursor.next());
         } finally {
+            disableFailPoint();
             if (cursor != null) {
                 cursor.close();
             }
@@ -182,19 +189,42 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
         collection.insertOne(Document.parse("{ _id: 43, x: 2 }"));
         BsonDocument startAfterResumeToken = cursor.next().getResumeToken();
-        BsonDocument origResumeToken = cursor.next().getResumeToken();
+        BsonDocument expectedResumeToken = cursor.next().getResumeToken();
         cursor.close();
 
         cursor = collection.watch().resumeAfter(startAfterResumeToken).iterator();
-        assertEquals(origResumeToken, cursor.next().getResumeToken());
+        assertEquals(expectedResumeToken, cursor.next().getResumeToken());
         cursor.close();
     }
 
+    //
+    // For a ChangeStream under these conditions:
+    //   Running against a server >=4.0.7.
+    //   The batch is empty or has been iterated to the last document.
+    // Expected result:
+    //   getResumeToken must return the postBatchResumeToken from the current command response.
+    //
+    @Test
+    public void testGetResumeTokenReturnsPostBatchResumeToken() {
+        assumeTrue(serverVersionAtLeast(asList(4, 0, 7)));
+
+        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
+        BsonDocument resumeToken = cursor.next().getResumeToken();
+        assertNotNull(resumeToken);
+        assertEquals(resumeToken, cursor.getPostBatchResumeToken());
+    }
+
     private void setFailPoint(final String command, final int errCode) {
-        getCollectionHelper().runAdminCommand(new BsonDocument("configureFailPoint", new BsonString("failCommand"))
+        failPointDocument = new BsonDocument("configureFailPoint", new BsonString("failCommand"))
                 .append("mode", new BsonDocument("times", new BsonInt32(1)))
                 .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(command))))
-                .append("errorCode", new BsonInt32(errCode))));
+                .append("errorCode", new BsonInt32(errCode)));
+        getCollectionHelper().runAdminCommand(failPointDocument);
+    }
+
+    private void disableFailPoint() {
+        getCollectionHelper().runAdminCommand(failPointDocument.append("mode", new BsonString("off")));
     }
 
     private boolean canRunTests() {

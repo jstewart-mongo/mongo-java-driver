@@ -21,6 +21,8 @@ import com.mongodb.ServerCursor;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.BatchCursor;
+import com.mongodb.operation.ChangeStreamCursor;
+import org.bson.BsonDocument;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -97,5 +99,18 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
             curPos = 0;
         }
         return nextInBatch;
+    }
+
+    /**
+     * Gets the post batch resume token.
+     *
+     * @return the post batch resume token
+     */
+    @Nullable
+    public BsonDocument getPostBatchResumeToken() {
+        if (batchCursor instanceof ChangeStreamCursor) {
+            return ((ChangeStreamCursor) batchCursor).getPostBatchResumeToken();
+        }
+        return null;
     }
 }
