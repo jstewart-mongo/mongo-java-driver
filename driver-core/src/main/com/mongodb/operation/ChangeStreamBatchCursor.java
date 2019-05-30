@@ -35,7 +35,7 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
     private final ReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
-    private BsonTimestamp startAtOperationTime;
+    private BsonTimestamp initialStartAtOperationTime;
     private ChangeStreamCursor<RawBsonDocument> wrapped;
     private BsonDocument postBatchResumeToken;
 
@@ -43,7 +43,7 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
                             final ChangeStreamCursor<RawBsonDocument> wrapped,
                             final ReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
-        this.startAtOperationTime = changeStreamOperation.getStartAtOperationTime();
+        this.initialStartAtOperationTime = changeStreamOperation.getStartAtOperationTime();
         if (changeStreamOperation.getStartAfter() != null) {
             changeStreamOperation.resumeToken(changeStreamOperation.getStartAfter());
             changeStreamOperation.startAfter(null);
@@ -167,7 +167,7 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
             } else if (changeStreamOperation.getStartAtOperationTime() != null
                     && binding.getReadConnectionSource().getServerDescription().getMaxWireVersion() >= 7) {
                 changeStreamOperation.resumeAfter(null);
-                changeStreamOperation.startAtOperationTime(startAtOperationTime);
+                changeStreamOperation.startAtOperationTime(initialStartAtOperationTime);
             } else {
                 changeStreamOperation.resumeAfter(null);
                 changeStreamOperation.startAtOperationTime(null);
