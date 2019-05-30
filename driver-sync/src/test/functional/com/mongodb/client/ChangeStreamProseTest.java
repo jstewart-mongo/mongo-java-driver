@@ -160,27 +160,6 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         assertNotNull(cursor.getServerCursor());
     }
 
-    //
-    // Test that the killCursors command sent during the "Resume Process" must not be allowed to throw an exception.
-    //
-    @Test
-    public void testNoExceptionFromKillCursors() {
-        assumeTrue(serverVersionAtLeast(4, 0));
-        MongoCursor<ChangeStreamDocument<Document>> cursor = null;
-
-        try {
-            setFailPoint("killCursors", 184);
-            cursor = collection.watch().iterator();
-            collection.insertOne(Document.parse("{ x: 1 }"));
-            assertNotNull(cursor.next());
-        } finally {
-            disableFailPoint();
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-    }
-
     @Test
     public void testGetResumeTokenFields() {
         assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
