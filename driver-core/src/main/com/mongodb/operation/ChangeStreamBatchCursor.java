@@ -53,6 +53,7 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
         }
         this.wrapped = wrapped;
         this.binding = binding.retain();
+        this.postBatchResumeToken = wrapped.getPostBatchResumeToken();
     }
 
     ChangeStreamCursor<RawBsonDocument> getWrapped() {
