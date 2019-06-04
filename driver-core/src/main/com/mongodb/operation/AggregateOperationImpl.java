@@ -62,7 +62,6 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
     private static final String RESULT = "result";
     private static final String CURSOR = "cursor";
     private static final String FIRST_BATCH = "firstBatch";
-    private static final String POST_BATCH_RESUME_TOKEN = "postBatchResumeToken";
     private static final List<String> FIELD_NAMES_WITH_RESULT = Arrays.asList(RESULT, FIRST_BATCH);
 
     private final MongoNamespace namespace;
@@ -259,7 +258,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
             return cursorDocumentToQueryResult(result.getDocument(CURSOR), description.getServerAddress());
         } else {
             return new QueryResult<T>(namespace, BsonDocumentWrapperHelper.<T>toList(result, RESULT), 0L,
-                    result.getDocument(CURSOR).getDocument(POST_BATCH_RESUME_TOKEN, null), description.getServerAddress());
+                    result.getDocument(CURSOR), description.getServerAddress());
         }
     }
 

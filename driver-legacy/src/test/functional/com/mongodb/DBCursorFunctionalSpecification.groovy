@@ -20,6 +20,7 @@ import com.mongodb.client.internal.TestOperationExecutor
 import com.mongodb.client.model.Collation
 import com.mongodb.client.model.CollationStrength
 import com.mongodb.operation.BatchCursor
+import org.bson.BsonDocument
 import spock.lang.IgnoreIf
 import spock.lang.Subject
 
@@ -341,6 +342,12 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
 
                     @Override
                     ServerAddress getServerAddress() { null }
+
+                    @Override
+                    BsonDocument getResumeToken() { null }
+
+                    @Override
+                    BsonDocument getPostBatchResumeToken() { null }
                 }
 
         def executor = new TestOperationExecutor([tailableCursor, tailableCursor, tailableCursor, tailableCursor])

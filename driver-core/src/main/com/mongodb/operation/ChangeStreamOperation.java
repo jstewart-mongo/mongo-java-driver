@@ -145,6 +145,19 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     }
 
     /**
+     * Returns the logical starting point for the new change stream.
+     *
+     * <p>A null value represents the server default.</p>
+     *
+     * @return the resumeAfter resumeToken
+     * @since 3.11
+     * @mongodb.server.release 4.2
+     */
+    public BsonDocument getResumeAfter() {
+        return resumeAfter;
+    }
+
+    /**
      * Sets the logical starting point for the new change stream.
      *
      * @param resumeAfter the resumeToken
@@ -331,8 +344,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this,
-                (ChangeStreamCursor<RawBsonDocument>) wrapped.execute(binding), binding);
+        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, wrapped.execute(binding), binding);
     }
 
     @Override

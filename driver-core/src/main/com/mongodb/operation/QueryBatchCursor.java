@@ -46,7 +46,7 @@ import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeast
 import static com.mongodb.operation.QueryHelper.translateCommandException;
 import static java.util.Collections.singletonList;
 
-class QueryBatchCursor<T> implements ChangeStreamCursor<T> {
+class QueryBatchCursor<T> implements BatchCursor<T> {
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
     private final MongoNamespace namespace;
     private final ServerAddress serverAddress;
@@ -213,6 +213,11 @@ class QueryBatchCursor<T> implements ChangeStreamCursor<T> {
         }
 
         return serverAddress;
+    }
+
+    @Override
+    public BsonDocument getResumeToken() {
+        return null;
     }
 
     @Override

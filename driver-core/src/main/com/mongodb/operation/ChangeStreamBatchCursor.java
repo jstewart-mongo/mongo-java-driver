@@ -31,16 +31,16 @@ import java.util.List;
 
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
 
-final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
+final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
     private final ReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
     private BsonTimestamp initialStartAtOperationTime;
-    private ChangeStreamCursor<RawBsonDocument> wrapped;
+    private BatchCursor<RawBsonDocument> wrapped;
     private BsonDocument postBatchResumeToken;
 
     ChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
-                            final ChangeStreamCursor<RawBsonDocument> wrapped,
+                            final BatchCursor<RawBsonDocument> wrapped,
                             final ReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
         this.initialStartAtOperationTime = changeStreamOperation.getStartAtOperationTime();
@@ -48,23 +48,28 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
             changeStreamOperation.resumeToken(changeStreamOperation.getStartAfter());
             changeStreamOperation.startAfter(null);
         }
+        else if (changeStreamOperation.getResumeAfter() != null) {
+            changeStreamOperation.resumeToken(changeStreamOperation.getResumeAfter());
+            changeStreamOperation.startAfter(null);
+        }
         if (changeStreamOperation.getResumeToken() == null) {
             changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
+            changeStreamOperation.resumeToken(wrapped.getPostBatchResumeToken());
         }
         this.wrapped = wrapped;
         this.binding = binding.retain();
         this.postBatchResumeToken = wrapped.getPostBatchResumeToken();
     }
 
-    ChangeStreamCursor<RawBsonDocument> getWrapped() {
+    BatchCursor<RawBsonDocument> getWrapped() {
         return wrapped;
     }
 
     @Override
     public boolean hasNext() {
-        return resumeableOperation(new Function<ChangeStreamCursor<RawBsonDocument>, Boolean>() {
+        return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, Boolean>() {
             @Override
-            public Boolean apply(final ChangeStreamCursor<RawBsonDocument> queryBatchCursor) {
+            public Boolean apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
                 return queryBatchCursor.hasNext();
             }
         });
@@ -72,9 +77,9 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
 
     @Override
     public List<T> next() {
-        return resumeableOperation(new Function<ChangeStreamCursor<RawBsonDocument>, List<T>>() {
+        return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, List<T>>() {
             @Override
-            public List<T> apply(final ChangeStreamCursor<RawBsonDocument> queryBatchCursor) {
+            public List<T> apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
                 cachePostBatchResumeToken(queryBatchCursor);
                 return convertResults(queryBatchCursor.next());
             }
@@ -83,9 +88,9 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
 
     @Override
     public List<T> tryNext() {
-        return resumeableOperation(new Function<ChangeStreamCursor<RawBsonDocument>, List<T>>() {
+        return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, List<T>>() {
             @Override
-            public List<T> apply(final ChangeStreamCursor<RawBsonDocument> queryBatchCursor) {
+            public List<T> apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
                 cachePostBatchResumeToken(queryBatchCursor);
                 return convertResults(queryBatchCursor.tryNext());
             }
@@ -128,7 +133,12 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
         return postBatchResumeToken;
     }
 
-    private void cachePostBatchResumeToken(final ChangeStreamCursor<RawBsonDocument> queryBatchCursor) {
+    @Override
+    public BsonDocument getResumeToken() {
+        return changeStreamOperation.getResumeToken();
+    }
+
+    private void cachePostBatchResumeToken(final BatchCursor<RawBsonDocument> queryBatchCursor) {
         postBatchResumeToken = queryBatchCursor.getPostBatchResumeToken();
         if (postBatchResumeToken != null) {
             changeStreamOperation.resumeToken(postBatchResumeToken);
@@ -143,14 +153,13 @@ final class ChangeStreamBatchCursor<T> implements ChangeStreamCursor<T> {
                 if (!rawDocument.containsKey("_id")) {
                     throw new MongoChangeStreamException("Cannot provide resume functionality when the resume token is missing.");
                 }
-                changeStreamOperation.resumeToken(rawDocument.getDocument("_id"));
                 results.add(rawDocument.decode(changeStreamOperation.getDecoder()));
             }
         }
         return results;
     }
 
-    <R> R resumeableOperation(final Function<ChangeStreamCursor<RawBsonDocument>, R> function) {
+    <R> R resumeableOperation(final Function<BatchCursor<RawBsonDocument>, R> function) {
         while (true) {
             try {
                 return function.apply(wrapped);

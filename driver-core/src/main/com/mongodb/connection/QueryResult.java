@@ -31,10 +31,12 @@ import java.util.List;
  */
 @Deprecated
 public class QueryResult<T> {
+    private static final String POST_BATCH_RESUME_TOKEN = "postBatchResumeToken";
+
     private final MongoNamespace namespace;
     private final List<T> results;
     private final long cursorId;
-    private final BsonDocument postBatchResumeToken;
+    private final BsonDocument cursorDocument;
     private final ServerAddress serverAddress;
 
     /**
@@ -55,15 +57,15 @@ public class QueryResult<T> {
      * @param namespace            the namespace
      * @param results              the query results
      * @param cursorId             the cursor id
-     * @param postBatchResumeToken the postBatchResumeToken
+     * @param cursorDocument       the cursor document
      * @param serverAddress        the server address
      */
-    public QueryResult(final MongoNamespace namespace, final List<T> results, final long cursorId, final BsonDocument postBatchResumeToken,
+    public QueryResult(final MongoNamespace namespace, final List<T> results, final long cursorId, final BsonDocument cursorDocument,
         final ServerAddress serverAddress) {
         this.namespace = namespace;
         this.results = results;
         this.cursorId = cursorId;
-        this.postBatchResumeToken = postBatchResumeToken;
+        this.cursorDocument = cursorDocument;
         this.serverAddress = serverAddress;
     }
 
@@ -101,7 +103,10 @@ public class QueryResult<T> {
      * @since 3.11
      */
     public BsonDocument getPostBatchResumeToken() {
-        return postBatchResumeToken;
+        if (cursorDocument != null) {
+            return cursorDocument.getDocument(POST_BATCH_RESUME_TOKEN, null);
+        }
+        return null;
     }
 
     /**

@@ -81,10 +81,18 @@ public interface MongoCursor<TResult> extends Iterator<TResult>, Closeable {
     ServerAddress getServerAddress();
 
     /**
-     * Returns the postBatchResumeToken
+     * Returns the postBatchResumeToken. For testing purposes only.
      *
      * @return the postBatchResumeToken, which can be null.
      */
     @Nullable
     BsonDocument getPostBatchResumeToken();
+
+    /**
+     * Returns the resume token.
+     *
+     * @return the resume token, which can be null.
+     */
+    @Nullable
+    BsonDocument getResumeToken();
 }

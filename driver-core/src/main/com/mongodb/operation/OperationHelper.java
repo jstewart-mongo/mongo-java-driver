@@ -367,10 +367,9 @@ final class OperationHelper {
     private static <T> QueryResult<T> cursorDocumentToQueryResult(final BsonDocument cursorDocument, final ServerAddress serverAddress,
                                                                   final String fieldNameContainingBatch) {
         long cursorId = ((BsonInt64) cursorDocument.get("id")).getValue();
-        BsonDocument postBatchResumeToken = cursorDocument.getDocument("postBatchResumeToken", null);
         MongoNamespace queryResultNamespace = new MongoNamespace(cursorDocument.getString("ns").getValue());
         return new QueryResult<T>(queryResultNamespace, BsonDocumentWrapperHelper.<T>toList(cursorDocument, fieldNameContainingBatch),
-                cursorId, postBatchResumeToken, serverAddress);
+                cursorId, cursorDocument, serverAddress);
     }
 
     static <T> SingleResultCallback<T> releasingCallback(final SingleResultCallback<T> wrapped, final AsyncConnectionSource source) {

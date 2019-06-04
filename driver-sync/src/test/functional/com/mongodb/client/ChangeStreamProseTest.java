@@ -166,7 +166,6 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
-        collection.insertOne(Document.parse("{ _id: 43, x: 2 }"));
         BsonDocument startAfterResumeToken = cursor.next().getResumeToken();
         BsonDocument expectedResumeToken = cursor.next().getResumeToken();
         cursor.close();
@@ -189,16 +188,44 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
-        BsonDocument resumeToken = cursor.next().getResumeToken();
+        BsonDocument resumeToken = cursor.getResumeToken();
         assertNotNull(resumeToken);
         assertEquals(resumeToken, cursor.getPostBatchResumeToken());
+        cursor.close();
+    }
+
+    //
+    // For a ChangeStream under these conditions:
+    //   Running against a server <4.0.7.
+    //   The batch is not empty.
+    //   The batch hasn’t been iterated at all.
+    //   The stream has iterated beyond a previous batch and a getMore command has just been executed.
+    // Expected result:
+    //   getResumeToken must return the _id of the previous document returned if one exists.
+    //   getResumeToken must return resumeAfter from the initial aggregate if the option was specified.
+    //   If the resumeAfter option was not specified, the getResumeToken result must be empty.
+    //
+    @Test
+    public void testGetResumeTokenReturnsIdOfPreviousDocument() {
+        assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
+
+        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        assertNull(cursor.getResumeToken());
+        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
+        BsonDocument resumeToken = cursor.next().getResumeToken();
+        assertEquals(resumeToken, cursor.getResumeToken());
+        cursor.close();
+
+        MongoCursor<ChangeStreamDocument<Document>> cursor2 = collection.watch().resumeAfter(resumeToken).iterator();
+        assertEquals(resumeToken, cursor2.getResumeToken());
+        cursor2.close();
     }
 
     private void setFailPoint(final String command, final int errCode) {
         failPointDocument = new BsonDocument("configureFailPoint", new BsonString("failCommand"))
                 .append("mode", new BsonDocument("times", new BsonInt32(1)))
                 .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(command))))
-                .append("errorCode", new BsonInt32(errCode)));
+                        .append("errorCode", new BsonInt32(errCode)));
         getCollectionHelper().runAdminCommand(failPointDocument);
     }
 

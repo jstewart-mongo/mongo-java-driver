@@ -80,4 +80,9 @@ class MongoMappingCursor<T, U> implements MongoCursor<U> {
     public BsonDocument getPostBatchResumeToken() {
         return null;
     }
+
+    @Override
+    public BsonDocument getResumeToken() {
+        return null;
+    }
 }

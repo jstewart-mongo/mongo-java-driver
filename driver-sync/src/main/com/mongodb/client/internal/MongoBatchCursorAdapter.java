@@ -19,9 +19,9 @@ package com.mongodb.client.internal;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.lang.Nullable;
 import com.mongodb.operation.BatchCursor;
-import com.mongodb.operation.ChangeStreamCursor;
 import org.bson.BsonDocument;
 
 import java.util.List;
@@ -36,6 +36,7 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
     private final BatchCursor<T> batchCursor;
     private List<T> curBatch;
     private int curPos;
+    private BsonDocument resumeToken;
 
     public MongoBatchCursorAdapter(final BatchCursor<T> batchCursor) {
         this.batchCursor = batchCursor;
@@ -98,19 +99,27 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
             curBatch = null;
             curPos = 0;
         }
+
+        setResumeToken(nextInBatch);
         return nextInBatch;
     }
 
-    /**
-     * Gets the post batch resume token.
-     *
-     * @return the post batch resume token
-     */
+    private void setResumeToken(final T nextInBatch) {
+        if (nextInBatch instanceof ChangeStreamDocument) {
+            resumeToken = ((ChangeStreamDocument) nextInBatch).getResumeToken();
+        }
+    }
+
     @Nullable
     public BsonDocument getPostBatchResumeToken() {
-        if (batchCursor instanceof ChangeStreamCursor) {
-            return ((ChangeStreamCursor) batchCursor).getPostBatchResumeToken();
+        return batchCursor.getPostBatchResumeToken();
+    }
+
+    @Nullable
+    public BsonDocument getResumeToken() {
+        if (resumeToken != null) {
+            return resumeToken;
         }
-        return null;
+        return batchCursor.getResumeToken();
     }
 }
