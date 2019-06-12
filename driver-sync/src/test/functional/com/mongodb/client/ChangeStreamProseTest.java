@@ -34,6 +34,7 @@ import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -41,9 +42,6 @@ import static org.junit.Assume.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
 public class ChangeStreamProseTest extends DatabaseTestCase {
-    private static final long START_TIME_MS = 1L;
-    private static final long ERROR_GENERATING_INTERVAL = 121000L;
-
     private BsonDocument failPointDocument;
 
     @Before
@@ -101,11 +99,10 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     @Test
     public void testResumeOneTimeOnError() {
         assumeTrue(serverVersionAtLeast(4, 0));
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        collection.insertOne(Document.parse("{ x: 1 }"));
         setFailPoint("getMore", 10107);
-        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
-        assertNull(cursor.tryNext());
         try {
-            collection.insertOne(Document.parse("{ x: 1 }"));
             assertNotNull(cursor.next());
         } finally {
             disableFailPoint();
@@ -119,10 +116,16 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     @Test
     public void testNoResumeForAggregateErrors() {
         boolean exceptionFound = false;
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = null;
+
         try {
-            collection.watch(asList(Document.parse("{ $unsupportedStage: { _id : 0 } }"))).iterator();
+            cursor = collection.watch(asList(Document.parse("{ $unsupportedStage: { _id : 0 } }"))).iterator();
         } catch (MongoCommandException e) {
             exceptionFound = true;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
         assertTrue(exceptionFound);
     }
@@ -134,7 +137,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     @Test
     public void testNoResumeErrors() {
         assumeTrue(serverVersionAtLeast(4, 0));
-        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         collection.insertOne(Document.parse("{ x: 1 }"));
 
         for (int errCode : asList(136, 237, 11601)) {
@@ -158,6 +161,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     public void testCursorNotClosed() {
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         assertNotNull(cursor.getServerCursor());
+        cursor.close();
     }
 
     @Test
@@ -166,6 +170,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
+        collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
         BsonDocument startAfterResumeToken = cursor.next().getResumeToken();
         BsonDocument expectedResumeToken = cursor.next().getResumeToken();
         cursor.close();
@@ -186,9 +191,9 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     public void testGetResumeTokenReturnsPostBatchResumeToken() {
         assumeTrue(serverVersionAtLeast(asList(4, 0, 7)));
 
-        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
-        BsonDocument resumeToken = cursor.getResumeToken();
+        BsonDocument resumeToken = cursor.next().getResumeToken();
         assertNotNull(resumeToken);
         assertEquals(resumeToken, cursor.getPostBatchResumeToken());
         cursor.close();
@@ -209,16 +214,47 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     public void testGetResumeTokenReturnsIdOfPreviousDocument() {
         assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
 
-        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
         assertNull(cursor.getResumeToken());
-        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
-        BsonDocument resumeToken = cursor.next().getResumeToken();
-        assertEquals(resumeToken, cursor.getResumeToken());
         cursor.close();
 
-        MongoCursor<ChangeStreamDocument<Document>> cursor2 = collection.watch().resumeAfter(resumeToken).iterator();
+        cursor = collection.watch().iterator();
+        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
+        cursor.next();
+        BsonDocument resumeToken = cursor.getResumeToken();
+        assertNotNull(resumeToken);
+
+        collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
+        cursor.next();
+        assertNotNull(cursor.getResumeToken());
+        assertNotEquals(resumeToken, cursor.getResumeToken());
+        cursor.close();
+
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor2 = collection.watch().resumeAfter(resumeToken).iterator();
         assertEquals(resumeToken, cursor2.getResumeToken());
         cursor2.close();
+    }
+
+    //
+    // For a ChangeStream under these conditions:
+    //   The batch is not empty.
+    //   The batch has been iterated up to but not including the last element.
+    // Expected result:
+    //   getResumeToken must return the _id of the previous document returned.
+    //
+    @Test
+    public void testGetResumeTokenEqualsIdOfPreviousDocument() {
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().batchSize(3).iterator();
+        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
+        collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
+        collection.insertOne(Document.parse("{ _id: 44, x: 1 }"));
+        cursor.next();
+        cursor.next();
+        try {
+            assertEquals(cursor.getPostBatchResumeToken(), cursor.getResumeToken());
+        } finally {
+            cursor.close();
+        }
     }
 
     private void setFailPoint(final String command, final int errCode) {

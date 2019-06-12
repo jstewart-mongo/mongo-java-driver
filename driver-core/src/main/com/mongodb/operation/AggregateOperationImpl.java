@@ -258,7 +258,7 @@ class AggregateOperationImpl<T> implements AsyncReadOperation<AsyncBatchCursor<T
             return cursorDocumentToQueryResult(result.getDocument(CURSOR), description.getServerAddress());
         } else {
             return new QueryResult<T>(namespace, BsonDocumentWrapperHelper.<T>toList(result, RESULT), 0L,
-                    result.getDocument(CURSOR), description.getServerAddress());
+                    description.getServerAddress());
         }
     }
 

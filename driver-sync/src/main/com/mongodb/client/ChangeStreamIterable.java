@@ -120,4 +120,11 @@ public interface ChangeStreamIterable<TResult> extends MongoIterable<ChangeStrea
      * @mongodb.driver.manual changeStreams/#change-stream-start-after
      */
     ChangeStreamIterable<TResult> startAfter(BsonDocument startAfter);
+
+    /**
+     * Returns an iterator over elements of type {@code ChangeStreamDocument<T>}.
+     *
+     * @return an Iterator.
+     */
+    MongoChangeStreamCursor<ChangeStreamDocument<TResult>> iterator();
 }

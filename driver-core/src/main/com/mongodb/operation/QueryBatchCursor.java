@@ -41,6 +41,7 @@ import java.util.NoSuchElementException;
 import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CursorHelper.getNumberToReturn;
+import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.getMoreCursorDocumentToQueryResult;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.QueryHelper.translateCommandException;
@@ -217,6 +218,7 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
 
     @Override
     public BsonDocument getResumeToken() {
+        LOGGER.warn("--- Calling QueryBatchCursor.getResumeToken == null");
         return null;
     }
 
@@ -275,12 +277,12 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
         serverCursor = queryResult.getCursor();
         nextBatch = queryResult.getResults().isEmpty() ? null : queryResult.getResults();
         count += queryResult.getResults().size();
-        postBatchResumeToken = queryResult.getPostBatchResumeToken();
     }
 
     private void initFromCommandResult(final BsonDocument getMoreCommandResultDocument) {
         QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(getMoreCommandResultDocument.getDocument("cursor"),
                                                                         connectionSource.getServerDescription().getAddress());
+        postBatchResumeToken = getMoreCommandResultDocument.getDocument("cursor").getDocument("postBatchResumeToken", null);
         initFromQueryResult(queryResult);
     }
 

@@ -21,6 +21,7 @@ import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
@@ -136,6 +137,11 @@ class ChangeStreamIterableImpl<TResult> extends MongoIterableImpl<ChangeStreamDo
     }
 
     @Override
+    public MongoChangeStreamCursor<ChangeStreamDocument<TResult>> iterator() {
+        return new MongoChangeStreamCursorImpl<ChangeStreamDocument<TResult>>(execute());
+    }
+
+    @Override
     public ReadOperation<BatchCursor<ChangeStreamDocument<TResult>>> asReadOperation() {
         return createChangeStreamOperation(codec);
     }
@@ -160,5 +166,9 @@ class ChangeStreamIterableImpl<TResult> extends MongoIterableImpl<ChangeStreamDo
             aggregateList.add(obj.toBsonDocument(BsonDocument.class, codecRegistry));
         }
         return aggregateList;
+    }
+
+    private BatchCursor<ChangeStreamDocument<TResult>> execute() {
+        return getExecutor().execute(asReadOperation(), getReadPreference(), getReadConcern(), getClientSession());
     }
 }
