@@ -60,7 +60,6 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     private final Decoder<T> decoder;
     private final ChangeStreamLevel changeStreamLevel;
 
-    private BsonDocument resumeToken;
     private BsonDocument resumeAfter;
     private BsonDocument startAfter;
     private BsonTimestamp startAtOperationTime;
@@ -120,28 +119,6 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
      */
     public FullDocument getFullDocument() {
         return fullDocument;
-    }
-
-    /**
-     * Cache the logical starting point for the new change stream.
-     *
-     * @param resumeToken the resumeToken
-     * @return this
-     */
-    public ChangeStreamOperation<T> resumeToken(final BsonDocument resumeToken) {
-        this.resumeToken = resumeToken;
-        return this;
-    }
-
-    /**
-     * Returns the cached logical starting point for the new change stream.
-     *
-     * <p>A null value represents the server default.</p>
-     *
-     * @return the resumeToken
-     */
-    public BsonDocument getResumeToken() {
-        return resumeToken;
     }
 
     /**

@@ -97,14 +97,7 @@ public interface BatchCursor<T> extends Iterator<List<T>>, Closeable {
     ServerAddress getServerAddress();
 
     /**
-     * Returns the resume token
-     *
-     * @return the resume token
-     */
-    BsonDocument getResumeToken();
-
-    /**
-     * Returns the postBatchResumeToken. For testing purposes only.
+     * Returns the postBatchResumeToken. For internal use only.
      *
      * @return the postBatchResumeToken
      */

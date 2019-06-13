@@ -345,9 +345,6 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
 
                     @Override
                     BsonDocument getResumeToken() { null }
-
-                    @Override
-                    BsonDocument getPostBatchResumeToken() { null }
                 }
 
         def executor = new TestOperationExecutor([tailableCursor, tailableCursor, tailableCursor, tailableCursor])

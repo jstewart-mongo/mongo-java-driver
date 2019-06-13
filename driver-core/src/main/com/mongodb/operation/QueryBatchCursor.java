@@ -41,7 +41,6 @@ import java.util.NoSuchElementException;
 import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.operation.CursorHelper.getNumberToReturn;
-import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.getMoreCursorDocumentToQueryResult;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.QueryHelper.translateCommandException;
@@ -214,12 +213,6 @@ class QueryBatchCursor<T> implements BatchCursor<T> {
         }
 
         return serverAddress;
-    }
-
-    @Override
-    public BsonDocument getResumeToken() {
-        LOGGER.warn("--- Calling QueryBatchCursor.getResumeToken == null");
-        return null;
     }
 
     @Override

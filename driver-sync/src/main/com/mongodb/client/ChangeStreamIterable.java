@@ -38,6 +38,14 @@ import java.util.concurrent.TimeUnit;
 public interface ChangeStreamIterable<TResult> extends MongoIterable<ChangeStreamDocument<TResult>> {
 
     /**
+     * Returns a cursor used for iterating over elements of type {@code ChnageStreamDocument<TResult>}. The cursor has
+     * a covariant return type to additionally provide a method to access the resume token in change stream batches.
+     *
+     * @return the change stream cursor
+     */
+    MongoChangeStreamCursor<ChangeStreamDocument<TResult>> cursor();
+
+    /**
      * Sets the fullDocument value.
      *
      * @param fullDocument the fullDocument
@@ -120,11 +128,4 @@ public interface ChangeStreamIterable<TResult> extends MongoIterable<ChangeStrea
      * @mongodb.driver.manual changeStreams/#change-stream-start-after
      */
     ChangeStreamIterable<TResult> startAfter(BsonDocument startAfter);
-
-    /**
-     * Returns an iterator over elements of type {@code ChangeStreamDocument<T>}.
-     *
-     * @return an Iterator.
-     */
-    MongoChangeStreamCursor<ChangeStreamDocument<TResult>> iterator();
 }

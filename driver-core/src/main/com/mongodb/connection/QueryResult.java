@@ -30,8 +30,6 @@ import java.util.List;
  */
 @Deprecated
 public class QueryResult<T> {
-    private static final String POST_BATCH_RESUME_TOKEN = "postBatchResumeToken";
-
     private final MongoNamespace namespace;
     private final List<T> results;
     private final long cursorId;
