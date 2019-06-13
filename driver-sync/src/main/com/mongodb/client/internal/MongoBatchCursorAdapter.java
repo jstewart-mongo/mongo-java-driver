@@ -99,8 +99,4 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
 
         return nextInBatch;
     }
-
-    protected BatchCursor<T> getBatchCursor() {
-        return batchCursor;
-    }
 }

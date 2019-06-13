@@ -25,7 +25,7 @@ import org.bson.BsonDocument;
  * An application should ensure that a cursor is closed in all circumstances, e.g. using a try-with-resources statement:
  *
  * <blockquote><pre>
- * try (MongoChangeStreamCursor&lt;Document&gt; cursor = collection.find().iterator()) {
+ * try (MongoChangeStreamCursor&lt;Document&gt; cursor = collection.find().cursor()) {
  *     while (cursor.hasNext()) {
  *         System.out.println(cursor.next());
  *     }
@@ -35,18 +35,11 @@ import org.bson.BsonDocument;
  * @since 3.11
  * @param <TResult> The type of documents the cursor contains
  */
-
 public interface MongoChangeStreamCursor<TResult> extends MongoCursor<TResult> {
     /**
-     * Returns the postBatchResumeToken. For testing purposes only.
-     *
-     * @return the postBatchResumeToken, which can be null.
-     */
-    @Nullable
-    BsonDocument getPostBatchResumeToken();
-
-    /**
-     * Returns the resume token.
+     * Returns the resume token. If a batch has been iterated to the last change stream document in the batch
+     * and a postBatchResumeToken is included in the document, the postBatchResumeToken will be returned.
+     * Otherwise, the resume token contained in the last change stream document will be returned.
      *
      * @return the resume token, which can be null.
      */

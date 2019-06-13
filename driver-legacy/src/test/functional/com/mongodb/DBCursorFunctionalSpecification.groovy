@@ -344,9 +344,6 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
                     ServerAddress getServerAddress() { null }
 
                     @Override
-                    BsonDocument getResumeToken() { null }
-
-                    @Override
                     BsonDocument getPostBatchResumeToken() { null }
                 }
 

@@ -445,13 +445,8 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
         }
 
         @Override
-        public BsonDocument getResumeToken() {
-            return delegate.getResumeToken();
-        }
-
-        @Override
         public BsonDocument getPostBatchResumeToken() {
-            return delegate.getPostBatchResumeToken();
+            throw new UnsupportedOperationException();
         }
     }
 
