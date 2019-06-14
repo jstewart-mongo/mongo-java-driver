@@ -46,11 +46,9 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
         this.initialStartAtOperationTime = changeStreamOperation.getStartAtOperationTime();
         if (changeStreamOperation.getStartAfter() != null) {
             resumeToken = changeStreamOperation.getStartAfter();
-            changeStreamOperation.startAfter(null);
         }
         else if (changeStreamOperation.getResumeAfter() != null) {
             resumeToken = changeStreamOperation.getResumeAfter();
-            changeStreamOperation.resumeAfter(null);
         }
         if (resumeToken == null) {
             changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());

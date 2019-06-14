@@ -42,7 +42,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
                                  final AsyncReadBinding binding) {
         changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
         this.changeStreamOperation = changeStreamOperation;
-        //this.resumeToken = changeStreamOperation.getResumeToken();
+        this.resumeToken = changeStreamOperation.getResumeAfter();
         this.wrapped = wrapped;
         this.binding = binding;
         binding.retain();
