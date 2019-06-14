@@ -38,6 +38,7 @@ public interface MongoIterable<TResult> extends Iterable<TResult> {
      * Returns a cursor used for iterating over elements of type {@code TResult}. The cursor is primarily used for change streams.
      *
      * @return a cursor
+     * @since 3.11
      */
     MongoCursor<TResult> cursor();
 

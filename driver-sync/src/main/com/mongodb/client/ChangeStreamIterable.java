@@ -42,6 +42,7 @@ public interface ChangeStreamIterable<TResult> extends MongoIterable<ChangeStrea
      * a covariant return type to additionally provide a method to access the resume token in change stream batches.
      *
      * @return the change stream cursor
+     * @since 3.11
      */
     MongoChangeStreamCursor<ChangeStreamDocument<TResult>> cursor();
 

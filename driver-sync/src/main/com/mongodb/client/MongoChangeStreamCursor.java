@@ -41,7 +41,7 @@ public interface MongoChangeStreamCursor<TResult> extends MongoCursor<TResult> {
      * and a postBatchResumeToken is included in the document, the postBatchResumeToken will be returned.
      * Otherwise, the resume token contained in the last change stream document will be returned.
      *
-     * @return the resume token, which can be null.
+     * @return the resume token, which can be null if the cursor has either not been iterated yet, or the cursor is closed.
      */
     @Nullable
     BsonDocument getResumeToken();
