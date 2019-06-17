@@ -97,7 +97,7 @@ public interface BatchCursor<T> extends Iterator<List<T>>, Closeable {
     ServerAddress getServerAddress();
 
     /**
-     * Returns the postBatchResumeToken. For internal use only.
+     * Returns the postBatchResumeToken.
      *
      * @return the postBatchResumeToken
      */
