@@ -35,7 +35,6 @@ public class MongoChangeStreamCursorImpl<T> implements MongoChangeStreamCursor<T
     private int curPos;
     private BsonDocument resumeToken;
 
-
     public MongoChangeStreamCursorImpl(final BatchCursor<RawBsonDocument> batchCursor, final Decoder<T> decoder,
                                        @Nullable final BsonDocument initialResumeToken) {
         this.batchCursor = batchCursor;

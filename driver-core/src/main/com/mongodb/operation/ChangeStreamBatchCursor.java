@@ -23,7 +23,6 @@ import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.binding.ReadBinding;
 import org.bson.BsonDocument;
-import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
 
 import java.util.ArrayList;
@@ -35,7 +34,6 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
     private final ReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
-    private BsonTimestamp initialStartAtOperationTime;
     private BatchCursor<RawBsonDocument> wrapped;
     private BsonDocument resumeToken;
 
@@ -43,7 +41,6 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
                             final BatchCursor<RawBsonDocument> wrapped,
                             final ReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
-        this.initialStartAtOperationTime = changeStreamOperation.getStartAtOperationTime();
         if (changeStreamOperation.getStartAfter() != null) {
             resumeToken = changeStreamOperation.getStartAfter();
         }
@@ -52,7 +49,6 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
         }
         if (resumeToken == null) {
             changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
-            resumeToken = wrapped.getPostBatchResumeToken();
         }
         this.wrapped = wrapped;
         this.binding = binding.retain();
@@ -148,7 +144,6 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
                 }
                 results.add(rawDocument.decode(changeStreamOperation.getDecoder()));
             }
-            // Should there be no postBatchResumeToken, cache the _id of the last document.
             resumeToken = rawDocuments.get(rawDocuments.size() - 1).getDocument("_id");
         }
         return results;
@@ -172,7 +167,6 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
             } else if (changeStreamOperation.getStartAtOperationTime() != null
                     && binding.getReadConnectionSource().getServerDescription().getMaxWireVersion() >= 7) {
                 changeStreamOperation.resumeAfter(null);
-                changeStreamOperation.startAtOperationTime(initialStartAtOperationTime);
             } else {
                 changeStreamOperation.resumeAfter(null);
                 changeStreamOperation.startAtOperationTime(null);

@@ -19,6 +19,7 @@ package com.mongodb.client;
 import com.mongodb.MongoChangeStreamException;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
+import com.mongodb.MongoQueryException;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import org.bson.BsonArray;
@@ -50,7 +51,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         assumeTrue(canRunTests());
         super.setUp();
 
-        // create the collection before starting transactions
+        // create the collection before starting tests
         collection.insertOne(Document.parse("{ _id : 0 }"));
     }
 
@@ -80,20 +81,23 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //
     @Test
     public void testMissingResumeTokenThrowsException() {
-        assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
         boolean exceptionFound = false;
 
         MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch(asList(Aggregates.project(Document.parse("{ _id : 0 }"))))
                 .iterator();
         try {
             collection.insertOne(Document.parse("{ x: 1 }"));
-            assertNull(cursor.next());
+            cursor.next();
         } catch (MongoChangeStreamException e) {
             exceptionFound = true;
+        } catch (MongoQueryException e) {
+            if (serverVersionAtLeast(4, 1)) {
+                exceptionFound = true;
+            }
         } finally {
             cursor.close();
         }
-        assumeTrue(exceptionFound);
+        assertTrue(exceptionFound);
     }
 
     //
@@ -168,24 +172,8 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         cursor.close();
     }
 
-    @Test
-    public void testGetResumeTokenFields() {
-        assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
-
-        MongoCursor<ChangeStreamDocument<Document>> cursor = collection.watch().iterator();
-        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
-        collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
-        BsonDocument startAfterResumeToken = cursor.next().getResumeToken();
-        BsonDocument expectedResumeToken = cursor.next().getResumeToken();
-        cursor.close();
-
-        cursor = collection.watch().resumeAfter(startAfterResumeToken).iterator();
-        assertEquals(expectedResumeToken, cursor.next().getResumeToken());
-        cursor.close();
-    }
-
     //
-    // For a ChangeStream under these conditions:
+    // 11. For a ChangeStream under these conditions:
     //   Running against a server >=4.0.7.
     //   The batch is empty or has been iterated to the last document.
     // Expected result:
@@ -196,49 +184,40 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         assumeTrue(serverVersionAtLeast(asList(4, 0, 7)));
 
         MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
+        assertNull(cursor.getResumeToken());
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
         assertEquals(cursor.next().getResumeToken(), cursor.getResumeToken());
         cursor.close();
     }
 
     //
-    // For a ChangeStream under these conditions:
+    // 12. For a ChangeStream under these conditions:
     //   Running against a server <4.0.7.
-    //   The batch is not empty.
-    //   The batch hasn’t been iterated at all.
-    //   The stream has iterated beyond a previous batch and a getMore command has just been executed.
+    //   The batch is empty or has been iterated to the last document.
     // Expected result:
-    //   getResumeToken must return the _id of the previous document returned if one exists.
+    //   getResumeToken must return the _id of the last document returned if one exists.
     //   getResumeToken must return resumeAfter from the initial aggregate if the option was specified.
     //   If the resumeAfter option was not specified, the getResumeToken result must be empty.
-    //
+    //j
     @Test
-    public void testGetResumeTokenReturnsIdOfPreviousDocument() {
+    public void testGetResumeTokenShouldWorkAsExpectedForEmptyAndNotIteratedBatch() {
         assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
 
         MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
         assertNull(cursor.getResumeToken());
-        cursor.close();
-
-        cursor = collection.watch().cursor();
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
-        cursor.next();
-        BsonDocument resumeToken = cursor.getResumeToken();
-        assertNotNull(resumeToken);
-
         collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
-        cursor.next();
-        assertNotNull(cursor.getResumeToken());
-        assertNotEquals(resumeToken, cursor.getResumeToken());
+        BsonDocument resumeToken = cursor.next().getResumeToken();
+        BsonDocument expectedResumeToken = cursor.next().getResumeToken();
         cursor.close();
 
-        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor2 = collection.watch().resumeAfter(resumeToken).cursor();
-        assertEquals(resumeToken, cursor2.getResumeToken());
-        cursor2.close();
+        cursor = collection.watch().resumeAfter(resumeToken).cursor();
+        assertEquals(expectedResumeToken, cursor.next().getResumeToken());
+        cursor.close();
     }
 
     //
-    // For a ChangeStream under these conditions:
+    // 13. For a ChangeStream under these conditions:
     //   The batch is not empty.
     //   The batch has been iterated up to but not including the last element.
     // Expected result:
@@ -251,18 +230,15 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
         collection.insertOne(Document.parse("{ _id: 44, x: 1 }"));
         try {
-            BsonDocument firstResumeToken = cursor.next().getResumeToken();
-            BsonDocument secondResumeToken = cursor.next().getResumeToken();
-            assertNotNull(firstResumeToken);
-            assertNotNull(secondResumeToken);
-            assertNotEquals(firstResumeToken, secondResumeToken);
+            cursor.next();
+            assertEquals(cursor.next().getResumeToken().get("_data"), cursor.getResumeToken().get("_data"));
         } finally {
             cursor.close();
         }
     }
 
     //
-    // For a ChangeStream under these conditions:
+    // 14. For a ChangeStream under these conditions: (startAfter only supported for 4.2)
     //   The batch is not empty.
     //   The batch hasn’t been iterated at all.
     //   Only the initial aggregate command has been executed.
@@ -277,11 +253,11 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
         collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
-        BsonDocument startAfterResumeToken = cursor.next().getResumeToken();
+        BsonDocument resumeToken = cursor.next().getResumeToken();
         cursor.close();
 
-        cursor = collection.watch().startAfter(startAfterResumeToken).cursor();
-        assertEquals(startAfterResumeToken, cursor.getResumeToken());
+        cursor = collection.watch().startAfter(resumeToken).cursor();
+        assertEquals(resumeToken, cursor.getResumeToken());
         cursor.close();
 
         cursor = collection.watch().cursor();
@@ -290,7 +266,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     }
 
     //
-    // For a ChangeStream under these conditions:
+    // 14. For a ChangeStream under these conditions:
     //   The batch is not empty.
     //   The batch hasn’t been iterated at all.
     //   Only the initial aggregate command has been executed.
@@ -316,7 +292,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     }
 
     //
-    // For a ChangeStream under these conditions:
+    // 15. For a ChangeStream under these conditions:
     //   Running against a server >=4.0.7.
     //   The batch is not empty.
     //   The batch hasn’t been iterated at all.
@@ -334,6 +310,38 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
         assertEquals(resumeToken, cursor.getResumeToken());
         cursor.close();
+    }
+
+    //
+    // 16. For a ChangeStream under these conditions:
+    //   Running against a server <4.0.7.
+    //   The batch is not empty.
+    //   The batch hasn’t been iterated at all.
+    //   The stream has iterated beyond a previous batch and a getMore command has just been executed.
+    // Expected result:
+    //   getResumeToken must return the _id of the previous document returned if one exists.
+    //   getResumeToken must return resumeAfter from the initial aggregate if the option was specified.
+    //   If the resumeAfter option was not specified, the getResumeToken result must be empty.
+    //
+    @Test
+    public void testGetResumeTokenReturnsIdOfPreviousDocument() {
+        assumeTrue(serverVersionLessThan(asList(4, 0, 7)));
+
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
+        collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
+        cursor.next();
+        BsonDocument resumeToken = cursor.getResumeToken();
+        assertNotNull(resumeToken);
+
+        collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
+        cursor.next();
+        assertNotNull(cursor.getResumeToken());
+        assertNotEquals(resumeToken, cursor.getResumeToken());
+        cursor.close();
+
+        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor2 = collection.watch().resumeAfter(resumeToken).cursor();
+        assertEquals(resumeToken, cursor2.getResumeToken());
+        cursor2.close();
     }
 
     private void setFailPoint(final String command, final int errCode) {
