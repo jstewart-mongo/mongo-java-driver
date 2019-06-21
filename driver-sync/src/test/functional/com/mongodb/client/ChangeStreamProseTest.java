@@ -43,7 +43,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
@@ -185,7 +184,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //   getResumeToken must return the postBatchResumeToken from the current command response.
     //
     @Test
-    public void testGetResumeTokenReturnsPostBatchResumeToken() {
+    public void testGetResumeTokenReturnsPostBatchResumeToken() throws NoSuchFieldException, IllegalAccessException {
         assumeTrue(serverVersionAtLeast(asList(4, 0, 7)));
 
         MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
@@ -197,8 +196,6 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
             // use reflection to access the postBatchResumeToken
             BatchCursor<?> batchCursor = getBatchCursor(cursor);
             assertEquals(cursor.getResumeToken(), batchCursor.getPostBatchResumeToken());
-        } catch (Exception e) {
-            fail(e.getMessage());
         } finally {
             cursor.close();
         }
@@ -349,7 +346,8 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //   getResumeToken must return the postBatchResumeToken from the previous command response.
     //
     @Test
-    public void testGetResumeTokenReturnsPostBatchResumeTokenAfterGetMore() {
+    public void testGetResumeTokenReturnsPostBatchResumeTokenAfterGetMore()
+            throws NoSuchFieldException, IllegalAccessException {
         assumeTrue(serverVersionAtLeast(asList(4, 0, 7)));
 
         MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
@@ -363,14 +361,12 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
             cursor.next();
             assertEquals(cursor.getResumeToken(), batchCursor.getPostBatchResumeToken());
-        } catch (Exception e) {
-            fail(e.getMessage());
         } finally {
             cursor.close();
         }
     }
 
-    private BatchCursor<?> getBatchCursor(MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor)
+    private BatchCursor<?> getBatchCursor(final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor)
             throws NoSuchFieldException, IllegalAccessException {
         Field batchCursorField = MongoChangeStreamCursorImpl.class.getDeclaredField("batchCursor");
         batchCursorField.setAccessible(true);
