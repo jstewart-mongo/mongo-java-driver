@@ -269,7 +269,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //   Only the initial aggregate command has been executed.
     // Expected result:
     //   getResumeToken must return startAfter from the initial aggregate if the option was specified.
-    //   If startAfter is specified, the getResumeToken result must be empty.
+    //   If startAfter is not specified, the getResumeToken result must be empty.
     //
     @Test
     public void testGetResumeTokenReturnsStartAfter() {
