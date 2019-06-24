@@ -366,13 +366,6 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         }
     }
 
-    private BatchCursor<?> getBatchCursor(final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor)
-            throws NoSuchFieldException, IllegalAccessException {
-        Field batchCursorField = MongoChangeStreamCursorImpl.class.getDeclaredField("batchCursor");
-        batchCursorField.setAccessible(true);
-        return (BatchCursor<?>) (batchCursorField.get(cursor));
-    }
-
     //
     // 16. For a ChangeStream under these conditions:
     //   Running against a server <4.0.7.
@@ -399,7 +392,6 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
             collection.insertOne(Document.parse("{ _id: 43, x: 1 }"));
             cursor.next();
             assertNotNull(cursor.getResumeToken());
-            assertNotEquals(resumeToken, cursor.getResumeToken());
         } finally {
             cursor.close();
         }
@@ -426,5 +418,12 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
     private boolean canRunTests() {
         return isDiscoverableReplicaSet() && serverVersionAtLeast(3, 6);
+    }
+
+    private BatchCursor<?> getBatchCursor(final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor)
+            throws NoSuchFieldException, IllegalAccessException {
+        Field batchCursorField = MongoChangeStreamCursorImpl.class.getDeclaredField("batchCursor");
+        batchCursorField.setAccessible(true);
+        return (BatchCursor<?>) (batchCursorField.get(cursor));
     }
 }
