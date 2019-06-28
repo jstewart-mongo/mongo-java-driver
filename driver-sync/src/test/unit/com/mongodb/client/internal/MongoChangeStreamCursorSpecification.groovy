@@ -18,7 +18,7 @@ package com.mongodb.client.internal
 
 import com.mongodb.ServerAddress
 import com.mongodb.ServerCursor
-import com.mongodb.operation.BatchCursor
+import com.mongodb.operation.AggregateResponseBatchCursor
 import org.bson.BsonDocument
 import org.bson.BsonInt32;
 import org.bson.codecs.Decoder;
@@ -30,7 +30,7 @@ import spock.lang.Specification
 class MongoChangeStreamCursorSpecification extends Specification {
     def 'should get server cursor and address'() {
         given:
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def decoder = Mock(Decoder)
         def resumeToken = Mock(BsonDocument)
         def address = new ServerAddress('host', 27018)
@@ -46,7 +46,7 @@ class MongoChangeStreamCursorSpecification extends Specification {
 
     def 'should throw on remove'() {
         given:
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def decoder = Mock(Decoder)
         def resumeToken = Mock(BsonDocument)
         def cursor = new MongoChangeStreamCursorImpl(batchCursor, decoder, resumeToken)
@@ -60,7 +60,7 @@ class MongoChangeStreamCursorSpecification extends Specification {
 
     def 'should close batch cursor'() {
         given:
-        def batchCursor = Mock(BatchCursor)
+        def batchCursor = Mock(AggregateResponseBatchCursor)
         def decoder = Mock(Decoder)
         def resumeToken = Mock(BsonDocument)
         def cursor = new MongoChangeStreamCursorImpl(batchCursor, decoder, resumeToken)
@@ -74,7 +74,7 @@ class MongoChangeStreamCursorSpecification extends Specification {
 
     def 'next should throw if there is no next'() {
         given:
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def codec = new RawBsonDocumentCodec();
         def resumeToken = Mock(BsonDocument)
 
@@ -96,7 +96,7 @@ class MongoChangeStreamCursorSpecification extends Specification {
                           RawBsonDocument.parse('{ _id: { _data: 2 }, x: 1 }')]
         def secondBatch = [RawBsonDocument.parse('{ _id: { _data: 3 }, x: 2 }')]
 
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def codec = new RawBsonDocumentCodec();
         def resumeToken = Mock(BsonDocument)
 
@@ -121,7 +121,7 @@ class MongoChangeStreamCursorSpecification extends Specification {
                           RawBsonDocument.parse('{ _id: { _data: 2 }, x: 1 }')]
         def secondBatch = [RawBsonDocument.parse('{ _id: { _data: 3 }, x: 2 }')]
 
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def codec = new RawBsonDocumentCodec();
         def resumeToken = Mock(BsonDocument)
 
@@ -143,7 +143,7 @@ class MongoChangeStreamCursorSpecification extends Specification {
                           RawBsonDocument.parse('{ _id: { _data: 2 }, x: 1 }')]
         def secondBatch = [RawBsonDocument.parse('{ _id: { _data: 3 }, x: 2 }')]
 
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def codec = new RawBsonDocumentCodec();
         def resumeToken = new BsonDocument('_data', new BsonInt32(1))
 
@@ -172,13 +172,14 @@ class MongoChangeStreamCursorSpecification extends Specification {
                           RawBsonDocument.parse('{ _id: { _data: 2 }, x: 1 }')]
         def secondBatch = [RawBsonDocument.parse('{ _id: { _data: 3 }, x: 2 }')]
 
-        def batchCursor = Stub(BatchCursor)
+        def batchCursor = Stub(AggregateResponseBatchCursor)
         def codec = new RawBsonDocumentCodec();
         def resumeToken = new BsonDocument('_data', new BsonInt32(1))
 
         batchCursor.hasNext() >>> [true, true, true, false]
         batchCursor.tryNext() >>> [firstBatch, null, secondBatch, null]
         batchCursor.getPostBatchResumeToken() >>> [new BsonDocument('_data', new BsonInt32(2)),
+                                                   new BsonDocument('_data', new BsonInt32(2)),
                                                    new BsonDocument('_data', new BsonInt32(2)),
                                                    new BsonDocument('_data', new BsonInt32(2)),
                                                    new BsonDocument('_data', new BsonInt32(3)),

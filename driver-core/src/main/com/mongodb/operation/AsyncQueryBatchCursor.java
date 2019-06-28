@@ -21,7 +21,7 @@ import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerCursor;
-import com.mongodb.async.AsyncBatchCursor;
+import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.connection.AsyncConnection;
@@ -32,6 +32,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
+import org.bson.BsonTimestamp;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
@@ -53,8 +54,11 @@ import static com.mongodb.operation.QueryHelper.translateCommandException;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
-class AsyncQueryBatchCursor<T> implements AsyncBatchCursor<T> {
+class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
+    private static final String CURSOR = "cursor";
+    private static final String POST_BATCH_RESUME_TOKEN = "postBatchResumeToken";
+    private static final String OPERATION_TIME = "operationTime";
 
     private final MongoNamespace namespace;
     private final int limit;
@@ -66,9 +70,17 @@ class AsyncQueryBatchCursor<T> implements AsyncBatchCursor<T> {
     private volatile QueryResult<T> firstBatch;
     private volatile int batchSize;
     private final AtomicInteger count = new AtomicInteger();
+    private volatile BsonDocument postBatchResumeToken;
+    private volatile BsonTimestamp operationTime;
 
     AsyncQueryBatchCursor(final QueryResult<T> firstBatch, final int limit, final int batchSize, final long maxTimeMS,
                           final Decoder<T> decoder, final AsyncConnectionSource connectionSource, final AsyncConnection connection) {
+        this(firstBatch, limit, batchSize, maxTimeMS, decoder, connectionSource, connection, null);
+    }
+
+    AsyncQueryBatchCursor(final QueryResult<T> firstBatch, final int limit, final int batchSize, final long maxTimeMS,
+                          final Decoder<T> decoder, final AsyncConnectionSource connectionSource, final AsyncConnection connection,
+                          final BsonDocument result) {
         isTrueArgument("maxTimeMS >= 0", maxTimeMS >= 0);
         this.maxTimeMS = maxTimeMS;
         this.namespace = firstBatch.getNamespace();
@@ -79,6 +91,10 @@ class AsyncQueryBatchCursor<T> implements AsyncBatchCursor<T> {
         this.cursor = new AtomicReference<ServerCursor>(firstBatch.getCursor());
         this.connectionSource = notNull("connectionSource", connectionSource);
         this.count.addAndGet(firstBatch.getResults().size());
+        if (result != null) {
+            this.operationTime = result.getTimestamp(OPERATION_TIME, null);
+            this.postBatchResumeToken = getPostBatchResumeTokenFromResponse(result);
+        }
 
         if (firstBatch.getCursor() != null) {
             connectionSource.retain();
@@ -120,6 +136,16 @@ class AsyncQueryBatchCursor<T> implements AsyncBatchCursor<T> {
     @Override
     public boolean isClosed() {
         return isClosed.get();
+    }
+
+    @Override
+    public BsonDocument getPostBatchResumeToken() {
+        return postBatchResumeToken;
+    }
+
+    @Override
+    public BsonTimestamp getOperationTime() {
+        return operationTime;
     }
 
     private void next(final SingleResultCallback<List<T>> callback, final boolean tryNext) {
@@ -297,8 +323,9 @@ class AsyncQueryBatchCursor<T> implements AsyncBatchCursor<T> {
                 connection.release();
                 callback.onResult(null, translatedException);
             } else {
-                QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(result.getDocument("cursor"),
+                QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(result.getDocument(CURSOR),
                         connection.getDescription().getServerAddress());
+                postBatchResumeToken = getPostBatchResumeTokenFromResponse(result);
                 handleGetMoreQueryResult(connection, callback, queryResult, tryNext);
             }
         }
@@ -329,5 +356,13 @@ class AsyncQueryBatchCursor<T> implements AsyncBatchCursor<T> {
 
     ServerCursor getServerCursor() {
         return cursor.get();
+    }
+
+    private BsonDocument getPostBatchResumeTokenFromResponse(final BsonDocument result) {
+        BsonDocument cursor = result.getDocument(CURSOR, null);
+        if (cursor != null) {
+            return cursor.getDocument(POST_BATCH_RESUME_TOKEN, null);
+        }
+        return null;
     }
 }

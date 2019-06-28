@@ -557,7 +557,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
         cursor.close()
         waitForLastRelease(async ? getAsyncCluster() : getCluster())
 
-        operation.resumeAfter(result.head().getDocument('_id'))
+        operation.resumeAfter(result.head().getDocument('_id')).startAtOperationTime(null)
         cursor = execute(operation, async)
         result = nextAndClean(cursor, async)
 
@@ -593,7 +593,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
         cursor.close()
         waitForLastRelease(async ? getAsyncCluster() : getCluster())
 
-        cursor = execute(operation.startAfter(result.head().getDocument('_id')), async)
+        cursor = execute(operation.startAfter(result.head().getDocument('_id')).startAtOperationTime(null), async)
         result = nextAndClean(cursor, async)
 
         then:

@@ -26,7 +26,7 @@ import com.mongodb.client.model.Collation
 import com.mongodb.client.model.changestream.ChangeStreamDocument
 import com.mongodb.client.model.changestream.ChangeStreamLevel
 import com.mongodb.client.model.changestream.FullDocument
-import com.mongodb.operation.BatchCursor
+import com.mongodb.operation.AggregateResponseBatchCursor
 import com.mongodb.operation.ChangeStreamOperation
 import com.mongodb.client.ClientSession
 import org.bson.BsonDocument
@@ -93,7 +93,7 @@ class ChangeStreamIterableSpecification extends Specification {
 
     def 'should use ClientSession'() {
         given:
-        def batchCursor = Stub(BatchCursor) {
+        def batchCursor = Stub(AggregateResponseBatchCursor) {
             _ * hasNext() >> { false }
         }
         def executor = new TestOperationExecutor([batchCursor, batchCursor])
@@ -259,7 +259,7 @@ class ChangeStreamIterableSpecification extends Specification {
     }
 
     def cursor(List<?> cannedResults) {
-        Stub(BatchCursor) {
+        Stub(AggregateResponseBatchCursor) {
             def counter = 0
             def results
             def getResult = {

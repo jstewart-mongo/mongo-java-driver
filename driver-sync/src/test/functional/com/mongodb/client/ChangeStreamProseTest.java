@@ -23,7 +23,7 @@ import com.mongodb.MongoQueryException;
 import com.mongodb.client.internal.MongoChangeStreamCursorImpl;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
-import com.mongodb.operation.BatchCursor;
+import com.mongodb.operation.AggregateResponseBatchCursor;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -194,7 +194,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
             cursor.next();
 
             // use reflection to access the postBatchResumeToken
-            BatchCursor<?> batchCursor = getBatchCursor(cursor);
+            AggregateResponseBatchCursor<?> batchCursor = getBatchCursor(cursor);
             assertEquals(cursor.getResumeToken(), batchCursor.getPostBatchResumeToken());
         } finally {
             cursor.close();
@@ -354,7 +354,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         collection.insertOne(Document.parse("{ _id: 42, x: 1 }"));
         try {
             // use reflection to access the postBatchResumeToken
-            BatchCursor<?> batchCursor = getBatchCursor(cursor);
+            AggregateResponseBatchCursor<?> batchCursor = getBatchCursor(cursor);
 
             // check equality in the case where the batch has not been iterated at all
             assertEquals(cursor.getResumeToken(), batchCursor.getPostBatchResumeToken());
@@ -420,10 +420,10 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         return isDiscoverableReplicaSet() && serverVersionAtLeast(3, 6);
     }
 
-    private BatchCursor<?> getBatchCursor(final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor)
+    private AggregateResponseBatchCursor<?> getBatchCursor(final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor)
             throws NoSuchFieldException, IllegalAccessException {
         Field batchCursorField = MongoChangeStreamCursorImpl.class.getDeclaredField("batchCursor");
         batchCursorField.setAccessible(true);
-        return (BatchCursor<?>) (batchCursorField.get(cursor));
+        return (AggregateResponseBatchCursor<?>) (batchCursorField.get(cursor));
     }
 }

@@ -21,8 +21,10 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
+import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadBinding;
 import org.bson.BsonDocument;
+import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
 
 import java.util.ArrayList;
@@ -30,40 +32,40 @@ import java.util.List;
 
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
 
-final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
+final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T> {
     private final ReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
-    private BatchCursor<RawBsonDocument> wrapped;
+    private AggregateResponseBatchCursor<RawBsonDocument> wrapped;
     private BsonDocument resumeToken;
 
     ChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
-                            final BatchCursor<RawBsonDocument> wrapped,
+                            final AggregateResponseBatchCursor<RawBsonDocument> wrapped,
                             final ReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
+        this.wrapped = wrapped;
+        this.binding = binding.retain();
         if (changeStreamOperation.getStartAfter() != null) {
             resumeToken = changeStreamOperation.getStartAfter();
         } else if (changeStreamOperation.getResumeAfter() != null) {
             resumeToken = changeStreamOperation.getResumeAfter();
-        } else if (wrapped.getPostBatchResumeToken() != null) {
-            resumeToken = wrapped.getPostBatchResumeToken();
-        }
-        if (resumeToken == null) {
+        } else if (changeStreamOperation.getStartAtOperationTime() == null && getMaxWireVersion() >= 7
+                && wrapped.getPostBatchResumeToken() == null) {
+            changeStreamOperation.startAtOperationTime(wrapped.getOperationTime());
+        } else if (resumeToken == null) {
             changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
         }
-        this.wrapped = wrapped;
-        this.binding = binding.retain();
     }
 
-    BatchCursor<RawBsonDocument> getWrapped() {
+    AggregateResponseBatchCursor<RawBsonDocument> getWrapped() {
         return wrapped;
     }
 
     @Override
     public boolean hasNext() {
-        return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, Boolean>() {
+        return resumeableOperation(new Function<AggregateResponseBatchCursor<RawBsonDocument>, Boolean>() {
             @Override
-            public Boolean apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
+            public Boolean apply(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
                 return queryBatchCursor.hasNext();
             }
         });
@@ -71,9 +73,9 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
 
     @Override
     public List<T> next() {
-        return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, List<T>>() {
+        return resumeableOperation(new Function<AggregateResponseBatchCursor<RawBsonDocument>, List<T>>() {
             @Override
-            public List<T> apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
+            public List<T> apply(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
                 List<T> results = convertResults(queryBatchCursor.next());
                 cachePostBatchResumeToken(queryBatchCursor);
                 return results;
@@ -83,9 +85,9 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
 
     @Override
     public List<T> tryNext() {
-        return resumeableOperation(new Function<BatchCursor<RawBsonDocument>, List<T>>() {
+        return resumeableOperation(new Function<AggregateResponseBatchCursor<RawBsonDocument>, List<T>>() {
             @Override
-            public List<T> apply(final BatchCursor<RawBsonDocument> queryBatchCursor) {
+            public List<T> apply(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
                 List<T> results = convertResults(queryBatchCursor.tryNext());
                 cachePostBatchResumeToken(queryBatchCursor);
                 return results;
@@ -126,10 +128,15 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
 
     @Override
     public BsonDocument getPostBatchResumeToken() {
-        return resumeToken;
+        return wrapped.getPostBatchResumeToken();
     }
 
-    private void cachePostBatchResumeToken(final BatchCursor<RawBsonDocument> queryBatchCursor) {
+    @Override
+    public BsonTimestamp getOperationTime() {
+        return changeStreamOperation.getStartAtOperationTime();
+    }
+
+    private void cachePostBatchResumeToken(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
         if (queryBatchCursor.getPostBatchResumeToken() != null) {
             resumeToken = queryBatchCursor.getPostBatchResumeToken();
         }
@@ -150,7 +157,16 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
         return results;
     }
 
-    <R> R resumeableOperation(final Function<BatchCursor<RawBsonDocument>, R> function) {
+    private int getMaxWireVersion() {
+        ConnectionSource source = binding.getReadConnectionSource();
+        try {
+            return source.getServerDescription().getMaxWireVersion();
+        } finally {
+            source.release();
+        }
+    }
+
+    <R> R resumeableOperation(final Function<AggregateResponseBatchCursor<RawBsonDocument>, R> function) {
         while (true) {
             try {
                 return function.apply(wrapped);
@@ -165,8 +181,7 @@ final class ChangeStreamBatchCursor<T> implements BatchCursor<T> {
             if (resumeToken != null) {
                 changeStreamOperation.startAtOperationTime(null);
                 changeStreamOperation.resumeAfter(resumeToken);
-            } else if (changeStreamOperation.getStartAtOperationTime() != null
-                    && binding.getReadConnectionSource().getServerDescription().getMaxWireVersion() >= 7) {
+            } else if (changeStreamOperation.getStartAtOperationTime() != null && getMaxWireVersion() >= 7) {
                 changeStreamOperation.resumeAfter(null);
             } else {
                 changeStreamOperation.resumeAfter(null);

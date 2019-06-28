@@ -17,10 +17,13 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoChangeStreamException;
+import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import org.bson.BsonDocument;
+import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
 
 import java.util.ArrayList;
@@ -30,25 +33,45 @@ import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandli
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 
-final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
+final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private final AsyncReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
     private volatile BsonDocument resumeToken;
-    private volatile AsyncBatchCursor<RawBsonDocument> wrapped;
+    private volatile AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped;
 
     AsyncChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
-                                 final AsyncBatchCursor<RawBsonDocument> wrapped,
+                                 final AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped,
                                  final AsyncReadBinding binding) {
-        changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
         this.changeStreamOperation = changeStreamOperation;
-        this.resumeToken = changeStreamOperation.getResumeAfter();
+        if (changeStreamOperation.getStartAfter() != null) {
+            resumeToken = changeStreamOperation.getStartAfter();
+        } else if (changeStreamOperation.getResumeAfter() != null) {
+            resumeToken = changeStreamOperation.getResumeAfter();
+        } else if (changeStreamOperation.getStartAtOperationTime() == null
+                && wrapped.getPostBatchResumeToken() == null) {
+            binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+                @Override
+                public void onResult(final AsyncConnectionSource result, final Throwable t) {
+                    if (t != null) {
+                        changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
+                    } else {
+                        if (result.getServerDescription().getMaxWireVersion() >= 7) {
+                            changeStreamOperation.startAtOperationTime(wrapped.getOperationTime());
+                        }
+                    }
+                    result.release();
+                }
+            });
+        } else if (resumeToken == null) {
+            changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
+        }
         this.wrapped = wrapped;
         this.binding = binding;
         binding.retain();
     }
 
-    AsyncBatchCursor<RawBsonDocument> getWrapped() {
+    AsyncAggregateResponseBatchCursor<RawBsonDocument> getWrapped() {
         return wrapped;
     }
 
@@ -56,7 +79,8 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
     public void next(final SingleResultCallback<List<T>> callback) {
         resumeableOperation(new AsyncBlock() {
             @Override
-            public void apply(final AsyncBatchCursor<RawBsonDocument> cursor, final SingleResultCallback<List<RawBsonDocument>> callback) {
+            public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
+                              final SingleResultCallback<List<RawBsonDocument>> callback) {
                 cursor.next(callback);
             }
         }, convertResultsCallback(callback));
@@ -66,7 +90,8 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
     public void tryNext(final SingleResultCallback<List<T>> callback) {
         resumeableOperation(new AsyncBlock() {
             @Override
-            public void apply(final AsyncBatchCursor<RawBsonDocument> cursor, final SingleResultCallback<List<RawBsonDocument>> callback) {
+            public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
+                              final SingleResultCallback<List<RawBsonDocument>> callback) {
                 cursor.tryNext(callback);
             }
         }, convertResultsCallback(callback));
@@ -93,8 +118,18 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
         binding.release();
     }
 
+    @Override
+    public BsonDocument getPostBatchResumeToken() {
+        return wrapped.getPostBatchResumeToken();
+    }
+
+    @Override
+    public BsonTimestamp getOperationTime() {
+        return changeStreamOperation.getStartAtOperationTime();
+    }
+
     private interface AsyncBlock {
-        void apply(AsyncBatchCursor<RawBsonDocument> cursor, SingleResultCallback<List<RawBsonDocument>> callback);
+        void apply(AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor, SingleResultCallback<List<RawBsonDocument>> callback);
     }
 
     private void resumeableOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
@@ -114,6 +149,26 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
     }
 
     private void retryOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
+        changeStreamOperation.startAfter(null);
+        if (resumeToken != null) {
+            changeStreamOperation.startAtOperationTime(null);
+            changeStreamOperation.resumeAfter(resumeToken);
+        } else if (changeStreamOperation.getStartAtOperationTime() != null) {
+            binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+                @Override
+                public void onResult(final AsyncConnectionSource result, final Throwable t) {
+                    if (result.getServerDescription().getMaxWireVersion() >= 7) {
+                        changeStreamOperation.resumeAfter(null);
+                    } else {
+                        changeStreamOperation.resumeAfter(null);
+                        changeStreamOperation.startAtOperationTime(null);
+                    }
+                }
+            });
+        } else {
+            changeStreamOperation.resumeAfter(null);
+            changeStreamOperation.startAtOperationTime(null);
+        }
         if (resumeToken != null) {
             changeStreamOperation.startOperationTimeForResume(null);
             changeStreamOperation.resumeAfter(resumeToken);
@@ -147,9 +202,9 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncBatchCursor<T> {
                             );
                             return;
                         }
-                        resumeToken = rawDocument.getDocument("_id");
                         results.add(rawDocument.decode(changeStreamOperation.getDecoder()));
                     }
+                    resumeToken = rawDocuments.get(rawDocuments.size() - 1).getDocument("_id");
                     callback.onResult(results, null);
                 } else {
                     callback.onResult(null, null);

@@ -20,6 +20,7 @@ import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.lang.Nullable;
+import com.mongodb.operation.AggregateResponseBatchCursor;
 import com.mongodb.operation.BatchCursor;
 import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
@@ -29,7 +30,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 public class MongoChangeStreamCursorImpl<T> implements MongoChangeStreamCursor<T> {
-    private final BatchCursor<RawBsonDocument> batchCursor;
+    private final AggregateResponseBatchCursor<RawBsonDocument> batchCursor;
     private final Decoder<T> decoder;
     private List<RawBsonDocument> curBatch;
     private int curPos;
@@ -37,7 +38,7 @@ public class MongoChangeStreamCursorImpl<T> implements MongoChangeStreamCursor<T
 
     public MongoChangeStreamCursorImpl(final BatchCursor<RawBsonDocument> batchCursor, final Decoder<T> decoder,
                                        @Nullable final BsonDocument initialResumeToken) {
-        this.batchCursor = batchCursor;
+        this.batchCursor = (AggregateResponseBatchCursor<RawBsonDocument>) batchCursor;
         this.decoder = decoder;
         this.resumeToken = initialResumeToken;
     }
@@ -78,7 +79,9 @@ public class MongoChangeStreamCursorImpl<T> implements MongoChangeStreamCursor<T
         }
 
         if (curBatch == null) {
-            resumeToken = batchCursor.getPostBatchResumeToken();
+            if (batchCursor.getPostBatchResumeToken() != null) {
+                resumeToken = batchCursor.getPostBatchResumeToken();
+            }
         }
 
         return curBatch == null ? null : getNextInBatch();

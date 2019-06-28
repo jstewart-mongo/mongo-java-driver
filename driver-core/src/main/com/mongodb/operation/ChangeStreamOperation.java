@@ -17,6 +17,7 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncReadBinding;
@@ -334,7 +335,8 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, wrapped.execute(binding), binding);
+        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this,
+                (AggregateResponseBatchCursor<RawBsonDocument>) wrapped.execute(binding), binding);
     }
 
     @Override
@@ -345,7 +347,8 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 if (t != null) {
                     callback.onResult(null, t);
                 } else {
-                    callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this, result, binding), null);
+                    callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this,
+                            (AsyncAggregateResponseBatchCursor<RawBsonDocument>) result, binding), null);
                 }
             }
         });
