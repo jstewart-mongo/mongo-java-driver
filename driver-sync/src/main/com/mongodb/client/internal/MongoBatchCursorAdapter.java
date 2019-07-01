@@ -96,7 +96,6 @@ public class MongoBatchCursorAdapter<T> implements MongoCursor<T> {
             curBatch = null;
             curPos = 0;
         }
-
         return nextInBatch;
     }
 }

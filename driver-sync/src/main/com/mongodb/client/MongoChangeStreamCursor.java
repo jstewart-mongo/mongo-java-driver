@@ -23,7 +23,7 @@ import org.bson.BsonDocument;
  * The Mongo Cursor interface for change streams implementing the iterator protocol.
  * <p>
  * An application should ensure that a cursor is closed in all circumstances, e.g. using a try-with-resources statement:
- *
+ * </p>
  * <blockquote><pre>
  * try (MongoChangeStreamCursor&lt;Document&gt; cursor = collection.find().cursor()) {
  *     while (cursor.hasNext()) {

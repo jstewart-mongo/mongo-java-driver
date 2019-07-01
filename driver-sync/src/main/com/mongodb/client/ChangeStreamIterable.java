@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 public interface ChangeStreamIterable<TResult> extends MongoIterable<ChangeStreamDocument<TResult>> {
 
     /**
-     * Returns a cursor used for iterating over elements of type {@code ChnageStreamDocument<TResult>}. The cursor has
+     * Returns a cursor used for iterating over elements of type {@code ChangeStreamDocument<TResult>}. The cursor has
      * a covariant return type to additionally provide a method to access the resume token in change stream batches.
      *
      * @return the change stream cursor

@@ -44,31 +44,28 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
                                  final AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped,
                                  final AsyncReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
+        this.wrapped = wrapped;
+        this.binding = binding;
+        binding.retain();
         if (changeStreamOperation.getStartAfter() != null) {
             resumeToken = changeStreamOperation.getStartAfter();
         } else if (changeStreamOperation.getResumeAfter() != null) {
             resumeToken = changeStreamOperation.getResumeAfter();
         } else if (changeStreamOperation.getStartAtOperationTime() == null
                 && wrapped.getPostBatchResumeToken() == null) {
-            binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+            getMaxWireVersion(new SingleResultCallback<Integer>() {
                 @Override
-                public void onResult(final AsyncConnectionSource result, final Throwable t) {
+                public void onResult(final Integer result, final Throwable t) {
                     if (t != null) {
                         changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
                     } else {
-                        if (result.getServerDescription().getMaxWireVersion() >= 7) {
+                        if (result >= 7) {
                             changeStreamOperation.startAtOperationTime(wrapped.getOperationTime());
                         }
                     }
-                    result.release();
                 }
             });
-        } else if (resumeToken == null) {
-            changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
         }
-        this.wrapped = wrapped;
-        this.binding = binding;
-        binding.retain();
     }
 
     AsyncAggregateResponseBatchCursor<RawBsonDocument> getWrapped() {
@@ -82,6 +79,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
             public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
                               final SingleResultCallback<List<RawBsonDocument>> callback) {
                 cursor.next(callback);
+                cachePostBatchResumeToken(cursor);
             }
         }, convertResultsCallback(callback));
     }
@@ -93,8 +91,15 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
             public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
                               final SingleResultCallback<List<RawBsonDocument>> callback) {
                 cursor.tryNext(callback);
+                cachePostBatchResumeToken(cursor);
             }
         }, convertResultsCallback(callback));
+    }
+
+    @Override
+    public void close() {
+        wrapped.close();
+        binding.release();
     }
 
     @Override
@@ -113,12 +118,6 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     @Override
-    public void close() {
-        wrapped.close();
-        binding.release();
-    }
-
-    @Override
     public BsonDocument getPostBatchResumeToken() {
         return wrapped.getPostBatchResumeToken();
     }
@@ -126,6 +125,52 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     @Override
     public BsonTimestamp getOperationTime() {
         return changeStreamOperation.getStartAtOperationTime();
+    }
+
+    private void cachePostBatchResumeToken(final AsyncAggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
+        if (queryBatchCursor.getPostBatchResumeToken() != null) {
+            resumeToken = queryBatchCursor.getPostBatchResumeToken();
+        }
+    }
+
+    private SingleResultCallback<List<RawBsonDocument>> convertResultsCallback(final SingleResultCallback<List<T>> callback) {
+        return errorHandlingCallback(new SingleResultCallback<List<RawBsonDocument>>() {
+            @Override
+            public void onResult(final List<RawBsonDocument> rawDocuments, final Throwable t) {
+                if (t != null) {
+                    callback.onResult(null, t);
+                } else if (rawDocuments != null) {
+                    List<T> results = new ArrayList<T>();
+                    for (RawBsonDocument rawDocument : rawDocuments) {
+                        if (!rawDocument.containsKey("_id")) {
+                            callback.onResult(null,
+                                    new MongoChangeStreamException("Cannot provide resume functionality when the resume token is missing.")
+                            );
+                            return;
+                        }
+                        results.add(rawDocument.decode(changeStreamOperation.getDecoder()));
+                    }
+                    resumeToken = rawDocuments.get(rawDocuments.size() - 1).getDocument("_id");
+                    callback.onResult(results, null);
+                } else {
+                    callback.onResult(null, null);
+                }
+            }
+        }, LOGGER);
+    }
+
+    private void getMaxWireVersion(final SingleResultCallback<Integer> callback) {
+        binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+            @Override
+            public void onResult(final AsyncConnectionSource result, final Throwable t) {
+                if (t != null) {
+                    callback.onResult(null, t);
+                } else {
+                    callback.onResult(result.getServerDescription().getMaxWireVersion(), null);
+                }
+                result.release();
+            }
+        });
     }
 
     private interface AsyncBlock {
@@ -154,10 +199,10 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
             changeStreamOperation.startAtOperationTime(null);
             changeStreamOperation.resumeAfter(resumeToken);
         } else if (changeStreamOperation.getStartAtOperationTime() != null) {
-            binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+            getMaxWireVersion(new SingleResultCallback<Integer>() {
                 @Override
-                public void onResult(final AsyncConnectionSource result, final Throwable t) {
-                    if (result.getServerDescription().getMaxWireVersion() >= 7) {
+                public void onResult(final Integer result, final Throwable t) {
+                    if (result != null && result >= 7) {
                         changeStreamOperation.resumeAfter(null);
                     } else {
                         changeStreamOperation.resumeAfter(null);
@@ -185,31 +230,5 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
                 }
             }
         });
-    }
-
-    private SingleResultCallback<List<RawBsonDocument>> convertResultsCallback(final SingleResultCallback<List<T>> callback) {
-        return errorHandlingCallback(new SingleResultCallback<List<RawBsonDocument>>() {
-            @Override
-            public void onResult(final List<RawBsonDocument> rawDocuments, final Throwable t) {
-                if (t != null) {
-                    callback.onResult(null, t);
-                } else if (rawDocuments != null) {
-                    List<T> results = new ArrayList<T>();
-                    for (RawBsonDocument rawDocument : rawDocuments) {
-                        if (!rawDocument.containsKey("_id")) {
-                            callback.onResult(null,
-                                    new MongoChangeStreamException("Cannot provide resume functionality when the resume token is missing.")
-                            );
-                            return;
-                        }
-                        results.add(rawDocument.decode(changeStreamOperation.getDecoder()));
-                    }
-                    resumeToken = rawDocuments.get(rawDocuments.size() - 1).getDocument("_id");
-                    callback.onResult(results, null);
-                } else {
-                    callback.onResult(null, null);
-                }
-            }
-        }, LOGGER);
     }
 }

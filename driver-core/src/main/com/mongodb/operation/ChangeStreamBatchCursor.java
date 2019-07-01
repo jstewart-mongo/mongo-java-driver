@@ -43,8 +43,8 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
                             final AggregateResponseBatchCursor<RawBsonDocument> wrapped,
                             final ReadBinding binding) {
         this.changeStreamOperation = changeStreamOperation;
-        this.wrapped = wrapped;
         this.binding = binding.retain();
+        this.wrapped = wrapped;
         if (changeStreamOperation.getStartAfter() != null) {
             resumeToken = changeStreamOperation.getStartAfter();
         } else if (changeStreamOperation.getResumeAfter() != null) {
@@ -52,8 +52,6 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
         } else if (changeStreamOperation.getStartAtOperationTime() == null && getMaxWireVersion() >= 7
                 && wrapped.getPostBatchResumeToken() == null) {
             changeStreamOperation.startAtOperationTime(wrapped.getOperationTime());
-        } else if (resumeToken == null) {
-            changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
         }
     }
 
