@@ -49,6 +49,9 @@ public final class UpdateRequest extends WriteRequest {
         if (updateType != Type.UPDATE && updateType != Type.REPLACE) {
             throw new IllegalArgumentException("Update type must be UPDATE or REPLACE");
         }
+        if (update != null && !update.isDocument() && !update.isArray()) {
+            throw new IllegalArgumentException("Update operation type must be a document or a pipeline");
+        }
 
         this.filter = notNull("filter", filter);
         this.update = notNull("update", update);
@@ -72,11 +75,26 @@ public final class UpdateRequest extends WriteRequest {
 
     /**
      * Gets the update.
+     *
+     * @return the update
+     * @deprecated use {@link #getUpdateValue()} instead
+     */
+    @Deprecated
+    public BsonDocument getUpdate() {
+        if (update.isDocument()) {
+            return update.asDocument();
+        }
+        return null;
+    }
+
+    /**
+     * Gets the update.
      * Note: Starting with server version 4.2+, the update can be either a document or a pipeline.
      *
      * @return the update
+     * @since 3.11
      */
-    public BsonValue getUpdate() {
+    public BsonValue getUpdateValue() {
         return update;
     }
 

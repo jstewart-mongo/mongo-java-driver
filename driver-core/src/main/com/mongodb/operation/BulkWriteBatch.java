@@ -388,21 +388,22 @@ final class BulkWriteBatch {
                 writer.writeName("q");
                 getCodec(update.getFilter()).encode(writer, update.getFilter(), EncoderContext.builder().build());
 
-                if (update.getUpdate().isDocument()) {
-                    if (update.getUpdate().asDocument().isEmpty()) {
-                        throw new IllegalArgumentException("Invalid BSON document for an update");
-                    }
+                BsonValue updateValue = update.getUpdateValue();
+                if ((!updateValue.isDocument() && !updateValue.isArray())
+                        || (updateValue.isDocument() && updateValue.asDocument().isEmpty())
+                        || (updateValue.isArray() && updateValue.asArray().isEmpty())) {
+                    throw new IllegalArgumentException("Invalid BSON document for an update");
+                }
+
+                if (updateValue.isDocument()) {
                     writer.writeName("u");
-                    getCodec(update.getUpdate().asDocument()).encode(writer, update.getUpdate().asDocument(),
-                            EncoderContext.builder().build());
-                } else if (update.getType() == WriteRequest.Type.UPDATE && update.getUpdate().isArray()) {
+                    getCodec(updateValue.asDocument()).encode(writer, updateValue.asDocument(), EncoderContext.builder().build());
+                } else if (update.getType() == WriteRequest.Type.UPDATE && updateValue.isArray()) {
                     writer.writeStartArray("u");
-                    for (BsonValue cur : update.getUpdate().asArray()) {
+                    for (BsonValue cur : updateValue.asArray()) {
                         getCodec(cur.asDocument()).encode(writer, cur.asDocument(), EncoderContext.builder().build());
                     }
                     writer.writeEndArray();
-                } else {
-                    throw new IllegalArgumentException("Invalid BSON value for an update");
                 }
 
                 if (update.isMulti()) {

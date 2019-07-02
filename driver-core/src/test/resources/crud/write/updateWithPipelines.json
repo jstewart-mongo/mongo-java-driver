@@ -17,6 +17,8 @@
     }
   ],
   "minServerVersion": "4.1.11",
+  "collection_name": "test",
+  "database_name": "crud-tests",
   "tests": [
     {
       "description": "UpdateOne using pipelines",
@@ -72,7 +74,7 @@
                 }
               ]
             },
-            "command_name": "updateOne",
+            "command_name": "update",
             "database_name": "crud-tests"
           }
         }
@@ -142,11 +144,12 @@
                         "foo": 1
                       }
                     }
-                  ]
+                  ],
+                  "multi": true
                 }
               ]
             },
-            "command_name": "updateMany",
+            "command_name": "update",
             "database_name": "crud-tests"
           }
         }
@@ -197,23 +200,16 @@
           "command_started_event": {
             "command": {
               "findAndModify": "test",
-              "updates": [
+              "update": [
                 {
-                  "q": {
-                    "_id": 1
-                  },
-                  "u": [
-                    {
-                      "$project": {
-                        "x": 1
-                      }
-                    },
-                    {
-                      "$addFields": {
-                        "foo": 1
-                      }
-                    }
-                  ]
+                  "$project": {
+                    "x": 1
+                  }
+                },
+                {
+                  "$addFields": {
+                    "foo": 1
+                  }
                 }
               ]
             },

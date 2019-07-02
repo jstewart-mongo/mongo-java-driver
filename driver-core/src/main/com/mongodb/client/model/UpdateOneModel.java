@@ -134,7 +134,7 @@ public final class UpdateOneModel<T> extends WriteModel<T> {
     public String toString() {
         return "UpdateOneModel{"
                 + "filter=" + filter
-                + ", update=" + (update != null ? update : getUpdatePipeline())
+                + ", update=" + (update != null ? update : updatePipeline)
                 + ", options=" + options
                 + '}';
     }

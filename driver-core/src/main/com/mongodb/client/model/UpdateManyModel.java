@@ -140,7 +140,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
     public String toString() {
         return "UpdateManyModel{"
                 + "filter=" + filter
-                + ", update=" + (update != null ? update : getUpdatePipeline())
+                + ", update=" + (update != null ? update : updatePipeline)
                 + ", options=" + options
                 + '}';
     }

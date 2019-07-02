@@ -1210,7 +1210,7 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
      * @throws com.mongodb.MongoWriteConcernException if the write failed due being unable to fulfil the write concern
@@ -1227,7 +1227,7 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter        a document describing the query filter, which may not be null.
-     * @param update        a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update        a pipeline describing the update, which may not be null.
      * @param updateOptions the options to apply to the update operation
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
@@ -1246,7 +1246,7 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
      * @throws com.mongodb.MongoWriteConcernException if the write failed due being unable to fulfil the write concern
@@ -1264,7 +1264,7 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter        a document describing the query filter, which may not be null.
-     * @param update        a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update        a pipeline describing the update, which may not be null.
      * @param updateOptions the options to apply to the update operation
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
@@ -1349,7 +1349,7 @@ public interface MongoCollection<TDocument> {
      * Update all documents in the collection according to the specified arguments.
      *
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @return the result of the update many operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
      * @throws com.mongodb.MongoWriteConcernException if the write failed due being unable to fulfil the write concern
@@ -1365,7 +1365,7 @@ public interface MongoCollection<TDocument> {
      * Update all documents in the collection according to the specified arguments.
      *
      * @param filter        a document describing the query filter, which may not be null.
-     * @param update        a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update        a pipeline describing the update, which may not be null.
      * @param updateOptions the options to apply to the update operation
      * @return the result of the update many operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
@@ -1383,7 +1383,7 @@ public interface MongoCollection<TDocument> {
      *
      * @param clientSession the client session with which to associate this operation
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @return the result of the update many operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
      * @throws com.mongodb.MongoWriteConcernException if the write failed due being unable to fulfil the write concern
@@ -1400,7 +1400,7 @@ public interface MongoCollection<TDocument> {
      *
      * @param clientSession the client session with which to associate this operation
      * @param filter        a document describing the query filter, which may not be null.
-     * @param update        a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update        a pipeline describing the update, which may not be null.
      * @param updateOptions the options to apply to the update operation
      * @return the result of the update many operation
      * @throws com.mongodb.MongoWriteException        if the write failed due some other failure specific to the update command
@@ -1584,7 +1584,7 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @return the document that was updated before the update was applied.  If no documents matched the query filter, then null will be
      * returned
      * @since 3.11
@@ -1598,7 +1598,7 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter  a document describing the query filter, which may not be null.
-     * @param update  a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update  a pipeline describing the update, which may not be null.
      * @param options the options to apply to the operation
      * @return the document that was updated.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
@@ -1615,7 +1615,7 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @return the document that was updated before the update was applied.  If no documents matched the query filter, then null will be
      * returned
      * @since 3.11
@@ -1630,7 +1630,7 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter  a document describing the query filter, which may not be null.
-     * @param update  a pipeline describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update  a pipeline describing the update, which may not be null.
      * @param options the options to apply to the operation
      * @return the document that was updated.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be

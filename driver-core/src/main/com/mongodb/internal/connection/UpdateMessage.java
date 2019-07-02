@@ -56,10 +56,10 @@ class UpdateMessage extends LegacyMessage {
 
         addDocument(updateRequest.getFilter(), bsonOutput, new NoOpFieldNameValidator());
         if (updateRequest.getType() == REPLACE) {
-            addDocument(updateRequest.getUpdate().asDocument(), bsonOutput, new CollectibleDocumentFieldNameValidator());
+            addDocument(updateRequest.getUpdateValue().asDocument(), bsonOutput, new CollectibleDocumentFieldNameValidator());
         } else {
             int bufferPosition = bsonOutput.getPosition();
-            BsonValue update = updateRequest.getUpdate();
+            BsonValue update = updateRequest.getUpdateValue();
             if (update.isDocument()) {
                 addDocument(update.asDocument(), bsonOutput, new UpdateFieldNameValidator());
             } else {
