@@ -22,6 +22,7 @@ import com.mongodb.MongoExecutionTimeoutException
 import com.mongodb.MongoNamespace
 import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
+import com.mongodb.ReadConcern
 import com.mongodb.ReadPreference
 import com.mongodb.WriteConcern
 import com.mongodb.client.model.Aggregates
@@ -79,7 +80,7 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         operation.getCollation() == null
     }
 
-    def 'should set optional values correctly'(){
+    def 'should set optional values correctly (with write concern)'(){
         given:
         def pipeline = [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))]
 
@@ -95,6 +96,25 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         operation.getMaxTime(MILLISECONDS) == 10
         operation.getBypassDocumentValidation() == true
         operation.getWriteConcern() == WriteConcern.MAJORITY
+        operation.getCollation() == defaultCollation
+    }
+
+    def 'should set optional values correctly (with read concern)'(){
+        given:
+        def pipeline = [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))]
+
+        when:
+        AggregateToCollectionOperation operation = new AggregateToCollectionOperation(getNamespace(), pipeline, ReadConcern.DEFAULT)
+                .allowDiskUse(true)
+                .maxTime(10, MILLISECONDS)
+                .bypassDocumentValidation(true)
+                .collation(defaultCollation)
+
+        then:
+        operation.getAllowDiskUse()
+        operation.getMaxTime(MILLISECONDS) == 10
+        operation.getBypassDocumentValidation() == true
+        operation.getReadConcern() == ReadConcern.DEFAULT
         operation.getCollation() == defaultCollation
     }
 
