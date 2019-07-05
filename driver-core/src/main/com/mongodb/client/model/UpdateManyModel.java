@@ -69,8 +69,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      * Construct a new instance.
      *
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update
-     *               operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @since 3.11
      * @mongodb.server.release 4.2
      */
@@ -82,8 +81,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      * Construct a new instance.
      *
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a pipeline describing the update, which may not be null. The update to apply must include only update
-     * operators.
+     * @param update a pipeline describing the update, which may not be null.
      * @param options the options to apply
      * @since 3.11
      * @mongodb.server.release 4.2
@@ -123,6 +121,7 @@ public final class UpdateManyModel<T> extends WriteModel<T> {
      * @since 3.11
      * @mongodb.server.release 4.2
      */
+    @Nullable
     public List<? extends Bson> getUpdatePipeline() {
         return updatePipeline;
     }

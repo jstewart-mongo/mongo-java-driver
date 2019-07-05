@@ -16,17 +16,10 @@
 
 package com.mongodb.async.client;
 
-import com.mongodb.Block;
-import com.mongodb.ConnectionString;
 import com.mongodb.MongoNamespace;
-import com.mongodb.ReadConcern;
-import com.mongodb.ReadConcernLevel;
-import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
-import com.mongodb.connection.SocketSettings;
-import com.mongodb.connection.SslSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonArray;
@@ -48,14 +41,12 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.JsonTestServerVersionChecker.skipTest;
-import static com.mongodb.async.client.Fixture.getConnectionString;
 import static com.mongodb.async.client.Fixture.getDefaultDatabase;
-import static com.mongodb.async.client.Fixture.getStreamFactoryFactory;
+import static com.mongodb.async.client.Fixture.getMongoClientBuilderFromConnectionString;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static org.junit.Assert.assertEquals;
@@ -70,7 +61,6 @@ public class CrudTest {
     private final BsonArray data;
     private final BsonDocument definition;
     private final boolean skipTest;
-    private ConnectionString connectionString;
     private CollectionHelper<Document> collectionHelper;
     private MongoClient mongoClient;
     private MongoCollection<BsonDocument> collection;
@@ -104,28 +94,13 @@ public class CrudTest {
 
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        connectionString = getConnectionString();
-        MongoClientSettings.Builder builder = MongoClientSettings.builder().applyConnectionString(connectionString)
-                .streamFactoryFactory(getStreamFactoryFactory());
+        JsonPoweredCrudTestHelper optionHelper = new JsonPoweredCrudTestHelper(null, null, null);
+        com.mongodb.MongoClientSettings.Builder builder = getMongoClientBuilderFromConnectionString()
+                .addCommandListener(commandListener)
+                .writeConcern(optionHelper.getWriteConcernFromDocument(clientOptions, false))
+                .readConcern(optionHelper.getReadConcernFromDocument(clientOptions))
+                .readPreference(optionHelper.getReadPreference(clientOptions));
 
-        if (System.getProperty("java.version").startsWith("1.6.")) {
-            builder.applyToSslSettings(new Block<SslSettings.Builder>() {
-                @Override
-                public void apply(final SslSettings.Builder builder) {
-                    builder.invalidHostNameAllowed(true);
-                }
-            });
-        }
-        builder.addCommandListener(commandListener)
-                .applyToSocketSettings(new Block<SocketSettings.Builder>() {
-                    @Override
-                    public void apply(final SocketSettings.Builder builder) {
-                        builder.readTimeout(5, TimeUnit.SECONDS);
-                    }
-                })
-                .writeConcern(getWriteConcern(clientOptions))
-                .readConcern(getReadConcern(clientOptions))
-                .readPreference(getReadPreference(clientOptions));
 
         mongoClient = MongoClients.create(builder.build());
         MongoDatabase database = mongoClient.getDatabase(databaseName);
@@ -144,34 +119,6 @@ public class CrudTest {
             }
         }
         commandListener.reset();
-    }
-
-    private ReadConcern getReadConcern(final BsonDocument clientOptions) {
-        if (clientOptions.containsKey("readConcernLevel")) {
-            return new ReadConcern(ReadConcernLevel.fromString(clientOptions.getString("readConcernLevel").getValue()));
-        } else {
-            return ReadConcern.DEFAULT;
-        }
-    }
-
-    private WriteConcern getWriteConcern(final BsonDocument clientOptions) {
-        if (clientOptions.containsKey("w")) {
-            if (clientOptions.isNumber("w")) {
-                return new WriteConcern(clientOptions.getNumber("w").intValue());
-            } else {
-                return new WriteConcern(clientOptions.getString("w").getValue());
-            }
-        } else {
-            return WriteConcern.ACKNOWLEDGED;
-        }
-    }
-
-    private ReadPreference getReadPreference(final BsonDocument clientOptions) {
-        if (clientOptions.containsKey("readPreference")) {
-            return ReadPreference.valueOf(clientOptions.getString("readPreference").getValue());
-        } else {
-            return ReadPreference.primary();
-        }
     }
 
     @After

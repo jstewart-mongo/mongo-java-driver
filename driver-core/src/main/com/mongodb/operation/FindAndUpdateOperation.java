@@ -30,6 +30,7 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
 import org.bson.conversions.Bson;
@@ -382,19 +383,15 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         };
     }
 
-    private List<BsonDocument> toBsonDocumentList(final List<? extends Bson> bsonList) {
+    private List<BsonValue> toBsonValueList(final List<? extends Bson> bsonList) {
         if (bsonList == null) {
             return null;
         }
-        List<BsonDocument> bsonDocumentList = new ArrayList<BsonDocument>(bsonList.size());
-        for (Bson cur : bsonList) {
-            bsonDocumentList.add(toBsonDocument(cur));
+        List<BsonValue> bsonValueList = new ArrayList<BsonValue>(bsonList.size());
+        for (Object cur : bsonList) {
+            bsonValueList.add((BsonValue) cur);
         }
-        return bsonDocumentList;
-    }
-
-    private BsonDocument toBsonDocument(final Bson document) {
-        return document == null ? null : document.toBsonDocument(BsonDocument.class, null);
+        return bsonValueList;
     }
 
     private BsonDocument createCommand(final SessionContext sessionContext, final ServerDescription serverDescription,
@@ -408,7 +405,7 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         putIfTrue(commandDocument, "upsert", isUpsert());
         putIfNotZero(commandDocument, "maxTimeMS", getMaxTime(MILLISECONDS));
         if (getUpdatePipeline() != null) {
-            commandDocument.put("update", new BsonArray(toBsonDocumentList(getUpdatePipeline())));
+            commandDocument.put("update", new BsonArray(toBsonValueList(getUpdatePipeline())));
         } else {
             putIfNotNull(commandDocument, "update", getUpdate());
         }

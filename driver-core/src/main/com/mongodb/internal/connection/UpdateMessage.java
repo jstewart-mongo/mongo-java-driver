@@ -55,7 +55,7 @@ class UpdateMessage extends LegacyMessage {
         int firstDocumentStartPosition = bsonOutput.getPosition();
 
         addDocument(updateRequest.getFilter(), bsonOutput, new NoOpFieldNameValidator());
-        if (updateRequest.getType() == REPLACE) {
+        if (updateRequest.getType() == REPLACE && updateRequest.getUpdateValue().isDocument()) {
             addDocument(updateRequest.getUpdateValue().asDocument(), bsonOutput, new CollectibleDocumentFieldNameValidator());
         } else {
             int bufferPosition = bsonOutput.getPosition();
@@ -63,7 +63,7 @@ class UpdateMessage extends LegacyMessage {
             if (update.isDocument()) {
                 addDocument(update.asDocument(), bsonOutput, new UpdateFieldNameValidator());
             } else {
-                throw new IllegalArgumentException("Invalid update type in update request");
+                throw new IllegalArgumentException("Invalid update filter in update request. The filter must be a document.");
             }
             if (bsonOutput.getPosition() == bufferPosition + 5) {
                 throw new IllegalArgumentException("Invalid BSON document for an update");

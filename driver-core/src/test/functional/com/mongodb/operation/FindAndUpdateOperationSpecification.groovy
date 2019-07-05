@@ -195,11 +195,11 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         def update = new BsonArray(singletonList(new BsonDocument('$addFields', new BsonDocument('foo', new BsonInt32(1)))))
         def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
+                .returnOriginal(false)
         Document returnedDocument = execute(operation, false)
 
         then:
         returnedDocument.getInteger('numberOfJobs') == 3
-        helper.find().size() == 2;
         helper.find().get(0).getInteger('foo') == 1
 
         when:
@@ -211,6 +211,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
         then:
         returnedDocument.getInteger('numberOfJobs') == 3
+        helper.find().get(0).getInteger('foo') == 1
     }
 
     def 'should update single document when using custom codecs'() {
@@ -249,20 +250,25 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ !serverVersionAtLeast(asList(4, 1, 11)) })
     def 'should update using pipeline when using custom codecs'() {
         given:
-        CollectionHelper<Worker> helper = new CollectionHelper<Worker>(workerCodec, getNamespace())
-        Worker pete = new Worker('Pete', 'handyman', new Date(), 3)
-        Worker sam = new Worker('Sam', 'plumber', new Date(), 5)
+        CollectionHelper<Document> helper = new CollectionHelper<Document>(documentCodec, getNamespace())
+        Document pete = new Document('name', 'Pete').append('numberOfJobs', 3)
+        Document sam = new Document('name', 'Sam').append('numberOfJobs', 5)
 
-        helper.insertDocuments(new WorkerCodec(), pete, sam)
+        helper.insertDocuments(new DocumentCodec(), pete, sam)
 
         when:
         def update = new BsonArray(singletonList(new BsonDocument('$project', new BsonDocument('name', new BsonInt32(1)))))
-        def operation = new FindAndUpdateOperation<Worker>(getNamespace(), ACKNOWLEDGED, false, workerCodec, update)
+        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
-        Worker returnedDocument = execute(operation, false)
+                .returnOriginal(false)
+        Document returnedDocument = execute(operation, async)
 
         then:
-        returnedDocument.name == 'Pete'
+        returnedDocument.getString('name') == 'Pete'
+        !returnedDocument.containsKey('numberOfJobs')
+
+        where:
+        async << [true, false]
     }
 
     def 'should return null if query fails to match'() {
@@ -296,11 +302,17 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
     @IgnoreIf({ !serverVersionAtLeast(asList(4, 1, 11)) })
     def 'should throw an exception if update pipeline contains operations that are not supported'() {
-        given:
+        when:
         def update = new BsonArray(singletonList(new BsonDocument('$foo', new BsonDocument('x', new BsonInt32(1)))))
         def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        execute(operation, async)
+
+        then:
+        thrown(MongoCommandException)
 
         when:
+        update = singletonList(new BsonInt32(1))
+        operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
         execute(operation, async)
 
         then:
