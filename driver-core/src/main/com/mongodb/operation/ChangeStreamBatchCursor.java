@@ -21,7 +21,6 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
-import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadBinding;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -41,18 +40,12 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
 
     ChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
                             final AggregateResponseBatchCursor<RawBsonDocument> wrapped,
-                            final ReadBinding binding) {
+                            final ReadBinding binding,
+                            final BsonDocument resumeToken) {
         this.changeStreamOperation = changeStreamOperation;
         this.binding = binding.retain();
         this.wrapped = wrapped;
-        if (changeStreamOperation.getStartAfter() != null) {
-            resumeToken = changeStreamOperation.getStartAfter();
-        } else if (changeStreamOperation.getResumeAfter() != null) {
-            resumeToken = changeStreamOperation.getResumeAfter();
-        } else if (changeStreamOperation.getStartAtOperationTime() == null && getMaxWireVersion() >= 7
-                && wrapped.getPostBatchResumeToken() == null) {
-            changeStreamOperation.startAtOperationTime(wrapped.getOperationTime());
-        }
+        this.resumeToken = resumeToken;
     }
 
     AggregateResponseBatchCursor<RawBsonDocument> getWrapped() {
@@ -155,15 +148,6 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
         return results;
     }
 
-    private int getMaxWireVersion() {
-        ConnectionSource source = binding.getReadConnectionSource();
-        try {
-            return source.getServerDescription().getMaxWireVersion();
-        } finally {
-            source.release();
-        }
-    }
-
     <R> R resumeableOperation(final Function<AggregateResponseBatchCursor<RawBsonDocument>, R> function) {
         while (true) {
             try {
@@ -175,16 +159,7 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
             }
             wrapped.close();
 
-            changeStreamOperation.startAfter(null);
-            if (resumeToken != null) {
-                changeStreamOperation.startAtOperationTime(null);
-                changeStreamOperation.resumeAfter(resumeToken);
-            } else if (changeStreamOperation.getStartAtOperationTime() != null && getMaxWireVersion() >= 7) {
-                changeStreamOperation.resumeAfter(null);
-            } else {
-                changeStreamOperation.resumeAfter(null);
-                changeStreamOperation.startAtOperationTime(null);
-            }
+            changeStreamOperation.setChangeStreamOptionsForResume(resumeToken);
             wrapped = ((ChangeStreamBatchCursor<T>) changeStreamOperation.execute(binding)).getWrapped();
             binding.release(); // release the new change stream batch cursor's reference to the binding
         }

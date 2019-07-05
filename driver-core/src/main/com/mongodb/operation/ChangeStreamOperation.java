@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionFourDotZero;
 
 /**
  * An operation that executes an {@code $changeStream} aggregation.
@@ -64,7 +63,6 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     private BsonDocument resumeAfter;
     private BsonDocument startAfter;
     private BsonTimestamp startAtOperationTime;
-    private BsonTimestamp startAtOperationTimeForResume;
 
     /**
      * Construct a new instance.
@@ -293,12 +291,6 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
         return this;
     }
 
-
-    ChangeStreamOperation<T> startOperationTimeForResume(final BsonTimestamp startAtOperationTime) {
-        startAtOperationTimeForResume = startAtOperationTime;
-        return this;
-    }
-
     /**
      * Returns the start at operation time
      *
@@ -335,8 +327,9 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
 
     @Override
     public BatchCursor<T> execute(final ReadBinding binding) {
-        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this,
-                (AggregateResponseBatchCursor<RawBsonDocument>) wrapped.execute(binding), binding);
+        AggregateResponseBatchCursor<RawBsonDocument> cursor = (AggregateResponseBatchCursor<RawBsonDocument>) wrapped.execute(binding);
+        return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
+                setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime()));
     }
 
     @Override
@@ -347,11 +340,43 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 if (t != null) {
                     callback.onResult(null, t);
                 } else {
-                    callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this,
-                            (AsyncAggregateResponseBatchCursor<RawBsonDocument>) result, binding), null);
+                    AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor = (AsyncAggregateResponseBatchCursor<RawBsonDocument>) result;
+                    callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
+                            setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime())), null);
                 }
             }
         });
+    }
+
+    private BsonDocument setChangeStreamOptions(final BsonDocument postBatchResumeToken, final BsonTimestamp operationTime) {
+        BsonDocument resumeToken = null;
+        if (startAfter != null) {
+            resumeToken = startAfter;
+        } else if (resumeAfter != null) {
+            resumeToken = resumeAfter;
+        } else if (startAtOperationTime == null && postBatchResumeToken == null) {
+            startAtOperationTime = operationTime;
+        }
+        return resumeToken;
+    }
+
+    /**
+     * Set the change stream operation options for a resumeable operation.
+     *
+     * @param resumeToken the resume token cached prior to resume
+     * @since 3.11
+     */
+    public void setChangeStreamOptionsForResume(final BsonDocument resumeToken) {
+        startAfter = null;
+        if (resumeToken != null) {
+            startAtOperationTime = null;
+            resumeAfter = resumeToken;
+        } else if (startAtOperationTime != null) {
+            resumeAfter = null;
+        } else {
+            resumeAfter = null;
+            startAtOperationTime = null;
+        }
     }
 
     private AggregateOperationImpl.AggregateTarget getAggregateTarget() {
@@ -387,10 +412,6 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 if (startAtOperationTime != null) {
                     hasResumeSetting = true;
                     changeStream.append("startAtOperationTime", startAtOperationTime);
-                }
-
-                if (!hasResumeSetting && startAtOperationTimeForResume != null && serverIsAtLeastVersionFourDotZero(description)) {
-                    changeStream.append("startAtOperationTime", startAtOperationTimeForResume);
                 }
 
                 changeStreamPipeline.add(new BsonDocument("$changeStream", changeStream));

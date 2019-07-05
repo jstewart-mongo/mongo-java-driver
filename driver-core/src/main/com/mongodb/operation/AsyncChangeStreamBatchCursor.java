@@ -20,7 +20,6 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
-import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -42,30 +41,13 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     AsyncChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
                                  final AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped,
-                                 final AsyncReadBinding binding) {
+                                 final AsyncReadBinding binding,
+                                 final BsonDocument resumeToken) {
         this.changeStreamOperation = changeStreamOperation;
         this.wrapped = wrapped;
         this.binding = binding;
         binding.retain();
-        if (changeStreamOperation.getStartAfter() != null) {
-            resumeToken = changeStreamOperation.getStartAfter();
-        } else if (changeStreamOperation.getResumeAfter() != null) {
-            resumeToken = changeStreamOperation.getResumeAfter();
-        } else if (changeStreamOperation.getStartAtOperationTime() == null
-                && wrapped.getPostBatchResumeToken() == null) {
-            getMaxWireVersion(new SingleResultCallback<Integer>() {
-                @Override
-                public void onResult(final Integer result, final Throwable t) {
-                    if (t != null) {
-                        changeStreamOperation.startOperationTimeForResume(binding.getSessionContext().getOperationTime());
-                    } else {
-                        if (result >= 7) {
-                            changeStreamOperation.startAtOperationTime(wrapped.getOperationTime());
-                        }
-                    }
-                }
-            });
-        }
+        this.resumeToken = resumeToken;
     }
 
     AsyncAggregateResponseBatchCursor<RawBsonDocument> getWrapped() {
@@ -159,20 +141,6 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
         }, LOGGER);
     }
 
-    private void getMaxWireVersion(final SingleResultCallback<Integer> callback) {
-        binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
-            @Override
-            public void onResult(final AsyncConnectionSource result, final Throwable t) {
-                if (t != null) {
-                    callback.onResult(null, t);
-                } else {
-                    callback.onResult(result.getServerDescription().getMaxWireVersion(), null);
-                }
-                result.release();
-            }
-        });
-    }
-
     private interface AsyncBlock {
         void apply(AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor, SingleResultCallback<List<RawBsonDocument>> callback);
     }
@@ -194,30 +162,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     private void retryOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
-        changeStreamOperation.startAfter(null);
-        if (resumeToken != null) {
-            changeStreamOperation.startAtOperationTime(null);
-            changeStreamOperation.resumeAfter(resumeToken);
-        } else if (changeStreamOperation.getStartAtOperationTime() != null) {
-            getMaxWireVersion(new SingleResultCallback<Integer>() {
-                @Override
-                public void onResult(final Integer result, final Throwable t) {
-                    if (result != null && result >= 7) {
-                        changeStreamOperation.resumeAfter(null);
-                    } else {
-                        changeStreamOperation.resumeAfter(null);
-                        changeStreamOperation.startAtOperationTime(null);
-                    }
-                }
-            });
-        } else {
-            changeStreamOperation.resumeAfter(null);
-            changeStreamOperation.startAtOperationTime(null);
-        }
-        if (resumeToken != null) {
-            changeStreamOperation.startOperationTimeForResume(null);
-            changeStreamOperation.resumeAfter(resumeToken);
-        }
+        changeStreamOperation.setChangeStreamOptionsForResume(resumeToken);
         changeStreamOperation.executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<T>>() {
             @Override
             public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {
