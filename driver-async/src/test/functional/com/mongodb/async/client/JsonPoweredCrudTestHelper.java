@@ -95,10 +95,6 @@ public class JsonPoweredCrudTestHelper {
     private final GridFSBucket gridFSBucket;
     private final MongoClient mongoClient;
 
-    public JsonPoweredCrudTestHelper() {
-        this(null, null, null, null, null);
-    }
-
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
                                      final MongoCollection<BsonDocument> collection) {
         this(description, database, collection, null, null);
@@ -641,7 +637,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
         }
 
         FutureResultCallback<BsonDocument> futureResultCallback = new FutureResultCallback<BsonDocument>();
@@ -651,7 +647,7 @@ public class JsonPoweredCrudTestHelper {
                         futureResultCallback);
             } else {
                 getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options,
+                        getPipelineFromArray(arguments.getArray("update")), options,
                         futureResultCallback);
             }
         } else {
@@ -753,7 +749,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
         }
         FutureResultCallback<UpdateResult> futureResultCallback = new FutureResultCallback<UpdateResult>();
         if (clientSession == null) {
@@ -762,7 +758,7 @@ public class JsonPoweredCrudTestHelper {
                         futureResultCallback);
             } else {
                 getCollection(collectionOptions).updateMany(arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options, futureResultCallback);
+                        getPipelineFromArray(arguments.getArray("update")), options, futureResultCallback);
             }
         } else {
             getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"), arguments.getDocument("update"),
@@ -782,7 +778,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
         }
         FutureResultCallback<UpdateResult> futureResultCallback = new FutureResultCallback<UpdateResult>();
         if (clientSession == null) {
@@ -791,7 +787,7 @@ public class JsonPoweredCrudTestHelper {
                         futureResultCallback);
             } else {
                 getCollection(collectionOptions).updateOne(arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options, futureResultCallback);
+                        getPipelineFromArray(arguments.getArray("update")), options, futureResultCallback);
             }
         } else {
             getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"), arguments.getDocument("update"),
@@ -1062,7 +1058,7 @@ public class JsonPoweredCrudTestHelper {
             options.upsert(true);
         }
         if (requestArguments.containsKey("arrayFilters")) {
-            options.arrayFilters(getListOfDocuments(requestArguments.getArray("arrayFilters")));
+            options.arrayFilters(getArrayFilters(requestArguments.getArray("arrayFilters")));
         }
         if (requestArguments.containsKey("collation")) {
             options.collation(getCollation(requestArguments.getDocument("collation")));
@@ -1090,7 +1086,12 @@ public class JsonPoweredCrudTestHelper {
     }
 
     @Nullable
-    private List<BsonDocument> getListOfDocuments(@Nullable final BsonArray bsonArray) {
+    private List<BsonDocument> getPipelineFromArray(@Nullable final BsonArray bsonArray) {
+        return getArrayFilters(bsonArray);
+    }
+
+    @Nullable
+    private List<BsonDocument> getArrayFilters(@Nullable final BsonArray bsonArray) {
         if (bsonArray == null) {
             return null;
         }
@@ -1121,32 +1122,18 @@ public class JsonPoweredCrudTestHelper {
     }
 
     ReadPreference getReadPreference(final BsonDocument arguments) {
-        if (arguments.containsKey("readPreference")) {
-            return ReadPreference.valueOf(
-                    arguments.getDocument("readPreference").getString("mode").getValue());
-        }
-        return ReadPreference.primary();
+        return ReadPreference.valueOf(
+                arguments.getDocument("readPreference").getString("mode").getValue());
     }
 
 
     WriteConcern getWriteConcern(final BsonDocument arguments) {
-        return getWriteConcernFromDocument(arguments.getDocument("writeConcern"), true);
-    }
-
-    ReadConcern getReadConcern(final BsonDocument arguments) {
-        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
-    }
-
-    WriteConcern getWriteConcernFromDocument(final BsonDocument writeConcernDocument, final boolean throwException) {
-        WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
+        BsonDocument writeConcernDocument = arguments.getDocument("writeConcern");
         if (!writeConcernDocument.containsKey("w")) {
-            if (throwException) {
-                throw new UnsupportedOperationException("Write concern document contains unexpected keys: "
-                        + writeConcernDocument.keySet());
-            }
-            return writeConcern;
+            throw new UnsupportedOperationException("Write concern document contains unexpected keys: " + writeConcernDocument.keySet());
         }
 
+        WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
         if (writeConcernDocument.isNumber("w")) {
             writeConcern = writeConcern.withW(writeConcernDocument.getNumber("w").intValue());
         } else {
@@ -1162,14 +1149,9 @@ public class JsonPoweredCrudTestHelper {
         return writeConcern;
     }
 
-    ReadConcern getReadConcernFromDocument(final BsonDocument document) {
-        if (document.containsKey("readPreference")) {
-            return getReadConcern(document);
-        } else {
-            return ReadConcern.DEFAULT;
-        }
+    ReadConcern getReadConcern(final BsonDocument arguments) {
+        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
     }
-
 
     private BsonDocument parseHexDocument(final BsonDocument document, final String hexDocument) {
         if (document.containsKey(hexDocument) && document.get(hexDocument).isDocument()) {

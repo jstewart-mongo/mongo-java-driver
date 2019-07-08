@@ -91,10 +91,6 @@ public class JsonPoweredCrudTestHelper {
     private final GridFSBucket gridFSBucket;
     private final MongoClient mongoClient;
 
-    public JsonPoweredCrudTestHelper() {
-        this(null, null, null, null, null);
-    }
-
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
                                      final MongoCollection<BsonDocument> collection) {
         this(description, database, collection, null, null);
@@ -620,7 +616,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
         }
 
         BsonDocument result;
@@ -630,7 +626,7 @@ public class JsonPoweredCrudTestHelper {
                         options);
             } else {  // update is a pipeline
                 result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -638,7 +634,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 result = getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         }
 
@@ -738,7 +734,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
         }
         if (arguments.containsKey("bypassDocumentValidation")) {
             options.bypassDocumentValidation(arguments.getBoolean("bypassDocumentValidation").getValue());
@@ -751,7 +747,7 @@ public class JsonPoweredCrudTestHelper {
                         options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -759,7 +755,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         }
 
@@ -777,7 +773,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
         }
         if (arguments.containsKey("bypassDocumentValidation")) {
             options.bypassDocumentValidation(arguments.getBoolean("bypassDocumentValidation").getValue());
@@ -790,7 +786,7 @@ public class JsonPoweredCrudTestHelper {
                         options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -798,7 +794,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"),
-                        getListOfDocuments(arguments.getArray("update")), options);
+                        getPipelineFromArray(arguments.getArray("update")), options);
             }
         }
 
@@ -1010,7 +1006,7 @@ public class JsonPoweredCrudTestHelper {
             options.upsert(true);
         }
         if (requestArguments.containsKey("arrayFilters")) {
-            options.arrayFilters(getListOfDocuments(requestArguments.getArray("arrayFilters")));
+            options.arrayFilters(getArrayFilters(requestArguments.getArray("arrayFilters")));
         }
         if (requestArguments.containsKey("collation")) {
             options.collation(getCollation(requestArguments.getDocument("collation")));
@@ -1038,7 +1034,7 @@ public class JsonPoweredCrudTestHelper {
     }
 
     @Nullable
-    private List<BsonDocument> getListOfDocuments(@Nullable final BsonArray bsonArray) {
+    private List<BsonDocument> getArrayFilters(@Nullable final BsonArray bsonArray) {
         if (bsonArray == null) {
             return null;
         }
@@ -1047,6 +1043,11 @@ public class JsonPoweredCrudTestHelper {
             arrayFilters.add(cur.asDocument());
         }
         return arrayFilters;
+    }
+
+    @Nullable
+    private List<BsonDocument> getPipelineFromArray(@Nullable final BsonArray bsonArray) {
+        return getArrayFilters(bsonArray);
     }
 
     private MongoCollection<BsonDocument> getCollection(final BsonDocument collectionOptions) {
@@ -1069,23 +1070,13 @@ public class JsonPoweredCrudTestHelper {
     }
 
     ReadPreference getReadPreference(final BsonDocument arguments) {
-        if (arguments.containsKey("readPreference")) {
-            return ReadPreference.valueOf(
-                    arguments.getDocument("readPreference").getString("mode").getValue());
-        }
-        return ReadPreference.primary();
+        return ReadPreference.valueOf(
+                arguments.getDocument("readPreference").getString("mode").getValue());
     }
 
     WriteConcern getWriteConcern(final BsonDocument arguments) {
-        return getWriteConcernFromDocument(arguments.getDocument("writeConcern"));
-    }
-
-    ReadConcern getReadConcern(final BsonDocument arguments) {
-        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
-    }
-
-    WriteConcern getWriteConcernFromDocument(final BsonDocument writeConcernDocument) {
         WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
+        BsonDocument writeConcernDocument = arguments.getDocument("writeConcern");
         for (Map.Entry<String, BsonValue> entry: writeConcernDocument.entrySet()) {
             if (entry.getKey().equals("w")) {
                 if (entry.getValue().isNumber()) {
@@ -1104,12 +1095,8 @@ public class JsonPoweredCrudTestHelper {
         return writeConcern;
     }
 
-    ReadConcern getReadConcernFromDocument(final BsonDocument document) {
-        if (document.containsKey("readPreference")) {
-            return getReadConcern(document);
-        } else {
-            return ReadConcern.DEFAULT;
-        }
+    ReadConcern getReadConcern(final BsonDocument arguments) {
+        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
     }
 
     private BsonDocument parseHexDocument(final BsonDocument document, final String hexDocument) {

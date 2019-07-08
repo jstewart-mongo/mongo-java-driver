@@ -140,6 +140,7 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
      *
      * @return the update document
      */
+    @Nullable
     public BsonDocument getUpdate() {
         return update;
     }

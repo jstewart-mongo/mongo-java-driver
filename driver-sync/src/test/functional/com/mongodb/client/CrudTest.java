@@ -91,14 +91,8 @@ public class CrudTest {
         collectionHelper.killAllSessions();
         collectionHelper.create(collectionName, new CreateCollectionOptions(), WriteConcern.MAJORITY);
 
-        final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
-
-        JsonPoweredCrudTestHelper optionHelper = new JsonPoweredCrudTestHelper();
-        MongoClientSettings settings = MongoClientSettings.builder(getMongoClientSettings()).retryWrites(false)
+        MongoClientSettings settings = MongoClientSettings.builder(getMongoClientSettings())
                 .addCommandListener(commandListener)
-                .writeConcern(optionHelper.getWriteConcernFromDocument(clientOptions))
-                .readConcern(optionHelper.getReadConcernFromDocument(clientOptions))
-                .readPreference(optionHelper.getReadPreference(clientOptions))
                 .build();
 
         mongoClient = MongoClients.create(settings);

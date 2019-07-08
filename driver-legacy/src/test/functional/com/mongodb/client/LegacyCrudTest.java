@@ -18,7 +18,6 @@ package com.mongodb.client;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
-import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
@@ -92,14 +91,8 @@ public class LegacyCrudTest {
         collectionHelper.killAllSessions();
         collectionHelper.create(collectionName, new CreateCollectionOptions(), WriteConcern.MAJORITY);
 
-        final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
-
-        JsonPoweredCrudTestHelper optionHelper = new JsonPoweredCrudTestHelper();
-        MongoClientSettings settings = MongoClientSettings.builder(getMongoClientSettings()).retryWrites(false)
+        MongoClientSettings settings = MongoClientSettings.builder(getMongoClientSettings())
                 .addCommandListener(commandListener)
-                .writeConcern(optionHelper.getWriteConcernFromDocument(clientOptions))
-                .readConcern(optionHelper.getReadConcernFromDocument(clientOptions))
-                .readPreference(getReadPreference(clientOptions))
                 .build();
 
         mongoClient = MongoClients.create(settings);
@@ -119,14 +112,6 @@ public class LegacyCrudTest {
             }
         }
         commandListener.reset();
-    }
-
-    private ReadPreference getReadPreference(final BsonDocument clientOptions) {
-        if (clientOptions.containsKey("readPreference")) {
-            return ReadPreference.valueOf(clientOptions.getString("readPreference").getValue());
-        } else {
-            return ReadPreference.primary();
-        }
     }
 
     @After
