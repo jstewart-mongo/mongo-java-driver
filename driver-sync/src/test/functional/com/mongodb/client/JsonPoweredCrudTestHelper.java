@@ -91,6 +91,10 @@ public class JsonPoweredCrudTestHelper {
     private final GridFSBucket gridFSBucket;
     private final MongoClient mongoClient;
 
+    public JsonPoweredCrudTestHelper() {
+        this(null, null, null, null, null);
+    }
+
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
                                      final MongoCollection<BsonDocument> collection) {
         this(description, database, collection, null, null);

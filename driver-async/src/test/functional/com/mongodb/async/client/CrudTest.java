@@ -94,7 +94,7 @@ public class CrudTest {
 
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        JsonPoweredCrudTestHelper optionHelper = new JsonPoweredCrudTestHelper(null, null, null);
+        JsonPoweredCrudTestHelper optionHelper = new JsonPoweredCrudTestHelper();
         com.mongodb.MongoClientSettings.Builder builder = getMongoClientBuilderFromConnectionString()
                 .addCommandListener(commandListener)
                 .writeConcern(optionHelper.getWriteConcernFromDocument(clientOptions, false))
