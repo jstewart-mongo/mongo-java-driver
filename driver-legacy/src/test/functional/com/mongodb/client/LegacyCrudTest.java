@@ -16,8 +16,6 @@
 
 package com.mongodb.client;
 
-import com.mongodb.Block;
-import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ReadConcern;
@@ -26,7 +24,6 @@ import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
-import com.mongodb.connection.SslSettings;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonArray;
@@ -50,12 +47,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.mongodb.ClusterFixture.getConnectionString;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.JsonTestServerVersionChecker.skipTest;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static com.mongodb.client.Fixture.getDefaultDatabaseName;
+import static com.mongodb.client.Fixture.getMongoClientSettings;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
@@ -101,23 +98,15 @@ public class LegacyCrudTest {
 
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        ConnectionString connectionString = getConnectionString();
-        MongoClientSettings.Builder builder = MongoClientSettings.builder().applyConnectionString(connectionString);
+        JsonPoweredCrudTestHelper optionHelper = new JsonPoweredCrudTestHelper();
+        MongoClientSettings settings = MongoClientSettings.builder(getMongoClientSettings()).retryWrites(false)
+                .addCommandListener(commandListener)
+                .writeConcern(optionHelper.getWriteConcernFromDocument(clientOptions, false))
+                .readConcern(optionHelper.getReadConcernFromDocument(clientOptions))
+                .readPreference(getReadPreference(clientOptions))
+                .build();
 
-        if (System.getProperty("java.version").startsWith("1.6.")) {
-            builder.applyToSslSettings(new Block<SslSettings.Builder>() {
-                @Override
-                public void apply(final SslSettings.Builder builder) {
-                    builder.invalidHostNameAllowed(true);
-                }
-            });
-        }
-        builder.addCommandListener(commandListener)
-                .writeConcern(getWriteConcern(clientOptions))
-                .readConcern(getReadConcern(clientOptions))
-                .readPreference(getReadPreference(clientOptions));
-
-        mongoClient = MongoClients.create(builder.build());
+        mongoClient = MongoClients.create(settings);
         database = mongoClient.getDatabase(databaseName);
 
         collection = database.getCollection(collectionName, BsonDocument.class);
