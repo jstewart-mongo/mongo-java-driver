@@ -79,6 +79,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -89,10 +90,6 @@ public class JsonPoweredCrudTestHelper {
     private final MongoCollection<BsonDocument> baseCollection;
     private final GridFSBucket gridFSBucket;
     private final MongoClient mongoClient;
-
-    public JsonPoweredCrudTestHelper() {
-        this(null, null, null, null, null);
-    }
 
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
                                      final MongoCollection<BsonDocument> collection) {
@@ -1038,52 +1035,33 @@ public class JsonPoweredCrudTestHelper {
     }
 
     ReadPreference getReadPreference(final BsonDocument arguments) {
-        if (arguments.containsKey("readPreference")) {
-            return ReadPreference.valueOf(
-                    arguments.getDocument("readPreference").getString("mode").getValue());
-        }
-        return ReadPreference.primary();
+        return ReadPreference.valueOf(
+                arguments.getDocument("readPreference").getString("mode").getValue());
     }
 
     WriteConcern getWriteConcern(final BsonDocument arguments) {
-        return getWriteConcernFromDocument(arguments.getDocument("writeConcern"), true);
-    }
-
-    ReadConcern getReadConcern(final BsonDocument arguments) {
-        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
-    }
-
-    WriteConcern getWriteConcernFromDocument(final BsonDocument writeConcernDocument, final boolean throwException) {
         WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
-        if (!writeConcernDocument.containsKey("w")) {
-            if (throwException) {
-                throw new UnsupportedOperationException("Write concern document contains unexpected keys: "
-                        + writeConcernDocument.keySet());
+        BsonDocument writeConcernDocument = arguments.getDocument("writeConcern");
+        for (Map.Entry<String, BsonValue> entry: writeConcernDocument.entrySet()) {
+            if (entry.getKey().equals("w")) {
+                if (entry.getValue().isNumber()) {
+                    writeConcern = writeConcern.withW(entry.getValue().asNumber().intValue());
+                } else {
+                    writeConcern = writeConcern.withW(entry.getValue().asString().getValue());
+                }
+            } else if (entry.getKey().equals("j")) {
+                writeConcern = writeConcern.withJournal(entry.getValue().asBoolean().getValue());
+            } else if (entry.getKey().equals("wtimeout")) {
+                writeConcern = writeConcern.withWTimeout(entry.getValue().asNumber().intValue(), TimeUnit.MILLISECONDS);
+            } else {
+                throw new UnsupportedOperationException("Unsupported write concern document key: " + entry.getKey());
             }
-            return writeConcern;
-        }
-
-        if (writeConcernDocument.isNumber("w")) {
-            writeConcern = writeConcern.withW(writeConcernDocument.getNumber("w").intValue());
-        } else {
-            writeConcern = writeConcern.withW(writeConcernDocument.getString("w").getValue());
-        }
-
-        if (writeConcernDocument.containsKey("wtimeout")) {
-            writeConcern = writeConcern.withWTimeout(writeConcernDocument.getNumber("wtimeout").longValue(), TimeUnit.MILLISECONDS);
-        }
-        if (writeConcernDocument.containsKey("j")) {
-            writeConcern = writeConcern.withJ(writeConcernDocument.getBoolean("j").getValue());
         }
         return writeConcern;
     }
 
-    ReadConcern getReadConcernFromDocument(final BsonDocument document) {
-        if (document.containsKey("readPreference")) {
-            return getReadConcern(document);
-        } else {
-            return ReadConcern.DEFAULT;
-        }
+    ReadConcern getReadConcern(final BsonDocument arguments) {
+        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
     }
 
     private BsonDocument parseHexDocument(final BsonDocument document, final String hexDocument) {

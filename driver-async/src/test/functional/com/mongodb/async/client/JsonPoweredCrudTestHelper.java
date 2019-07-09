@@ -95,10 +95,6 @@ public class JsonPoweredCrudTestHelper {
     private final GridFSBucket gridFSBucket;
     private final MongoClient mongoClient;
 
-    public JsonPoweredCrudTestHelper() {
-        this(null, null, null, null, null);
-    }
-
     public JsonPoweredCrudTestHelper(final String description, final MongoDatabase database,
                                      final MongoCollection<BsonDocument> collection) {
         this(description, database, collection, null, null);
@@ -1105,32 +1101,18 @@ public class JsonPoweredCrudTestHelper {
     }
 
     ReadPreference getReadPreference(final BsonDocument arguments) {
-        if (arguments.containsKey("readPreference")) {
-            return ReadPreference.valueOf(
-                    arguments.getDocument("readPreference").getString("mode").getValue());
-        }
-        return ReadPreference.primary();
+        return ReadPreference.valueOf(
+                arguments.getDocument("readPreference").getString("mode").getValue());
     }
 
 
     WriteConcern getWriteConcern(final BsonDocument arguments) {
-        return getWriteConcernFromDocument(arguments.getDocument("writeConcern"), true);
-    }
-
-    ReadConcern getReadConcern(final BsonDocument arguments) {
-        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
-    }
-
-    WriteConcern getWriteConcernFromDocument(final BsonDocument writeConcernDocument, final boolean throwException) {
-        WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
+        BsonDocument writeConcernDocument = arguments.getDocument("writeConcern");
         if (!writeConcernDocument.containsKey("w")) {
-            if (throwException) {
-                throw new UnsupportedOperationException("Write concern document contains unexpected keys: "
-                        + writeConcernDocument.keySet());
-            }
-            return writeConcern;
+            throw new UnsupportedOperationException("Write concern document contains unexpected keys: " + writeConcernDocument.keySet());
         }
 
+        WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
         if (writeConcernDocument.isNumber("w")) {
             writeConcern = writeConcern.withW(writeConcernDocument.getNumber("w").intValue());
         } else {
@@ -1146,12 +1128,8 @@ public class JsonPoweredCrudTestHelper {
         return writeConcern;
     }
 
-    ReadConcern getReadConcernFromDocument(final BsonDocument document) {
-        if (document.containsKey("readPreference")) {
-            return getReadConcern(document);
-        } else {
-            return ReadConcern.DEFAULT;
-        }
+    ReadConcern getReadConcern(final BsonDocument arguments) {
+        return new ReadConcern(ReadConcernLevel.fromString(arguments.getDocument("readConcern").getString("level").getValue()));
     }
 
     private BsonDocument parseHexDocument(final BsonDocument document, final String hexDocument) {

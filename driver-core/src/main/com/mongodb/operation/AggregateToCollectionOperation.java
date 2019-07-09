@@ -139,20 +139,6 @@ public class AggregateToCollectionOperation implements AsyncWriteOperation<Void>
      *
      * @param namespace the database and collection namespace for the operation.
      * @param pipeline the aggregation pipeline.
-     * @param writeConcern the write concern to apply
-     * @param aggregationLevel the aggregation level
-     * @since 3.11
-     */
-    public AggregateToCollectionOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline,
-                                          final WriteConcern writeConcern, final AggregationLevel aggregationLevel) {
-        this(namespace, pipeline, null, writeConcern, aggregationLevel);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param namespace the database and collection namespace for the operation.
-     * @param pipeline the aggregation pipeline.
      * @param readConcern the read concern to apply
      * @param writeConcern the write concern to apply
      * @param aggregationLevel the aggregation level
