@@ -616,7 +616,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
         }
 
         BsonDocument result;
@@ -626,7 +626,7 @@ public class JsonPoweredCrudTestHelper {
                         options);
             } else {  // update is a pipeline
                 result = getCollection(collectionOptions).findOneAndUpdate(arguments.getDocument("filter"),
-                        getPipelineFromArray(arguments.getArray("update")), options);
+                        getListOfDocuments(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -634,7 +634,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 result = getCollection(collectionOptions).findOneAndUpdate(clientSession, arguments.getDocument("filter"),
-                        getPipelineFromArray(arguments.getArray("update")), options);
+                        getListOfDocuments(arguments.getArray("update")), options);
             }
         }
 
@@ -734,7 +734,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
         }
         if (arguments.containsKey("bypassDocumentValidation")) {
             options.bypassDocumentValidation(arguments.getBoolean("bypassDocumentValidation").getValue());
@@ -747,7 +747,7 @@ public class JsonPoweredCrudTestHelper {
                         options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateMany(arguments.getDocument("filter"),
-                        getPipelineFromArray(arguments.getArray("update")), options);
+                        getListOfDocuments(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -755,7 +755,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateMany(clientSession, arguments.getDocument("filter"),
-                        getPipelineFromArray(arguments.getArray("update")), options);
+                        getListOfDocuments(arguments.getArray("update")), options);
             }
         }
 
@@ -773,7 +773,7 @@ public class JsonPoweredCrudTestHelper {
             options.collation(getCollation(arguments.getDocument("collation")));
         }
         if (arguments.containsKey("arrayFilters")) {
-            options.arrayFilters((getArrayFilters(arguments.getArray("arrayFilters"))));
+            options.arrayFilters((getListOfDocuments(arguments.getArray("arrayFilters"))));
         }
         if (arguments.containsKey("bypassDocumentValidation")) {
             options.bypassDocumentValidation(arguments.getBoolean("bypassDocumentValidation").getValue());
@@ -786,7 +786,7 @@ public class JsonPoweredCrudTestHelper {
                         options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateOne(arguments.getDocument("filter"),
-                        getPipelineFromArray(arguments.getArray("update")), options);
+                        getListOfDocuments(arguments.getArray("update")), options);
             }
         } else {
             if (arguments.isDocument("update")) {
@@ -794,7 +794,7 @@ public class JsonPoweredCrudTestHelper {
                         arguments.getDocument("update"), options);
             } else {  // update is a pipeline
                 updateResult = getCollection(collectionOptions).updateOne(clientSession, arguments.getDocument("filter"),
-                        getPipelineFromArray(arguments.getArray("update")), options);
+                        getListOfDocuments(arguments.getArray("update")), options);
             }
         }
 
@@ -1006,7 +1006,7 @@ public class JsonPoweredCrudTestHelper {
             options.upsert(true);
         }
         if (requestArguments.containsKey("arrayFilters")) {
-            options.arrayFilters(getArrayFilters(requestArguments.getArray("arrayFilters")));
+            options.arrayFilters(getListOfDocuments(requestArguments.getArray("arrayFilters")));
         }
         if (requestArguments.containsKey("collation")) {
             options.collation(getCollation(requestArguments.getDocument("collation")));
@@ -1034,7 +1034,7 @@ public class JsonPoweredCrudTestHelper {
     }
 
     @Nullable
-    private List<BsonDocument> getArrayFilters(@Nullable final BsonArray bsonArray) {
+    private List<BsonDocument> getListOfDocuments(@Nullable final BsonArray bsonArray) {
         if (bsonArray == null) {
             return null;
         }
@@ -1043,11 +1043,6 @@ public class JsonPoweredCrudTestHelper {
             arrayFilters.add(cur.asDocument());
         }
         return arrayFilters;
-    }
-
-    @Nullable
-    private List<BsonDocument> getPipelineFromArray(@Nullable final BsonArray bsonArray) {
-        return getArrayFilters(bsonArray);
     }
 
     private MongoCollection<BsonDocument> getCollection(final BsonDocument collectionOptions) {
