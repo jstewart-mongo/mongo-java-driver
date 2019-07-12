@@ -109,6 +109,11 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
         return changeStreamOperation.getStartAtOperationTime();
     }
 
+    @Override
+    public boolean isFirstBatchEmpty() {
+        return wrapped.isFirstBatchEmpty();
+    }
+
     private void cachePostBatchResumeToken(final AsyncAggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
         if (queryBatchCursor.getPostBatchResumeToken() != null) {
             resumeToken = queryBatchCursor.getPostBatchResumeToken();

@@ -66,6 +66,7 @@ class QueryBatchCursor<T> implements AggregateResponseBatchCursor<T> {
     private volatile boolean closed;
     private BsonDocument postBatchResumeToken;
     private BsonTimestamp operationTime;
+    private boolean firstBatchEmpty;
 
     QueryBatchCursor(final QueryResult<T> firstQueryResult, final int limit, final int batchSize, final Decoder<T> decoder) {
         this(firstQueryResult, limit, batchSize, decoder, null);
@@ -245,6 +246,11 @@ class QueryBatchCursor<T> implements AggregateResponseBatchCursor<T> {
         return operationTime;
     }
 
+    @Override
+    public boolean isFirstBatchEmpty() {
+        return firstBatchEmpty;
+    }
+
     private void getMore() {
         Connection connection = connectionSource.getConnection();
         try {
@@ -294,6 +300,7 @@ class QueryBatchCursor<T> implements AggregateResponseBatchCursor<T> {
     private void initFromQueryResult(final QueryResult<T> queryResult) {
         serverCursor = queryResult.getCursor();
         nextBatch = queryResult.getResults().isEmpty() ? null : queryResult.getResults();
+        firstBatchEmpty = queryResult.getResults().isEmpty();
         count += queryResult.getResults().size();
     }
 

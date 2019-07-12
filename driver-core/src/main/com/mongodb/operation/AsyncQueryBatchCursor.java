@@ -72,6 +72,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private final AtomicInteger count = new AtomicInteger();
     private volatile BsonDocument postBatchResumeToken;
     private volatile BsonTimestamp operationTime;
+    private volatile boolean firstBatchEmpty;
 
     AsyncQueryBatchCursor(final QueryResult<T> firstBatch, final int limit, final int batchSize, final long maxTimeMS,
                           final Decoder<T> decoder, final AsyncConnectionSource connectionSource, final AsyncConnection connection) {
@@ -146,6 +147,11 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     @Override
     public BsonTimestamp getOperationTime() {
         return operationTime;
+    }
+
+    @Override
+    public boolean isFirstBatchEmpty() {
+        return firstBatchEmpty;
     }
 
     private void next(final SingleResultCallback<List<T>> callback, final boolean tryNext) {
@@ -326,6 +332,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
                 QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(result.getDocument(CURSOR),
                         connection.getDescription().getServerAddress());
                 postBatchResumeToken = getPostBatchResumeTokenFromResponse(result);
+                firstBatchEmpty = queryResult.getResults().isEmpty();
                 handleGetMoreQueryResult(connection, callback, queryResult, tryNext);
             }
         }

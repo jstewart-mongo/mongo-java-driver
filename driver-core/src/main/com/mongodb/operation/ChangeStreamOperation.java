@@ -329,7 +329,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     public BatchCursor<T> execute(final ReadBinding binding) {
         AggregateResponseBatchCursor<RawBsonDocument> cursor = (AggregateResponseBatchCursor<RawBsonDocument>) wrapped.execute(binding);
         return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
-                setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime()));
+                setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(), cursor.isFirstBatchEmpty()));
     }
 
     @Override
@@ -342,19 +342,21 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 } else {
                     AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor = (AsyncAggregateResponseBatchCursor<RawBsonDocument>) result;
                     callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
-                            setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime())), null);
+                            setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(),
+                                    cursor.isFirstBatchEmpty())), null);
                 }
             }
         });
     }
 
-    private BsonDocument setChangeStreamOptions(final BsonDocument postBatchResumeToken, final BsonTimestamp operationTime) {
+    private BsonDocument setChangeStreamOptions(final BsonDocument postBatchResumeToken, final BsonTimestamp operationTime,
+                                                final boolean firstBatchEmpty) {
         BsonDocument resumeToken = null;
         if (startAfter != null) {
             resumeToken = startAfter;
         } else if (resumeAfter != null) {
             resumeToken = resumeAfter;
-        } else if (startAtOperationTime == null && postBatchResumeToken == null) {
+        } else if (startAtOperationTime == null && postBatchResumeToken == null && firstBatchEmpty) {
             startAtOperationTime = operationTime;
         }
         return resumeToken;
@@ -400,17 +402,13 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                     changeStream.append("allChangesForCluster", BsonBoolean.TRUE);
                 }
 
-                boolean hasResumeSetting = false;
                 if (resumeAfter != null) {
-                    hasResumeSetting = true;
                     changeStream.append("resumeAfter", resumeAfter);
                 }
                 if (startAfter != null) {
-                    hasResumeSetting = true;
                     changeStream.append("startAfter", startAfter);
                 }
                 if (startAtOperationTime != null) {
-                    hasResumeSetting = true;
                     changeStream.append("startAtOperationTime", startAtOperationTime);
                 }
 

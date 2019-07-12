@@ -43,4 +43,11 @@ public interface AggregateResponseBatchCursor<T> extends BatchCursor<T> {
      * @return the operation time
      */
     BsonTimestamp getOperationTime();
+
+    /**
+     * Returns true if the first batch was empty.
+     *
+     * @return true if the first batch was empty
+     */
+    boolean isFirstBatchEmpty();
 }
