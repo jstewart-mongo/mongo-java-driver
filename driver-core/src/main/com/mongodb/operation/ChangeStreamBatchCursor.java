@@ -164,7 +164,8 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
             }
             wrapped.close();
 
-            changeStreamOperation.setChangeStreamOptionsForResume(resumeToken);
+            changeStreamOperation.setChangeStreamOptionsForResume(resumeToken,
+                    binding.getReadConnectionSource().getServerDescription().getMaxWireVersion());
             wrapped = ((ChangeStreamBatchCursor<T>) changeStreamOperation.execute(binding)).getWrapped();
             binding.release(); // release the new change stream batch cursor's reference to the binding
         }

@@ -20,6 +20,7 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -167,16 +168,25 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     private void retryOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
-        changeStreamOperation.setChangeStreamOptionsForResume(resumeToken);
-        changeStreamOperation.executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<T>>() {
+        binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
             @Override
-            public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {
+            public void onResult(final AsyncConnectionSource result, final Throwable t) {
                 if (t != null) {
                     callback.onResult(null, t);
                 } else {
-                    wrapped = ((AsyncChangeStreamBatchCursor<T>) result).getWrapped();
-                    binding.release(); // release the new change stream batch cursor's reference to the binding
-                    resumeableOperation(asyncBlock, callback);
+                    changeStreamOperation.setChangeStreamOptionsForResume(resumeToken, result.getServerDescription().getMaxWireVersion());
+                    changeStreamOperation.executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<T>>() {
+                        @Override
+                        public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {
+                            if (t != null) {
+                                callback.onResult(null, t);
+                            } else {
+                                wrapped = ((AsyncChangeStreamBatchCursor<T>) result).getWrapped();
+                                binding.release(); // release the new change stream batch cursor's reference to the binding
+                                resumeableOperation(asyncBlock, callback);
+                            }
+                        }
+                    });
                 }
             }
         });

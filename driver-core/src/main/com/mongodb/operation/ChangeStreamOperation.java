@@ -20,6 +20,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
 import com.mongodb.binding.ReadBinding;
 import com.mongodb.client.model.Collation;
@@ -329,7 +330,8 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
     public BatchCursor<T> execute(final ReadBinding binding) {
         AggregateResponseBatchCursor<RawBsonDocument> cursor = (AggregateResponseBatchCursor<RawBsonDocument>) wrapped.execute(binding);
         return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
-                setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(), cursor.isFirstBatchEmpty()));
+                setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(),
+                        binding.getReadConnectionSource().getServerDescription().getMaxWireVersion(), cursor.isFirstBatchEmpty()));
     }
 
     @Override
@@ -340,23 +342,33 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                 if (t != null) {
                     callback.onResult(null, t);
                 } else {
-                    AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor = (AsyncAggregateResponseBatchCursor<RawBsonDocument>) result;
-                    callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
-                            setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(),
-                                    cursor.isFirstBatchEmpty())), null);
+                    final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor =
+                            (AsyncAggregateResponseBatchCursor<RawBsonDocument>) result;
+                    binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+                        @Override
+                        public void onResult(final AsyncConnectionSource source, final Throwable t) {
+                            if (t != null) {
+                                callback.onResult(null, t);
+                            } else {
+                                callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
+                                        setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(),
+                                                source.getServerDescription().getMaxWireVersion(), cursor.isFirstBatchEmpty())), null);
+                            }
+                        }
+                    });
                 }
             }
         });
     }
 
     private BsonDocument setChangeStreamOptions(final BsonDocument postBatchResumeToken, final BsonTimestamp operationTime,
-                                                final boolean firstBatchEmpty) {
+                                                final int maxWireVersion, final boolean firstBatchEmpty) {
         BsonDocument resumeToken = null;
         if (startAfter != null) {
             resumeToken = startAfter;
         } else if (resumeAfter != null) {
             resumeToken = resumeAfter;
-        } else if (startAtOperationTime == null && postBatchResumeToken == null && firstBatchEmpty) {
+        } else if (startAtOperationTime == null && postBatchResumeToken == null && firstBatchEmpty && maxWireVersion >= 7) {
             startAtOperationTime = operationTime;
         }
         return resumeToken;
@@ -366,14 +378,15 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
      * Set the change stream operation options for a resumeable operation.
      *
      * @param resumeToken the resume token cached prior to resume
+     * @param maxWireVersion the max wire version reported by the server description
      * @since 3.11
      */
-    public void setChangeStreamOptionsForResume(final BsonDocument resumeToken) {
+    public void setChangeStreamOptionsForResume(final BsonDocument resumeToken, final int maxWireVersion) {
         startAfter = null;
         if (resumeToken != null) {
             startAtOperationTime = null;
             resumeAfter = resumeToken;
-        } else if (startAtOperationTime != null) {
+        } else if (startAtOperationTime != null && maxWireVersion >= 7) {
             resumeAfter = null;
         } else {
             resumeAfter = null;
