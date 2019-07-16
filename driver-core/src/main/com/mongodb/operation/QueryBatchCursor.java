@@ -110,6 +110,7 @@ class QueryBatchCursor<T> implements AggregateResponseBatchCursor<T> {
         }
 
         initFromQueryResult(firstQueryResult);
+        firstBatchEmpty = firstQueryResult.getResults().isEmpty();
         if (limitReached()) {
             killCursor(connection);
         }
@@ -300,7 +301,6 @@ class QueryBatchCursor<T> implements AggregateResponseBatchCursor<T> {
     private void initFromQueryResult(final QueryResult<T> queryResult) {
         serverCursor = queryResult.getCursor();
         nextBatch = queryResult.getResults().isEmpty() ? null : queryResult.getResults();
-        firstBatchEmpty = queryResult.getResults().isEmpty();
         count += queryResult.getResults().size();
     }
 

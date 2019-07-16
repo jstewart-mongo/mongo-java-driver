@@ -97,6 +97,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
             this.postBatchResumeToken = getPostBatchResumeTokenFromResponse(result);
         }
 
+        firstBatchEmpty = firstBatch.getResults().isEmpty();
         if (firstBatch.getCursor() != null) {
             connectionSource.retain();
             if (limitReached()) {
@@ -332,7 +333,6 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
                 QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(result.getDocument(CURSOR),
                         connection.getDescription().getServerAddress());
                 postBatchResumeToken = getPostBatchResumeTokenFromResponse(result);
-                firstBatchEmpty = queryResult.getResults().isEmpty();
                 handleGetMoreQueryResult(connection, callback, queryResult, tryNext);
             }
         }

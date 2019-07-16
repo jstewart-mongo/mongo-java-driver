@@ -21,7 +21,9 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
+import com.mongodb.binding.ConnectionSource;
 import com.mongodb.binding.ReadBinding;
+import com.mongodb.operation.OperationHelper.CallableWithSource;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
@@ -30,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
+import static com.mongodb.operation.OperationHelper.withConnectionSource;
 
 final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T> {
     private final ReadBinding binding;
@@ -164,8 +167,13 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
             }
             wrapped.close();
 
-            changeStreamOperation.setChangeStreamOptionsForResume(resumeToken,
-                    binding.getReadConnectionSource().getServerDescription().getMaxWireVersion());
+            withConnectionSource(binding, new CallableWithSource<Void>() {
+                @Override
+                public Void call(final ConnectionSource source) {
+                    changeStreamOperation.setChangeStreamOptionsForResume(resumeToken, source.getServerDescription().getMaxWireVersion());
+                    return null;
+                }
+            });
             wrapped = ((ChangeStreamBatchCursor<T>) changeStreamOperation.execute(binding)).getWrapped();
             binding.release(); // release the new change stream batch cursor's reference to the binding
         }

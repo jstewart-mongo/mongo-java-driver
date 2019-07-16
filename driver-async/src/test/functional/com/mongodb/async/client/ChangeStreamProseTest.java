@@ -38,10 +38,11 @@ import org.junit.Test;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
+import static com.mongodb.async.client.Fixture.getDefaultDatabaseName;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -73,7 +74,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     public void testMissingResumeTokenThrowsException() {
         boolean exceptionFound = false;
         AsyncBatchCursor<ChangeStreamDocument<Document>> cursor =
-                createChangeStreamCursor(collection.watch(asList(Aggregates.project(Document.parse("{ _id : 0 }")))));
+                createChangeStreamCursor(collection.watch(singletonList(Aggregates.project(Document.parse("{ _id : 0 }")))));
 
         try {
             insertOneDocument();
@@ -85,9 +86,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
                 exceptionFound = true;
             }
         } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
+            cursor.close();
         }
         assertTrue(exceptionFound);
     }
@@ -120,7 +119,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         AsyncBatchCursor<ChangeStreamDocument<Document>> cursor = null;
 
         try {
-            cursor = createChangeStreamCursor(collection.watch(asList(Document.parse("{ $unsupportedStage: { _id : 0 } }"))));
+            cursor = createChangeStreamCursor(collection.watch(singletonList(Document.parse("{ $unsupportedStage: { _id : 0 } }"))));
         } catch (MongoCommandException e) {
             exceptionFound = true;
         } finally {
@@ -173,6 +172,13 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         return futureResult(callback);
     }
 
+    private List<ChangeStreamDocument<Document>> getNextBatch(final AsyncBatchCursor<ChangeStreamDocument<Document>> cursor) {
+        FutureResultCallback<List<ChangeStreamDocument<Document>>> callback =
+                new FutureResultCallback<List<ChangeStreamDocument<Document>>>();
+        cursor.next(callback);
+        return futureResult(callback);
+    }
+
     private void setFailPoint(final String command, final int errCode) {
         failPointDocument = new BsonDocument("configureFailPoint", new BsonString("failCommand"))
                 .append("mode", new BsonDocument("times", new BsonInt32(1)))
@@ -189,16 +195,9 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         return isDiscoverableReplicaSet() && serverVersionAtLeast(3, 6);
     }
 
-    private List<ChangeStreamDocument<Document>> getNextBatch(final AsyncBatchCursor<ChangeStreamDocument<Document>> cursor) {
-        FutureResultCallback<List<ChangeStreamDocument<Document>>> callback =
-                new FutureResultCallback<List<ChangeStreamDocument<Document>>>();
-        cursor.next(callback);
-        return futureResult(callback);
-    }
-
-    <T> T futureResult(final FutureResultCallback<T> callback) {
+    private <T> T futureResult(final FutureResultCallback<T> callback) {
         try {
-            return callback.get(5, TimeUnit.SECONDS);
+            return callback.get(30, TimeUnit.SECONDS);
         } catch (Throwable t) {
             throw MongoException.fromThrowable(t);
         }

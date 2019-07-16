@@ -22,6 +22,7 @@ import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
+import com.mongodb.operation.OperationHelper.AsyncCallableWithSource;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
@@ -32,6 +33,7 @@ import java.util.List;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
 import static com.mongodb.operation.OperationHelper.LOGGER;
+import static com.mongodb.operation.OperationHelper.withConnection;
 
 final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private final AsyncReadBinding binding;
@@ -168,13 +170,14 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     private void retryOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
-        binding.getReadConnectionSource(new SingleResultCallback<AsyncConnectionSource>() {
+        withConnection(binding, new AsyncCallableWithSource() {
             @Override
-            public void onResult(final AsyncConnectionSource result, final Throwable t) {
+            public void call(final AsyncConnectionSource source, final Throwable t) {
                 if (t != null) {
                     callback.onResult(null, t);
                 } else {
-                    changeStreamOperation.setChangeStreamOptionsForResume(resumeToken, result.getServerDescription().getMaxWireVersion());
+                    changeStreamOperation.setChangeStreamOptionsForResume(resumeToken, source.getServerDescription().getMaxWireVersion());
+                    source.release();
                     changeStreamOperation.executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<T>>() {
                         @Override
                         public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {
