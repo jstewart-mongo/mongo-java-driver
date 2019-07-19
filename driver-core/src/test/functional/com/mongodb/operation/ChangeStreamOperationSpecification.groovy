@@ -498,7 +498,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
         waitForLastRelease(async ? getAsyncCluster() : getCluster())
 
         where:
-        async << [false]
+        async << [true, false]
     }
 
     @IgnoreIf({ !serverVersionAtLeast([4, 0, 0]) })
