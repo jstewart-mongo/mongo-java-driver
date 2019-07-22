@@ -138,6 +138,7 @@ public final class ChangeStreamDocument<TDocument> {
      *
      * @since 3.11
      */
+    @Deprecated
     public ChangeStreamDocument(@BsonProperty("operationType") final OperationType operationType,
                                 @BsonProperty("resumeToken") final BsonDocument resumeToken,
                                 @Nullable @BsonProperty("ns") final BsonDocument namespaceDocument,
