@@ -79,6 +79,10 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
             }
             assertTrue(interruptedExceptionOccurred);
         }
+
+        public boolean getInterruptedExceptionOccurred() {
+            return interruptedExceptionOccurred;
+        }
     }
 
     //
@@ -86,10 +90,12 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //
     @Test
     public void testThreadInterrupted() throws InterruptedException {
-        final Thread t = new Thread(new ChangeStreamWatcher(collection.watch().cursor()));
+        final ChangeStreamWatcher watcher = new ChangeStreamWatcher(collection.watch().cursor());
+        final Thread t = new Thread(watcher);
         t.start();
         t.interrupt();
         t.join();
+        assertTrue(watcher.getInterruptedExceptionOccurred());
     }
 
     //
