@@ -19,6 +19,7 @@ package com.mongodb.client;
 import com.mongodb.MongoChangeStreamException;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
+import com.mongodb.MongoInterruptedException;
 import com.mongodb.MongoQueryException;
 import com.mongodb.client.internal.MongoChangeStreamCursorImpl;
 import com.mongodb.client.model.Aggregates;
@@ -48,6 +49,7 @@ import static org.junit.Assume.assumeTrue;
 // See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
 public class ChangeStreamProseTest extends DatabaseTestCase {
     private BsonDocument failPointDocument;
+    private volatile boolean interruptedExceptionOccurred = false;
 
     @Before
     @Override
@@ -57,6 +59,34 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
 
         // create the collection before starting tests
         collection.insertOne(Document.parse("{ _id : 0 }"));
+    }
+
+    class ChangeStreamWatchThread extends Thread {
+        @Override
+        public void run() {
+            try {
+                for (final ChangeStreamDocument<Document> doc : collection.watch()) {
+                    // do nothing
+                }
+            } catch (final MongoInterruptedException e) {
+                interruptedExceptionOccurred = true;
+            }
+        }
+    }
+
+    //
+    // Test that MongoInterruptedException is not retryable so that a thread can be interrupted.
+    //
+    @Test
+    public void testThreadInterrupted() throws InterruptedException {
+        final Thread t = new Thread(new ChangeStreamWatchThread());
+        t.start();
+
+        Thread.sleep(500);
+
+        t.interrupt();
+        t.join();
+        assertTrue(interruptedExceptionOccurred);
     }
 
     //
