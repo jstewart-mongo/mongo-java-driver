@@ -49,7 +49,6 @@ import static org.junit.Assume.assumeTrue;
 // See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
 public class ChangeStreamProseTest extends DatabaseTestCase {
     private BsonDocument failPointDocument;
-    private volatile boolean interruptedExceptionOccurred = false;
 
     @Before
     @Override
@@ -61,16 +60,24 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         collection.insertOne(Document.parse("{ _id : 0 }"));
     }
 
-    class ChangeStreamWatchThread extends Thread {
+    class ChangeStreamWatcher implements Runnable {
+        private volatile boolean interruptedExceptionOccurred = false;
+        private final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor;
+
+        ChangeStreamWatcher(final MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor) {
+            this.cursor = cursor;
+        }
+
         @Override
         public void run() {
             try {
-                for (final ChangeStreamDocument<Document> doc : collection.watch()) {
-                    // do nothing
-                }
+                cursor.next();
             } catch (final MongoInterruptedException e) {
                 interruptedExceptionOccurred = true;
+            } finally {
+                cursor.close();
             }
+            assertTrue(interruptedExceptionOccurred);
         }
     }
 
@@ -79,14 +86,10 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
     //
     @Test
     public void testThreadInterrupted() throws InterruptedException {
-        final Thread t = new Thread(new ChangeStreamWatchThread());
+        final Thread t = new Thread(new ChangeStreamWatcher(collection.watch().cursor()));
         t.start();
-
-        Thread.sleep(500);
-
         t.interrupt();
         t.join();
-        assertTrue(interruptedExceptionOccurred);
     }
 
     //
