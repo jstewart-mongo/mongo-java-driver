@@ -52,6 +52,7 @@ import static com.mongodb.operation.OperationHelper.validateCollation;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
 import static com.mongodb.operation.OperationHelper.withConnection;
+import static com.mongodb.operation.OperationHelper.withConnectionAsync;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
 import static com.mongodb.internal.operation.WriteConcernHelper.throwOnWriteConcernError;
 import static java.util.Arrays.asList;
@@ -519,7 +520,7 @@ MapReduceToCollectionOperation implements AsyncWriteOperation<MapReduceStatistic
 
     @Override
     public void executeAsync(final AsyncWriteBinding binding, final SingleResultCallback<MapReduceStatistics> callback) {
-        withConnection(binding, new AsyncCallableWithConnection() {
+        withConnectionAsync(binding, new AsyncCallableWithConnection() {
             @Override
             public void call(final AsyncConnection connection, final Throwable t) {
                 SingleResultCallback<MapReduceStatistics> errHandlingCallback = errorHandlingCallback(callback, LOGGER);

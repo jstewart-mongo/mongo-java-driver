@@ -38,6 +38,7 @@ import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
+import static com.mongodb.operation.OperationHelper.withConnectionAsync;
 
 /**
  * An operation that renames the given collection to the new name.
@@ -131,7 +132,7 @@ public class RenameCollectionOperation implements AsyncWriteOperation<Void>, Wri
 
     @Override
     public void executeAsync(final AsyncWriteBinding binding, final SingleResultCallback<Void> callback) {
-        withConnection(binding, new OperationHelper.AsyncCallableWithConnection() {
+        withConnectionAsync(binding, new OperationHelper.AsyncCallableWithConnection() {
             @Override
             public void call(final AsyncConnection connection, final Throwable t) {
                 SingleResultCallback<Void> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
