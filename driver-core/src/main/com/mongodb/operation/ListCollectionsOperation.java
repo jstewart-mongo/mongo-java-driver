@@ -70,7 +70,7 @@ import static com.mongodb.operation.OperationHelper.createEmptyBatchCursor;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToAsyncBatchCursor;
 import static com.mongodb.operation.OperationHelper.cursorDocumentToBatchCursor;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
-import static com.mongodb.operation.OperationHelper.withReadConnectionAsync;
+import static com.mongodb.operation.OperationHelper.withAsyncReadConnection;
 import static com.mongodb.operation.OperationHelper.withReadConnectionSource;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -256,7 +256,7 @@ public class ListCollectionsOperation<T> implements AsyncReadOperation<AsyncBatc
 
     @Override
     public void executeAsync(final AsyncReadBinding binding, final SingleResultCallback<AsyncBatchCursor<T>> callback) {
-        withReadConnectionAsync(binding, new AsyncCallableWithConnectionAndSource() {
+        withAsyncReadConnection(binding, new AsyncCallableWithConnectionAndSource() {
             @Override
             public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
                 SingleResultCallback<AsyncBatchCursor<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);

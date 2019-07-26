@@ -542,19 +542,19 @@ final class OperationHelper {
         }
     }
 
-    static void withConnectionAsync(final AsyncWriteBinding binding, final AsyncCallableWithConnection callable) {
+    static void withAsyncConnection(final AsyncWriteBinding binding, final AsyncCallableWithConnection callable) {
         binding.getWriteConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionCallback(callable), LOGGER));
     }
 
-    static void withConnectionAsync(final AsyncWriteBinding binding, final AsyncCallableWithConnectionAndSource callable) {
+    static void withAsyncConnection(final AsyncWriteBinding binding, final AsyncCallableWithConnectionAndSource callable) {
         binding.getWriteConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionAndSourceCallback(callable), LOGGER));
     }
 
-    static void withReadConnectionAsync(final AsyncReadBinding binding, final AsyncCallableWithSource callable) {
+    static void withAsyncReadConnection(final AsyncReadBinding binding, final AsyncCallableWithSource callable) {
         binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithSourceCallback(callable), LOGGER));
     }
 
-    static void withReadConnectionAsync(final AsyncReadBinding binding, final AsyncCallableWithConnectionAndSource callable) {
+    static void withAsyncReadConnection(final AsyncReadBinding binding, final AsyncCallableWithConnectionAndSource callable) {
         binding.getReadConnectionSource(errorHandlingCallback(new AsyncCallableWithConnectionAndSourceCallback(callable), LOGGER));
     }
 
@@ -568,7 +568,7 @@ final class OperationHelper {
             if (t != null) {
                 callable.call(null, t);
             } else {
-                withConnectionSourceAsyncCallableConnection(source, callable);
+                withAsyncConnectionSourceCallableConnection(source, callable);
             }
         }
     }
@@ -583,12 +583,12 @@ final class OperationHelper {
             if (t != null) {
                 callable.call(null, t);
             } else {
-                withConnectionSourceAsync(source, callable);
+                withAsyncConnectionSource(source, callable);
             }
         }
     }
 
-    private static void withConnectionSourceAsyncCallableConnection(final AsyncConnectionSource source,
+    private static void withAsyncConnectionSourceCallableConnection(final AsyncConnectionSource source,
                                                                     final AsyncCallableWithConnection callable) {
         source.getConnection(new SingleResultCallback<AsyncConnection>() {
             @Override
@@ -603,11 +603,11 @@ final class OperationHelper {
         });
     }
 
-    private static void withConnectionSourceAsync(final AsyncConnectionSource source, final AsyncCallableWithSource callable) {
+    private static void withAsyncConnectionSource(final AsyncConnectionSource source, final AsyncCallableWithSource callable) {
         callable.call(source, null);
     }
 
-    private static void withConnectionSourceAsync(final AsyncConnectionSource source, final AsyncCallableWithConnectionAndSource callable) {
+    private static void withAsyncConnectionSource(final AsyncConnectionSource source, final AsyncCallableWithConnectionAndSource callable) {
         source.getConnection(new SingleResultCallback<AsyncConnection>() {
             @Override
             public void onResult(final AsyncConnection result, final Throwable t) {
@@ -628,7 +628,7 @@ final class OperationHelper {
             if (t != null) {
                 callable.call(null, null, t);
             } else {
-                withConnectionSourceAsync(source, callable);
+                withAsyncConnectionSource(source, callable);
             }
         }
     }

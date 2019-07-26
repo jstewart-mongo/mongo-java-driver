@@ -38,7 +38,9 @@ import static com.mongodb.operation.OperationHelper.releasingCallback;
 import static com.mongodb.operation.OperationHelper.withConnection;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
 import static com.mongodb.operation.CommandOperationHelper.writeConcernErrorTransformer;
-import static com.mongodb.operation.OperationHelper.withConnectionAsync;
+import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
+import static com.mongodb.operation.OperationHelper.CallableWithConnection;
+import static com.mongodb.operation.OperationHelper.withAsyncConnection;
 
 /**
  * An operation that renames the given collection to the new name.
@@ -121,7 +123,7 @@ public class RenameCollectionOperation implements AsyncWriteOperation<Void>, Wri
      */
     @Override
     public Void execute(final WriteBinding binding) {
-        return withConnection(binding, new OperationHelper.CallableWithConnection<Void>() {
+        return withConnection(binding, new CallableWithConnection<Void>() {
             @Override
             public Void call(final Connection connection) {
                 return executeCommand(binding, "admin", getCommand(connection.getDescription()), connection,
@@ -132,7 +134,7 @@ public class RenameCollectionOperation implements AsyncWriteOperation<Void>, Wri
 
     @Override
     public void executeAsync(final AsyncWriteBinding binding, final SingleResultCallback<Void> callback) {
-        withConnectionAsync(binding, new OperationHelper.AsyncCallableWithConnection() {
+        withAsyncConnection(binding, new AsyncCallableWithConnection() {
             @Override
             public void call(final AsyncConnection connection, final Throwable t) {
                 SingleResultCallback<Void> errHandlingCallback = errorHandlingCallback(callback, LOGGER);

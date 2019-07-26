@@ -56,7 +56,8 @@ import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.canRetryRead;
 import static com.mongodb.operation.OperationHelper.canRetryWrite;
 import static com.mongodb.operation.OperationHelper.releasingCallback;
-import static com.mongodb.operation.OperationHelper.withReadConnectionAsync;
+import static com.mongodb.operation.OperationHelper.withAsyncConnection;
+import static com.mongodb.operation.OperationHelper.withAsyncReadConnection;
 import static com.mongodb.operation.OperationHelper.withReadConnectionSource;
 import static com.mongodb.operation.OperationHelper.withReleasableConnection;
 import static java.lang.String.format;
@@ -404,7 +405,7 @@ final class CommandOperationHelper {
                                            final boolean retryReads,
                                            final SingleResultCallback<T> originalCallback) {
         final SingleResultCallback<T> errorHandlingCallback = errorHandlingCallback(originalCallback, LOGGER);
-        withReadConnectionAsync(binding, new AsyncCallableWithConnectionAndSource() {
+        withAsyncReadConnection(binding, new AsyncCallableWithConnectionAndSource() {
             @Override
             public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
                 if (t != null) {
@@ -497,7 +498,7 @@ final class CommandOperationHelper {
             }
 
             private void retryableCommand(final Throwable originalError) {
-                withReadConnectionAsync(binding, new AsyncCallableWithConnectionAndSource() {
+                withAsyncReadConnection(binding, new AsyncCallableWithConnectionAndSource() {
                     @Override
                     public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
                         if (t != null) {
@@ -837,7 +838,7 @@ final class CommandOperationHelper {
             private void retryableCommand(final Throwable originalError) {
                 final BsonDocument retryCommand = retryCommandModifier.apply(command);
                 logRetryExecute(retryCommand.getFirstKey(), originalError);
-                OperationHelper.withConnectionAsync(binding, new AsyncCallableWithConnectionAndSource() {
+                withAsyncConnection(binding, new AsyncCallableWithConnectionAndSource() {
                     @Override
                     public void call(final AsyncConnectionSource source, final AsyncConnection connection, final Throwable t) {
                         if (t != null) {
