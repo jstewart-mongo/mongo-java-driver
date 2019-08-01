@@ -1138,7 +1138,7 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a document describing the update, which may not be null. The update to apply must include at least one update operator.
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due to some specific write exception
      * @throws com.mongodb.MongoWriteConcernException if the write failed due to being unable to fulfil the write concern
@@ -1146,6 +1146,7 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoException             if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @see com.mongodb.client.MongoCollection#replaceOne(Bson, Object)
      */
     UpdateResult updateOne(Bson filter, Bson update);
 
@@ -1154,7 +1155,8 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter        a document describing the query filter, which may not be null.
-     * @param update        a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update        a document describing the update, which may not be null. The update to apply must include at least one update
+     *                      operator.
      * @param updateOptions the options to apply to the update operation
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due to some specific write exception
@@ -1163,6 +1165,7 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoException             if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @see com.mongodb.client.MongoCollection#replaceOne(Bson, Object, ReplaceOptions)
      */
     UpdateResult updateOne(Bson filter, Bson update, UpdateOptions updateOptions);
 
@@ -1172,7 +1175,7 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a document describing the update, which may not be null. The update to apply must include at least one update operator.
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due to some specific write exception
      * @throws com.mongodb.MongoWriteConcernException if the write failed due to being unable to fulfil the write concern
@@ -1182,6 +1185,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @see com.mongodb.client.MongoCollection#replaceOne(ClientSession, Bson, Object)
      */
     UpdateResult updateOne(ClientSession clientSession, Bson filter, Bson update);
 
@@ -1191,7 +1195,8 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter        a document describing the query filter, which may not be null.
-     * @param update        a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update        a document describing the update, which may not be null. The update to apply must include at least one update
+     *                     operator.
      * @param updateOptions the options to apply to the update operation
      * @return the result of the update one operation
      * @throws com.mongodb.MongoWriteException        if the write failed due to some specific write exception
@@ -1202,6 +1207,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @see com.mongodb.client.MongoCollection#replaceOne(ClientSession, Bson, Object, ReplaceOptions)
      */
     UpdateResult updateOne(ClientSession clientSession, Bson filter, Bson update, UpdateOptions updateOptions);
 
@@ -1526,9 +1532,10 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a document describing the update, which may not be null. The update to apply must include at least one update operator.
      * @return the document that was updated before the update was applied.  If no documents matched the query filter, then null will be
      * returned
+     * @see com.mongodb.client.MongoCollection#findOneAndReplace(Bson, Object)
      */
     @Nullable
     TDocument findOneAndUpdate(Bson filter, Bson update);
@@ -1538,11 +1545,13 @@ public interface MongoCollection<TDocument> {
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter  a document describing the query filter, which may not be null.
-     * @param update  a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update  a document describing the update, which may not be null. The update to apply must include at least one update
+     *               operator.
      * @param options the options to apply to the operation
      * @return the document that was updated.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @see com.mongodb.client.MongoCollection#findOneAndReplace(Bson, Object, FindOneAndReplaceOptions)
      */
     @Nullable
     TDocument findOneAndUpdate(Bson filter, Bson update, FindOneAndUpdateOptions options);
@@ -1553,11 +1562,12 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter a document describing the query filter, which may not be null.
-     * @param update a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update a document describing the update, which may not be null. The update to apply must include at least one update operator.
      * @return the document that was updated before the update was applied.  If no documents matched the query filter, then null will be
      * returned
      * @since 3.6
      * @mongodb.server.release 3.6
+     * @see com.mongodb.client.MongoCollection#findOneAndReplace(ClientSession, Bson, Object)
      */
     @Nullable
     TDocument findOneAndUpdate(ClientSession clientSession, Bson filter, Bson update);
@@ -1568,13 +1578,15 @@ public interface MongoCollection<TDocument> {
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter  a document describing the query filter, which may not be null.
-     * @param update  a document describing the update, which may not be null. The update to apply must include only update operators.
+     * @param update  a document describing the update, which may not be null. The update to apply must include at least one update
+     *               operator.
      * @param options the options to apply to the operation
      * @return the document that was updated.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
      * @since 3.6
      * @mongodb.server.release 3.6
+     * @see com.mongodb.client.MongoCollection#findOneAndReplace(ClientSession, Bson, Object, FindOneAndReplaceOptions)
      */
     @Nullable
     TDocument findOneAndUpdate(ClientSession clientSession, Bson filter, Bson update, FindOneAndUpdateOptions options);
