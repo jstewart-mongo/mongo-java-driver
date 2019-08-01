@@ -17,6 +17,7 @@
 package com.mongodb.async.client
 
 import com.mongodb.Block
+import com.mongodb.MongoClientException
 import com.mongodb.MongoException
 import com.mongodb.async.SingleResultCallback
 import spock.lang.Specification
@@ -303,9 +304,9 @@ class SingleResultCallbackSubscriptionSpecification extends Specification {
         observer.requestMore(1)
 
         then:
-        notThrown(MongoException)
         observer.assertTerminalEvent()
         observer.assertErrored()
+        observer.getOnErrorEvents().first() instanceof MongoClientException
     }
 
     def 'should throw the exception if calling onComplete raises one'() {

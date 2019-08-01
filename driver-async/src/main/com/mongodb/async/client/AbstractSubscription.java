@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 abstract class AbstractSubscription<TResult> implements Subscription {
     private static final Logger LOGGER = Loggers.getLogger("client");
+    private static final Object NULL_PLACEHOLDER = new Object();
     private final Observer<? super TResult> observer;
 
     /* protected by `this` */
@@ -37,7 +38,6 @@ abstract class AbstractSubscription<TResult> implements Subscription {
     private boolean isTerminated = false;
     /* protected by `this` */
 
-    private static final Object NULL_PLACEHOLDER = new Object();
     private final ConcurrentLinkedQueue<Object> resultsQueue = new ConcurrentLinkedQueue<Object>();
 
     AbstractSubscription(final Observer<? super TResult> observer) {
