@@ -1028,6 +1028,9 @@ public interface MongoCollection<TDocument> {
     /**
      * Replace a document in the collection according to the specified arguments.
      *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #updateOne(Bson, Bson)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter      the query filter to apply the the replace operation
      * @param replacement the replacement document
@@ -1037,11 +1040,15 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoCommandException      if the write failed due to a specific command exception
      * @throws com.mongodb.MongoException             if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/#replace-the-document Replace
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      */
     UpdateResult replaceOne(Bson filter, TDocument replacement);
 
     /**
      * Replace a document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #updateOne(Bson, Bson, UpdateOptions)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter        the query filter to apply the the replace operation
@@ -1053,6 +1060,7 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoCommandException      if the write failed due to a specific command exception
      * @throws com.mongodb.MongoException             if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/#replace-the-document Replace
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @deprecated use {@link #replaceOne(Bson, Object, ReplaceOptions)} instead
      */
     @Deprecated
@@ -1060,6 +1068,9 @@ public interface MongoCollection<TDocument> {
 
     /**
      * Replace a document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #updateOne(Bson, Bson, UpdateOptions)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter        the query filter to apply the the replace operation
@@ -1071,12 +1082,16 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoCommandException      if the write failed due to a specific command exception
      * @throws com.mongodb.MongoException             if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/#replace-the-document Replace
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.7
      */
     UpdateResult replaceOne(Bson filter, TDocument replacement, ReplaceOptions replaceOptions);
 
     /**
      * Replace a document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #updateOne(ClientSession, Bson, Bson)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
@@ -1090,11 +1105,15 @@ public interface MongoCollection<TDocument> {
      * @since 3.6
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual tutorial/modify-documents/#replace-the-document Replace
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      */
     UpdateResult replaceOne(ClientSession clientSession, Bson filter, TDocument replacement);
 
     /**
      * Replace a document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #updateOne(ClientSession, Bson, Bson, UpdateOptions)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
@@ -1110,12 +1129,16 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual tutorial/modify-documents/#replace-the-document Replace
      * @deprecated use {@link #replaceOne(ClientSession, Bson, Object, ReplaceOptions)} instead
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      */
     @Deprecated
     UpdateResult replaceOne(ClientSession clientSession, Bson filter, TDocument replacement, UpdateOptions updateOptions);
 
     /**
      * Replace a document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #updateOne(ClientSession, Bson, Bson, UpdateOptions)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
@@ -1130,6 +1153,7 @@ public interface MongoCollection<TDocument> {
      * @since 3.7
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual tutorial/modify-documents/#replace-the-document Replace
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      */
     UpdateResult replaceOne(ClientSession clientSession, Bson filter, TDocument replacement, ReplaceOptions replaceOptions);
 
@@ -1489,18 +1513,25 @@ public interface MongoCollection<TDocument> {
     /**
      * Atomically find a document and replace it.
      *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #findOneAndUpdate(Bson, Bson)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter      the query filter to apply the the replace operation
      * @param replacement the replacement document
      * @return the document that was replaced.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      */
     @Nullable
     TDocument findOneAndReplace(Bson filter, TDocument replacement);
 
     /**
      * Atomically find a document and replace it.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #findOneAndUpdate(Bson, Bson, FindOneAndUpdateOptions)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter      the query filter to apply the the replace operation
@@ -1509,12 +1540,16 @@ public interface MongoCollection<TDocument> {
      * @return the document that was replaced.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      */
     @Nullable
     TDocument findOneAndReplace(Bson filter, TDocument replacement, FindOneAndReplaceOptions options);
 
     /**
      * Atomically find a document and replace it.
+     *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #findOneAndUpdate(ClientSession, Bson, Bson)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
@@ -1523,6 +1558,7 @@ public interface MongoCollection<TDocument> {
      * @return the document that was replaced.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.6
      * @mongodb.server.release 3.6
      */
@@ -1532,6 +1568,9 @@ public interface MongoCollection<TDocument> {
     /**
      * Atomically find a document and replace it.
      *
+     * <p>Use this method to replace a document using the specified replacement argument. To update the document with update operators, use
+     * the corresponding {@link #findOneAndUpdate(ClientSession, Bson, Bson, FindOneAndUpdateOptions)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter      the query filter to apply the the replace operation
@@ -1540,6 +1579,7 @@ public interface MongoCollection<TDocument> {
      * @return the document that was replaced.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.6
      * @mongodb.server.release 3.6
      */
@@ -1549,11 +1589,16 @@ public interface MongoCollection<TDocument> {
     /**
      * Atomically find a document and update it.
      *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #findOneAndReplace(Bson, Object)} method.
+     * </p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter a document describing the query filter, which may not be null.
      * @param update a document describing the update, which may not be null. The update to apply must include at least one update operator.
      * @return the document that was updated before the update was applied.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @see com.mongodb.client.MongoCollection#findOneAndReplace(Bson, Object)
      */
     @Nullable
@@ -1561,6 +1606,10 @@ public interface MongoCollection<TDocument> {
 
     /**
      * Atomically find a document and update it.
+     *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #findOneAndReplace(Bson, Object,
+     * FindOneAndReplaceOptions)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter  a document describing the query filter, which may not be null.
@@ -1570,6 +1619,7 @@ public interface MongoCollection<TDocument> {
      * @return the document that was updated.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @see com.mongodb.client.MongoCollection#findOneAndReplace(Bson, Object, FindOneAndReplaceOptions)
      */
     @Nullable
@@ -1578,12 +1628,17 @@ public interface MongoCollection<TDocument> {
     /**
      * Atomically find a document and update it.
      *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #findOneAndReplace(ClientSession, Bson,
+     * Object)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter a document describing the query filter, which may not be null.
      * @param update a document describing the update, which may not be null. The update to apply must include at least one update operator.
      * @return the document that was updated before the update was applied.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.6
      * @mongodb.server.release 3.6
      * @see com.mongodb.client.MongoCollection#findOneAndReplace(ClientSession, Bson, Object)
@@ -1594,6 +1649,10 @@ public interface MongoCollection<TDocument> {
     /**
      * Atomically find a document and update it.
      *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #findOneAndReplace(ClientSession, Bson,
+     * Object, FindOneAndReplaceOptions)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession the client session with which to associate this operation
      * @param filter  a document describing the query filter, which may not be null.
@@ -1603,6 +1662,7 @@ public interface MongoCollection<TDocument> {
      * @return the document that was updated.  Depending on the value of the {@code returnOriginal} property, this will either be the
      * document as it was before the update or as it is after the update.  If no documents matched the query filter, then null will be
      * returned
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.6
      * @mongodb.server.release 3.6
      * @see com.mongodb.client.MongoCollection#findOneAndReplace(ClientSession, Bson, Object, FindOneAndReplaceOptions)
