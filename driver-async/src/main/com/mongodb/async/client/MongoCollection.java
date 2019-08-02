@@ -1167,6 +1167,10 @@ public interface MongoCollection<TDocument> {
     /**
      * Update a single document in the collection according to the specified arguments.
      *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #replaceOne(Bson, Object,
+     * SingleResultCallback)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter   a document describing the query filter, which may not be null.
      * @param update   a document describing the update, which may not be null. The update to apply must include at least one update
@@ -1178,12 +1182,17 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoException             via the callback if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @see com.mongodb.async.client.MongoCollection#replaceOne(Bson, Object, SingleResultCallback)
      */
     void updateOne(Bson filter, Bson update, SingleResultCallback<UpdateResult> callback);
 
     /**
      * Update a single document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #replaceOne(Bson, Object, ReplaceOptions,
+     * SingleResultCallback)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param filter   a document describing the query filter, which may not be null.
@@ -1197,12 +1206,17 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoException             via the callback if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @see com.mongodb.async.client.MongoCollection#replaceOne(Bson, Object, UpdateOptions, SingleResultCallback)
      */
     void updateOne(Bson filter, Bson update, UpdateOptions options, SingleResultCallback<UpdateResult> callback);
 
     /**
      * Update a single document in the collection according to the specified arguments.
+     *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #replaceOne(ClientSession, Bson, Object,
+     * SingleResultCallback)} method.</p>
      *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession  the client session with which to associate this operation
@@ -1216,6 +1230,7 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoException             via the callback if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.6
      * @mongodb.server.release 3.6
      * @see com.mongodb.async.client.MongoCollection#replaceOne(ClientSession, Bson, Object, SingleResultCallback)
@@ -1225,6 +1240,10 @@ public interface MongoCollection<TDocument> {
     /**
      * Update a single document in the collection according to the specified arguments.
      *
+     * <p>Use this method to only update the corresponding fields in the document according to the update operators used in the update
+     * document. To replace the entire document with a new document, use the corresponding {@link #replaceOne(ClientSession, Bson, Object,
+     * UpdateOptions, SingleResultCallback)} method.</p>
+     *
      * <p>Note: Supports retryable writes on MongoDB server versions 3.6 or higher when the retryWrites setting is enabled.</p>
      * @param clientSession  the client session with which to associate this operation
      * @param filter   a document describing the query filter, which may not be null.
@@ -1238,6 +1257,7 @@ public interface MongoCollection<TDocument> {
      * @throws com.mongodb.MongoException             via the callback if the write failed due some other failure
      * @mongodb.driver.manual tutorial/modify-documents/ Updates
      * @mongodb.driver.manual reference/operator/update/ Update Operators
+     * @mongodb.driver.manual reference/command/update   Update Command Behaviors
      * @since 3.6
      * @mongodb.server.release 3.6
      * @see com.mongodb.async.client.MongoCollection#replaceOne(ClientSession, Bson, Object, UpdateOptions, SingleResultCallback)
