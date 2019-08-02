@@ -16,12 +16,21 @@
 
 package org.bson.codecs.pojo.entities;
 
+import org.bson.codecs.pojo.annotations.BsonIgnore;
+import org.bson.codecs.pojo.annotations.BsonProperty;
+
 import javax.annotation.Nullable;
 
 public class DuplicateAnnotationAllowedModel {
 
     @Nullable
     private String id;
+
+    @BsonIgnore
+    private String ignoredString;
+
+    @BsonProperty("property")
+    private String propertyString;
 
     public DuplicateAnnotationAllowedModel() {
     }
@@ -37,6 +46,26 @@ public class DuplicateAnnotationAllowedModel {
 
     public void setId(@Nullable final String id) {
         this.id = id;
+    }
+
+    @BsonIgnore
+    public String getIgnoredString() {
+        return ignoredString;
+    }
+
+    @BsonIgnore
+    public void setIgnoredString(final String ignoredString) {
+        this.ignoredString = ignoredString;
+    }
+
+    @BsonProperty("property")
+    public String getPropertyString() {
+        return propertyString;
+    }
+
+    @BsonProperty("property")
+    public void setPropertyString(final String propertyString) {
+        this.propertyString = propertyString;
     }
 
     @Override

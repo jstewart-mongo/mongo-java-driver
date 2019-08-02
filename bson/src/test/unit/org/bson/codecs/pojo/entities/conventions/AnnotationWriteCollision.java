@@ -18,12 +18,13 @@ package org.bson.codecs.pojo.entities.conventions;
 
 import org.bson.codecs.pojo.annotations.BsonProperty;
 
-public final class AnnotationCollision {
+public final class AnnotationWriteCollision {
 
     public String id;
 
     @BsonProperty("color")
     private String color;
+
 
     public String getId() {
         return id;
@@ -33,11 +34,11 @@ public final class AnnotationCollision {
         this.id = id;
     }
 
-    @BsonProperty("theme")
     public String getColor() {
         return color;
     }
 
+    @BsonProperty("theme")
     public void setColor(final String color) {
         this.color = color;
     }

@@ -23,6 +23,7 @@ import org.bson.codecs.pojo.entities.conventions.AnnotationCollision;
 import org.bson.codecs.pojo.entities.conventions.AnnotationDefaultsModel;
 import org.bson.codecs.pojo.entities.conventions.AnnotationNameCollision;
 import org.bson.codecs.pojo.entities.conventions.AnnotationWithObjectIdModel;
+import org.bson.codecs.pojo.entities.conventions.AnnotationWriteCollision;
 import org.bson.codecs.pojo.entities.conventions.CreatorInvalidConstructorModel;
 import org.bson.codecs.pojo.entities.conventions.CreatorInvalidMethodModel;
 import org.bson.codecs.pojo.entities.conventions.CreatorInvalidMethodReturnTypeModel;
@@ -141,6 +142,11 @@ public final class ConventionsTest {
     @Test(expected = CodecConfigurationException.class)
     public void testAnnotationCollision() {
         ClassModel.builder(AnnotationCollision.class).conventions(DEFAULT_CONVENTIONS).build();
+    }
+
+    @Test(expected = CodecConfigurationException.class)
+    public void testAnnotationWriteCollision() {
+        ClassModel.builder(AnnotationWriteCollision.class).conventions(DEFAULT_CONVENTIONS).build();
     }
 
     @Test(expected = CodecConfigurationException.class)
