@@ -16,6 +16,8 @@
 
 package org.bson.codecs.pojo;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,13 +46,13 @@ public final class ClassModel<T> {
         this.name = clazz.getSimpleName();
         this.type = clazz;
         this.hasTypeParameters = clazz.getTypeParameters().length > 0;
-        this.propertyNameToTypeParameterMap = propertyNameToTypeParameterMap;
+        this.propertyNameToTypeParameterMap = new HashMap<String, TypeParameterMap>(propertyNameToTypeParameterMap);
         this.instanceCreatorFactory = instanceCreatorFactory;
         this.discriminatorEnabled = discriminatorEnabled;
         this.discriminatorKey = discriminatorKey;
         this.discriminator = discriminator;
         this.idPropertyModelHolder = idPropertyModelHolder;
-        this.propertyModels = propertyModels;
+        this.propertyModels = new ArrayList<PropertyModel<?>>(propertyModels);
     }
 
     /**
@@ -131,7 +133,7 @@ public final class ClassModel<T> {
      * @return the list of properties
      */
     public List<PropertyModel<?>> getPropertyModels() {
-        return propertyModels;
+        return new ArrayList<PropertyModel<?>>(propertyModels);
     }
 
     /**
@@ -211,7 +213,7 @@ public final class ClassModel<T> {
         result = 31 * result + (discriminatorEnabled ? 1 : 0);
         result = 31 * result + (getDiscriminatorKey() != null ? getDiscriminatorKey().hashCode() : 0);
         result = 31 * result + (getDiscriminator() != null ? getDiscriminator().hashCode() : 0);
-        result = 31 * result + (getIdPropertyModelHolder() != null ? getIdPropertyModelHolder().hashCode() : 0);
+        result = 31 * result + getIdPropertyModelHolder().hashCode();
         result = 31 * result + getPropertyModels().hashCode();
         result = 31 * result + getPropertyNameToTypeParameterMap().hashCode();
         return result;
@@ -222,7 +224,7 @@ public final class ClassModel<T> {
     }
 
     Map<String, TypeParameterMap> getPropertyNameToTypeParameterMap() {
-        return propertyNameToTypeParameterMap;
+        return new HashMap<String, TypeParameterMap>(propertyNameToTypeParameterMap);
     }
 
 }
