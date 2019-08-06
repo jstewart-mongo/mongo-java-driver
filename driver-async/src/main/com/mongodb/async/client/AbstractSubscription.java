@@ -16,7 +16,6 @@
 
 package com.mongodb.async.client;
 
-import com.mongodb.MongoClientException;
 import com.mongodb.MongoException;
 import com.mongodb.diagnostics.logging.Logger;
 import com.mongodb.diagnostics.logging.Loggers;
@@ -143,7 +142,7 @@ abstract class AbstractSubscription<TResult> implements Subscription {
     private void onNext(@Nullable final TResult next) {
         if (!isTerminated()) {
             if (next == null) {
-                onError(new MongoClientException("A null result for subscribing observers is no longer accepted"));
+                throw new NullPointerException();
             }
             try {
                 observer.onNext(next);
