@@ -263,6 +263,16 @@ functions:
           # DO NOT ECHO WITH XTRACE (which PREPARE_SHELL does)
           PROJECT_DIRECTORY=${PROJECT_DIRECTORY} JDK=${JDK} MONGODB_URI=${gssapi_auth_mongodb_uri} KDC=${gssapi_auth_kdc} REALM=${gssapi_auth_realm} KEYTAB_BASE64=${gssapi_auth_keytab_base64} .evergreen/run-gssapi-auth-test.sh
 
+  "run mmapv1 storage test":
+    - command: shell.exec
+      type: test
+      params:
+        silent: true
+        working_dir: "src"
+        script: |
+          # DO NOT ECHO WITH XTRACE (which PREPARE_SHELL does)
+          PROJECT_DIRECTORY=${PROJECT_DIRECTORY} JDK=${JDK} TOPOLOGY=${TOPOLOGY} STORAGE_ENGINE=${STORAGE_ENGINE} MONGODB_URI="${MONGODB_URI}" .evergreen/run-mmapv1-storage-test.sh
+
   "run atlas test":
     - command: shell.exec
       type: test
@@ -433,6 +443,11 @@ tasks:
         - func: "bootstrap mongo-orchestration"
         - func: "run perf tests"
         - func: "send dashboard data"
+
+    - name: "mmapv1-storage-test"
+      commands:
+        - func: "run mmapv1 storage test"
+
 axes:
   - id: version
     display_name: MongoDB Version
@@ -582,41 +597,42 @@ buildvariants:
 
 # Test packaging and other release related routines
 - name: static-checks
+  matrix_spec: { storage-engine: "wiredtiger" }
   display_name: "Static Checks"
   run_on: *hosts
   tasks:
     - name: "static-analysis"
 
 - matrix_name: "tests-zlib-compression"
-  matrix_spec: { compressor : "zlib", auth: "noauth", ssl: "nossl", jdk: "jdk6", version: ["3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "linux" }
+  matrix_spec: { compressor : "zlib", auth: "noauth", ssl: "nossl", jdk: "jdk6", version: ["3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:
      - name: "test"
 
 - matrix_name: "tests-snappy-compression"
-  matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["3.4", "3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "linux" }
+  matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["3.4", "3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:
      - name: "test"
 
 - matrix_name: "tests-zstd-compression"
-  matrix_spec: { compressor : "zstd", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["4.2", "latest"], topology: "standalone", os: "linux" }
+  matrix_spec: { compressor : "zstd", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["4.2", "latest"], topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:
      - name: "test"
 
 - matrix_name: "tests-jdk6-unsecure"
-  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "jdk6", version: "*", topology: "*", os: "linux" }
+  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "jdk6", version: "*", topology: "*", os: "linux", storage-engine: "wiredtiger" }
   display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:
      - name: "test"
 
 - matrix_name: "tests-jdk6-secure"
-  matrix_spec:  { auth: "auth", ssl: "ssl", jdk: "jdk6", version: "*", topology: "*", os: "linux" }
+  matrix_spec:  { auth: "auth", ssl: "ssl", jdk: "jdk6", version: "*", topology: "*", os: "linux", storage-engine: "wiredtiger" }
   exclude_spec: { auth: "auth", ssl: "ssl", jdk: "jdk6", version: ["4.0", "4.2", "latest"], topology: "*", os: "linux" }
   display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
@@ -624,56 +640,56 @@ buildvariants:
      - name: "test"
 
 - matrix_name: "tests-jdk-newer-secure"
-  matrix_spec: { auth: "auth", ssl: "ssl", jdk: ["jdk8", "jdk11"], version: ["4.0", "4.2", "latest"], topology: "*", os: "linux" }
+  matrix_spec: { auth: "auth", ssl: "ssl", jdk: ["jdk8", "jdk11"], version: ["4.0", "4.2", "latest"], topology: "*", os: "linux", storage-engine: "wiredtiger" }
   display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:
      - name: "test"
 
 - matrix_name: "tests-jdk7-secure"
-  matrix_spec: { auth: "auth", ssl: "ssl", jdk: "jdk7", version: "3.6", topology: "standalone", os: "linux" }
+  matrix_spec: { auth: "auth", ssl: "ssl", jdk: "jdk7", version: "3.6", topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "${version} ${topology} ${auth} ${ssl} ${jdk} ${os} "
   tags: ["tests-variant"]
   tasks:
      - name: "test"
 
 - matrix_name: "tests-slow"
-  matrix_spec: { auth: "noauth", ssl: "*", jdk: "jdk8", version: ["4.2"], topology: "*", os: "linux" }
+  matrix_spec: { auth: "noauth", ssl: "*", jdk: "jdk8", version: ["4.2"], topology: "*", os: "linux", storage-engine: "wiredtiger" }
   display_name: "Slow: ${version} ${topology} ${ssl} ${jdk} ${os} "
   tags: ["tests-slow-variant"]
   tasks:
   - name: "slow-test"
 
 - matrix_name: "tests-socket"
-  matrix_spec: { auth: "*", ssl: "nossl", jdk: "jdk8", version: ["4.2"], topology: "standalone", os: "linux" }
+  matrix_spec: { auth: "*", ssl: "nossl", jdk: "jdk8", version: ["4.2"], topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "Socket: ${version} ${topology} ${auth} ${jdk} ${os} "
   tags: ["tests-socket-variant"]
   tasks:
      - name: "socket-test"
 
 - matrix_name: "tests-socket-snappy-compression"
-  matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["4.2"], topology: "standalone", os: "linux" }
+  matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["4.2"], topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "Socket: ${version} ${compressor} ${topology} ${auth} ${jdk} ${os} "
   tags: ["tests-socket-variant"]
   tasks:
      - name: "socket-test"
 
 - matrix_name: "tests-socket-zstd-compression"
-  matrix_spec: { compressor : "zstd", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["4.2"], topology: "standalone", os: "linux" }
+  matrix_spec: { compressor : "zstd", auth: "noauth", ssl: "nossl", jdk: "jdk7", version: ["4.2"], topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   display_name: "Socket: ${version} ${compressor} ${topology} ${auth} ${jdk} ${os} "
   tags: ["tests-socket-variant"]
   tasks:
      - name: "socket-test"
 
 - matrix_name: "test-gssapi"
-  matrix_spec: { jdk: "*", os: "linux" }
+  matrix_spec: { jdk: "*", os: "linux", storage-engine: "wiredtiger" }
   display_name: "GSSAPI (Kerberos) Auth test ${jdk} ${os} "
   tags: ["test-gssapi-variant"]
   tasks:
      - name: "gssapi-auth-test"
 
 - matrix_name: "perf"
-  matrix_spec:  { auth: "noauth", ssl: "nossl", jdk: "jdk9", version: "*", topology: "standalone", os: "linux" }
+  matrix_spec:  { auth: "noauth", ssl: "nossl", jdk: "jdk9", version: "*", topology: "standalone", os: "linux", storage-engine: "wiredtiger" }
   batchtime: 1440 # run once a day
   display_name: "Perf Tests ${version} "
   tags: ["perf-variant"]
@@ -681,7 +697,7 @@ buildvariants:
      - name: "perf"
 
 - matrix_name: "tests-embedded"
-  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "*", version: ["4.2"], topology: "standalone", os: "ubuntu" }
+  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "*", version: ["4.2"], topology: "standalone", os: "ubuntu", storage-engine: "wiredtiger" }
   exclude_spec: { auth: "*", ssl: "*", jdk: "jdk6", version: "*", topology: "*", os: "*" }
   display_name: "Embedded: ${jdk}"
   tags: ["test-embedded-variant"]
@@ -689,26 +705,28 @@ buildvariants:
   - name: "embedded-test"
 
 - name: plain-auth-test
+  matrix_spec: { storage-engine: "wiredtiger" }
   display_name: "PLAIN (LDAP) Auth test"
   run_on: *hosts
   tasks:
     - name: "plain-auth-test"
 
 - name: atlas-test
+  matrix_spec: { storage-engine: "wiredtiger" }
   display_name: "Atlas test"
   run_on: *hosts
   tasks:
     - name: "atlas-test"
 
 - name: publish-snapshot
+  matrix_spec: { storage-engine: "wiredtiger" }
   display_name: "Publish Snapshot"
   run_on: ubuntu1804-test
   tasks:
     - name: "publish-snapshot"
 
-# Storage engine tests on RHEL 6.2 (x86_64)
 - matrix_name: "tests-storage-engines"
-  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "*", platform: "rhel62", version: ["3.6", "4.0"], topology: ["replicaset", "sharded"], storage-engine: "mmapv1" }
+  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "jdk8", platform: "rhel62", version: ["3.6", "4.0"], topology: ["replicaset", "sharded"], storage-engine: "mmapv1" }
   display_name: "Storage ${storage-engine} ${jdk} ${platform} ${topology}"
   tasks:
     - name: "test"

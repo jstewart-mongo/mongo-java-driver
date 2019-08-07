@@ -27,7 +27,6 @@ import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
-import static java.util.Arrays.asList;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
