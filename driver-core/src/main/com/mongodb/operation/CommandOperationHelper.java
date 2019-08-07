@@ -895,6 +895,10 @@ final class CommandOperationHelper {
             return true;
         }
         String errorMessage = t.getMessage();
+        if (((MongoException) t).getCode() == 20 && errorMessage.contains("Transaction numbers")) {
+            throw new MongoException(((MongoException) t).getCode(), "This MongoDB deployment does not support retryable writes. "
+                    + "Please add retryWrites=false to your connection string.", t);
+        }
         if (t instanceof MongoWriteConcernException) {
             errorMessage = ((MongoWriteConcernException) t).getWriteConcernError().getMessage();
         }
