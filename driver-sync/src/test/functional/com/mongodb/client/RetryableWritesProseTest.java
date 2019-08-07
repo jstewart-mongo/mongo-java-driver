@@ -16,6 +16,7 @@
 
 package com.mongodb.client;
 
+import com.mongodb.MongoClientException;
 import com.mongodb.MongoException;
 import org.bson.Document;
 import org.junit.Before;
@@ -45,9 +46,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
 
         try {
             collection.insertOne(Document.parse("{x: 1}"));
-        } catch (MongoException e) {
-            assertTrue(e.getCode() == 20 && e.getMessage().equals("This MongoDB deployment does not support retryable writes. "
+        } catch (MongoClientException e) {
+            assertTrue(e.getMessage().equals("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string."));
+            assertTrue(((MongoException) e.getCause()).getCode() == 20);
+            assertTrue(((MongoException) e.getCause()).getMessage().contains("Transaction numbers"));
             exceptionFound = true;
         }
         assertTrue(exceptionFound);

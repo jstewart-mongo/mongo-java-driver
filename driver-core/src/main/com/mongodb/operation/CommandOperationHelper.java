@@ -17,6 +17,7 @@
 package com.mongodb.operation;
 
 import com.mongodb.Function;
+import com.mongodb.MongoClientException;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNodeIsRecoveringException;
@@ -896,7 +897,7 @@ final class CommandOperationHelper {
         }
         String errorMessage = t.getMessage();
         if (((MongoException) t).getCode() == 20 && errorMessage.contains("Transaction numbers")) {
-            throw new MongoException(((MongoException) t).getCode(), "This MongoDB deployment does not support retryable writes. "
+            throw new MongoClientException("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string.", t);
         }
         if (t instanceof MongoWriteConcernException) {
