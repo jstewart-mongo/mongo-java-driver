@@ -201,7 +201,7 @@ functions:
       params:
         script: |
           ${PREPARE_SHELL}
-          MONGODB_VERSION=${VERSION} TOPOLOGY=${TOPOLOGY} AUTH=${AUTH} SSL=${SSL} sh ${DRIVERS_TOOLS}/.evergreen/run-orchestration.sh
+          MONGODB_VERSION=${VERSION} TOPOLOGY=${TOPOLOGY} AUTH=${AUTH} SSL=${SSL} STORAGE_ENGINE=${STORAGE_ENGINE} sh ${DRIVERS_TOOLS}/.evergreen/run-orchestration.sh
     # run-orchestration generates expansion file with the MONGODB_URI for the cluster
     - command: expansions.update
       params:
@@ -561,6 +561,23 @@ axes:
         variables:
            JDK: "jdk6"
 
+  # Choice of MongoDB storage engine
+  - id: storage-engine
+    display_name: Storage
+    values:
+      - id: mmapv1
+        display_name: MMAPv1
+        variables:
+           STORAGE_ENGINE: "mmapv1"
+      - id: wiredtiger
+        display_name: WiredTiger
+        variables:
+           STORAGE_ENGINE: "wiredtiger"
+      - id: inmemory
+        display_name: InMemory
+        variables:
+           STORAGE_ENGINE: "inmemory"
+           
 buildvariants:
 
 # Test packaging and other release related routines
@@ -688,3 +705,10 @@ buildvariants:
   run_on: ubuntu1804-test
   tasks:
     - name: "publish-snapshot"
+
+# Storage engine tests on RHEL 6.2 (x86_64)
+- matrix_name: "tests-storage-engines"
+  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "*", platform: "rhel62", version: ["3.6", "4.0"], topology: ["replicaset", "sharded"], storage-engine: "mmapv1" }
+  display_name: "Storage ${storage-engine} ${jdk} ${platform} ${topology}"
+  tasks:
+    - name: "test"
