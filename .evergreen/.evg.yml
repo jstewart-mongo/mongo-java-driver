@@ -729,4 +729,4 @@ buildvariants:
   matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "jdk8", platform: "rhel62", version: ["3.6", "4.0"], topology: ["replicaset", "sharded"], storage-engine: "mmapv1" }
   display_name: "Storage ${storage-engine} ${jdk} ${platform} ${topology}"
   tasks:
-    - name: "test"
+    - name: "mmapv1-storage-test"
