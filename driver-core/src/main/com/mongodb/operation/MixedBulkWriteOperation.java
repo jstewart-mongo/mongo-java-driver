@@ -17,6 +17,7 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoBulkWriteException;
+import com.mongodb.MongoClientException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
@@ -479,18 +480,22 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             @Override
             public void onResult(final BsonDocument result, final Throwable t) {
                 if (t != null) {
-                    if (isSecondAttempt || !shouldAttemptToRetryWrite(retryWrites, t)) {
-                        if (retryWrites && !isSecondAttempt) {
-                            logUnableToRetry(batch.getPayload().getPayloadType().toString(), t);
-                        }
-                        if (t instanceof MongoWriteConcernWithResponseException) {
-                            addBatchResult((BsonDocument) ((MongoWriteConcernWithResponseException) t).getResponse(), binding, connection,
-                                    batch, retryWrites, callback);
+                    try {
+                        if (isSecondAttempt || !shouldAttemptToRetryWrite(retryWrites, t)) {
+                            if (retryWrites && !isSecondAttempt) {
+                                logUnableToRetry(batch.getPayload().getPayloadType().toString(), t);
+                            }
+                            if (t instanceof MongoWriteConcernWithResponseException) {
+                                addBatchResult((BsonDocument) ((MongoWriteConcernWithResponseException) t).getResponse(), binding, connection,
+                                        batch, retryWrites, callback);
+                            } else {
+                                callback.onResult(null, t);
+                            }
                         } else {
-                            callback.onResult(null, t);
+                            retryExecuteBatchesAsync(binding, batch, t, callback.releaseConnectionAndGetWrapped());
                         }
-                    } else {
-                        retryExecuteBatchesAsync(binding, batch, t, callback.releaseConnectionAndGetWrapped());
+                    } catch (MongoClientException e) {
+                        callback.onResult(null, e);
                     }
                 } else {
                     if (retryWrites && !isSecondAttempt) {
