@@ -40,7 +40,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     @Test
-    public void testRetryWritesAgainstMMAPv1RaisesError() {
+    public void testRetryWritesWithInsertOneAgainstMMAPv1RaisesError() {
         boolean exceptionFound = false;
 
         try {
@@ -49,7 +49,23 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
             assertTrue(e.getMessage().equals("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string."));
             assertTrue(((MongoException) e.getCause()).getCode() == 20);
-            assertTrue(((MongoException) e.getCause()).getMessage().contains("Transaction numbers"));
+            assertTrue(e.getCause().getMessage().contains("Transaction numbers"));
+            exceptionFound = true;
+        }
+        assertTrue(exceptionFound);
+    }
+
+    @Test
+    public void testRetryWritesWithFindOneAndDeleteAgainstMMAPv1RaisesError() {
+        boolean exceptionFound = false;
+
+        try {
+            collection.findOneAndDelete(Document.parse("{x: 1}"));
+        } catch (MongoClientException e) {
+            assertTrue(e.getMessage().equals("This MongoDB deployment does not support retryable writes. "
+                    + "Please add retryWrites=false to your connection string."));
+            assertTrue(((MongoException) e.getCause()).getCode() == 20);
+            assertTrue(e.getCause().getMessage().contains("Transaction numbers"));
             exceptionFound = true;
         }
         assertTrue(exceptionFound);
@@ -58,8 +74,8 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     private boolean canRunTests() {
         Document storageEngine = (Document) getServerStatus().get("storageEngine");
 
-        return ((isSharded() || isDiscoverableReplicaSet()) &&
-                storageEngine != null && storageEngine.get("name").equals("mmapv1") &&
-                serverVersionAtLeast(3, 6) && serverVersionLessThan(4,1));
+        return ((isSharded() || isDiscoverableReplicaSet())
+                && storageEngine != null && storageEngine.get("name").equals("mmapv1")
+                && serverVersionAtLeast(3, 6) && serverVersionLessThan(4, 1));
     }
 }

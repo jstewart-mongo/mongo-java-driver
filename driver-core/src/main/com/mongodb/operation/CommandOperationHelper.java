@@ -715,7 +715,7 @@ final class CommandOperationHelper {
                         if (isRetryWritesEnabled(command)) {
                             logUnableToRetry(command.getFirstKey(), e);
                         }
-                        throw exception;
+                        throw (MongoException) transformWriteException(exception);
                     }
                 } finally {
                     connection.release();
@@ -825,7 +825,7 @@ final class CommandOperationHelper {
                     if (isRetryWritesEnabled(command)) {
                         logUnableToRetry(command.getFirstKey(), originalError);
                     }
-                    releasingCallback.onResult(null, originalError);
+                    releasingCallback.onResult(null, transformWriteException(originalError));
                 } else {
                     oldConnection.release();
                     oldSource.release();
@@ -896,10 +896,6 @@ final class CommandOperationHelper {
             return true;
         }
         String errorMessage = t.getMessage();
-        if (((MongoException) t).getCode() == 20 && errorMessage.contains("Transaction numbers")) {
-            throw new MongoClientException("This MongoDB deployment does not support retryable writes. "
-                    + "Please add retryWrites=false to your connection string.", t);
-        }
         if (t instanceof MongoWriteConcernException) {
             errorMessage = ((MongoWriteConcernException) t).getWriteConcernError().getMessage();
         }
@@ -1012,6 +1008,15 @@ final class CommandOperationHelper {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug(format("Unable to retry operation %s due to error \"%s\"", operation, originalError));
         }
+    }
+
+    static Throwable transformWriteException(final Throwable exception) {
+        if (exception instanceof MongoException && ((MongoException) exception).getCode() == 20
+                && exception.getMessage().contains("Transaction numbers")) {
+            return new MongoClientException("This MongoDB deployment does not support retryable writes. "
+                    + "Please add retryWrites=false to your connection string.", exception);
+        }
+        return exception;
     }
 
     private CommandOperationHelper() {

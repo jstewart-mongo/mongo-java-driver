@@ -446,6 +446,7 @@ tasks:
 
     - name: "mmapv1-storage-test"
       commands:
+        - func: "bootstrap mongo-orchestration"
         - func: "run mmapv1 storage test"
 
 axes:
@@ -584,10 +585,6 @@ axes:
         display_name: MMAPv1
         variables:
            STORAGE_ENGINE: "mmapv1"
-      - id: wiredtiger
-        display_name: WiredTiger
-        variables:
-           STORAGE_ENGINE: "wiredtiger"
            
 buildvariants:
 
@@ -677,7 +674,7 @@ buildvariants:
      - name: "socket-test"
 
 - matrix_name: "test-gssapi"
-  matrix_spec: { jdk: "*", os: "linux", storage-engine: "wiredtiger" }
+  matrix_spec: { jdk: "*", os: "linux" }
   display_name: "GSSAPI (Kerberos) Auth test ${jdk} ${os} "
   tags: ["test-gssapi-variant"]
   tasks:
@@ -718,7 +715,7 @@ buildvariants:
     - name: "publish-snapshot"
 
 - matrix_name: "tests-storage-engines"
-  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "jdk8", platform: "rhel62", version: ["3.6", "4.0"], topology: ["replicaset", "sharded"], storage-engine: "mmapv1" }
-  display_name: "Storage ${storage-engine} ${jdk} ${platform} ${topology}"
+  matrix_spec: { auth: "noauth", ssl: "nossl", jdk: "jdk8", os: "linux", version: ["3.6", "4.0"], topology: ["replicaset", "sharded-cluster"], storage-engine: "mmapv1" }
+  display_name: "${version} Storage ${storage-engine} ${jdk} ${os} ${topology}"
   tasks:
     - name: "mmapv1-storage-test"

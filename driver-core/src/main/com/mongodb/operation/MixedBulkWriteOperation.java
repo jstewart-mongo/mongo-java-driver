@@ -17,7 +17,6 @@
 package com.mongodb.operation;
 
 import com.mongodb.MongoBulkWriteException;
-import com.mongodb.MongoClientException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
@@ -53,6 +52,7 @@ import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeast
 import static com.mongodb.operation.CommandOperationHelper.logRetryExecute;
 import static com.mongodb.operation.CommandOperationHelper.logUnableToRetry;
 import static com.mongodb.operation.CommandOperationHelper.shouldAttemptToRetryWrite;
+import static com.mongodb.operation.CommandOperationHelper.transformWriteException;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnection;
 import static com.mongodb.operation.OperationHelper.AsyncCallableWithConnectionAndSource;
 import static com.mongodb.operation.OperationHelper.CallableWithConnectionAndSource;
@@ -291,7 +291,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             if (originalBatch.getRetryWrites()) {
                 logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), exception);
             }
-            throw exception;
+            throw (MongoException) transformWriteException(exception);
         } else {
             return retryExecuteBatches(binding, currentBatch, exception);
         }
@@ -480,22 +480,18 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             @Override
             public void onResult(final BsonDocument result, final Throwable t) {
                 if (t != null) {
-                    try {
-                        if (isSecondAttempt || !shouldAttemptToRetryWrite(retryWrites, t)) {
-                            if (retryWrites && !isSecondAttempt) {
-                                logUnableToRetry(batch.getPayload().getPayloadType().toString(), t);
-                            }
-                            if (t instanceof MongoWriteConcernWithResponseException) {
-                                addBatchResult((BsonDocument) ((MongoWriteConcernWithResponseException) t).getResponse(), binding, connection,
-                                        batch, retryWrites, callback);
-                            } else {
-                                callback.onResult(null, t);
-                            }
-                        } else {
-                            retryExecuteBatchesAsync(binding, batch, t, callback.releaseConnectionAndGetWrapped());
+                    if (isSecondAttempt || !shouldAttemptToRetryWrite(retryWrites, t)) {
+                        if (retryWrites && !isSecondAttempt) {
+                            logUnableToRetry(batch.getPayload().getPayloadType().toString(), t);
                         }
-                    } catch (MongoClientException e) {
-                        callback.onResult(null, e);
+                        if (t instanceof MongoWriteConcernWithResponseException) {
+                            addBatchResult((BsonDocument) ((MongoWriteConcernWithResponseException) t).getResponse(), binding, connection,
+                                    batch, retryWrites, callback);
+                        } else {
+                            callback.onResult(null, transformWriteException(t));
+                        }
+                    } else {
+                        retryExecuteBatchesAsync(binding, batch, t, callback.releaseConnectionAndGetWrapped());
                     }
                 } else {
                     if (retryWrites && !isSecondAttempt) {
@@ -526,7 +522,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
                 if (retryWrites) {
                     logUnableToRetry(batch.getPayload().getPayloadType().toString(), batch.getError());
                 }
-                callback.onResult(null, batch.getError());
+                callback.onResult(null, transformWriteException(batch.getError()));
             } else {
                 callback.onResult(batch.getResult(), null);
             }
