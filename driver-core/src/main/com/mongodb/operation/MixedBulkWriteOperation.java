@@ -291,7 +291,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             if (originalBatch.getRetryWrites()) {
                 logUnableToRetry(originalBatch.getPayload().getPayloadType().toString(), exception);
             }
-            throw (MongoException) transformWriteException(exception);
+            throw transformWriteException(exception);
         } else {
             return retryExecuteBatches(binding, currentBatch, exception);
         }
@@ -488,7 +488,7 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
                             addBatchResult((BsonDocument) ((MongoWriteConcernWithResponseException) t).getResponse(), binding, connection,
                                     batch, retryWrites, callback);
                         } else {
-                            callback.onResult(null, transformWriteException(t));
+                            callback.onResult(null, t instanceof MongoException ? transformWriteException((MongoException) t) : t);
                         }
                     } else {
                         retryExecuteBatchesAsync(binding, batch, t, callback.releaseConnectionAndGetWrapped());
