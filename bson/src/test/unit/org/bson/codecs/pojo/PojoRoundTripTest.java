@@ -102,6 +102,7 @@ import java.util.List;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 @RunWith(Parameterized.class)
 public final class PojoRoundTripTest extends PojoTestCase {
@@ -159,6 +160,15 @@ public final class PojoRoundTripTest extends PojoTestCase {
                 "{'_t': 'org.bson.codecs.pojo.entities.ConcreteAndNestedAbstractInterfaceModel', 'name': 'A', "
                         + "'child': {'_t': 'org.bson.codecs.pojo.entities.ConcreteAndNestedAbstractInterfaceModel', 'name': 'B', "
                         + "  'child': {'_t': 'org.bson.codecs.pojo.entities.ConcreteStandAloneAbstractInterfaceModel', 'name': 'C'}}}}"));
+
+        data.add(new TestData("Interface concrete and abstract model with list",
+                new ConcreteAndNestedAbstractInterfaceModel("A",
+                        singletonList(new ConcreteStandAloneAbstractInterfaceModel("B"))),
+                getPojoCodecProviderBuilder(InterfaceBasedModel.class, AbstractInterfaceModel.class,
+                        ConcreteAndNestedAbstractInterfaceModel.class, ConcreteStandAloneAbstractInterfaceModel.class),
+                "{'_t': 'org.bson.codecs.pojo.entities.ConcreteAndNestedAbstractInterfaceModel', 'name': 'A', "
+                        + "  'wildcardList': [{'_t': 'org.bson.codecs.pojo.entities.ConcreteStandAloneAbstractInterfaceModel', "
+                        + "'name': 'B'}]}"));
 
         data.add(new TestData("Concrete generic interface model", new ConcreteInterfaceGenericModel("someValue"),
                 getPojoCodecProviderBuilder(ConcreteInterfaceGenericModel.class), "{propertyA: 'someValue'}"));

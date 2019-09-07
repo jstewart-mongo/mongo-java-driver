@@ -120,6 +120,9 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
             InstanceCreator<T> instanceCreator = classModel.getInstanceCreator();
             decodeProperties(reader, decoderContext, instanceCreator);
             return instanceCreator.getInstance();
+        } else if (classModel.getType().isInterface() && !classModel.useDiscriminator()) {
+            reader.skipValue();
+            return null;
         } else {
             return getCodecFromDocument(reader, classModel.useDiscriminator(), classModel.getDiscriminatorKey(), registry,
                     discriminatorLookup, this).decode(reader, DecoderContext.builder().checkedDiscriminator(true).build());
