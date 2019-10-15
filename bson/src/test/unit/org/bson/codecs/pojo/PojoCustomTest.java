@@ -258,6 +258,23 @@ public final class PojoCustomTest extends PojoTestCase {
         roundTrip(builder, new MapGetterMutableModel(Collections.singletonMap("a", 3)), "{mapField: {a: 3}}");
     }
 
+    @Test
+    public void testWithWildcardListField() {
+        ClassModel<InterfaceBasedModel> interfaceBasedModelClassModel =
+                ClassModel.builder(InterfaceBasedModel.class).enableDiscriminator(true).build();
+        PojoCodecProvider.Builder builder = PojoCodecProvider.builder().automatic(true)
+                .register(interfaceBasedModelClassModel)
+                .register(AbstractInterfaceModel.class, ConcreteStandAloneAbstractInterfaceModel.class,
+                        ConcreteAndNestedAbstractInterfaceModel.class);
+
+        roundTrip(builder,
+                new ConcreteAndNestedAbstractInterfaceModel("A",
+                        singletonList(new ConcreteStandAloneAbstractInterfaceModel("B"))),
+                "{'_t': 'org.bson.codecs.pojo.entities.ConcreteAndNestedAbstractInterfaceModel', 'name': 'A', "
+                        + "  'wildcardList': [{'_t': 'org.bson.codecs.pojo.entities.ConcreteStandAloneAbstractInterfaceModel', "
+                        + "'name': 'B'}]}");
+    }
+
     @Test(expected = CodecConfigurationException.class)
     public void testUseGettersForSettersConventionInvalidTypeForCollection() {
         PojoCodecProvider.Builder builder = getPojoCodecProviderBuilder(CollectionsGetterMutableModel.class)
@@ -576,17 +593,6 @@ public final class PojoCustomTest extends PojoTestCase {
     @Test(expected = CodecConfigurationException.class)
     public void testInvalidGetterAndSetterModelDecoding() {
         decodingShouldFail(getCodec(InvalidGetterAndSetterModel.class), "{'integerField': 42, 'stringField': 'myString'}");
-    }
-
-    @Test(expected = CodecConfigurationException.class)
-    public void testExceptionWithWildcardList() {
-        roundTrip(getPojoCodecProviderBuilder(InterfaceBasedModel.class, AbstractInterfaceModel.class,
-                ConcreteAndNestedAbstractInterfaceModel.class, ConcreteStandAloneAbstractInterfaceModel.class),
-                new ConcreteAndNestedAbstractInterfaceModel("A",
-                        singletonList(new ConcreteStandAloneAbstractInterfaceModel("B"))),
-                "{'_t': 'org.bson.codecs.pojo.entities.ConcreteAndNestedAbstractInterfaceModel', 'name': 'A', "
-                        + "  'wildcardList': [{'_t': 'org.bson.codecs.pojo.entities.ConcreteStandAloneAbstractInterfaceModel', "
-                        + "'name': 'B'}]}");
     }
 
     private List<Convention> getDefaultAndUseGettersConvention() {
