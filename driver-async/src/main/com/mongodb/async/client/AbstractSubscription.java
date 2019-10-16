@@ -124,11 +124,7 @@ abstract class AbstractSubscription<TResult> implements Subscription {
 
     void onError(final Throwable t) {
         if (terminalAction()) {
-            try {
-                postTerminate();
-            } catch (Throwable throwable) {
-                // fall through
-            }
+            postTerminate();
             try {
                 observer.onError(t);
             } catch (Throwable t1) {
