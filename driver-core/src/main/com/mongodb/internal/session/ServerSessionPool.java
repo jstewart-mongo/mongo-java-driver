@@ -56,7 +56,6 @@ public class ServerSessionPool {
     private volatile boolean closing;
     private volatile boolean closed;
     private final List<BsonDocument> closedSessionIdentifiers = new ArrayList<BsonDocument>();
-    private final Object closeLock = new Object();
 
     interface Clock {
         long millis();
@@ -95,9 +94,10 @@ public class ServerSessionPool {
         try {
             closing = true;
             serverSessionPool.close();
-            endClosedSessions();
+            endClosedSessions(new ArrayList<BsonDocument>(closedSessionIdentifiers));
         } finally {
             closed = true;
+            clearClosedSessionIdentifiers();
         }
     }
 
@@ -112,16 +112,17 @@ public class ServerSessionPool {
             return;
         }
 
-        synchronized (closeLock) {
+        synchronized (this) {
             closedSessionIdentifiers.add(serverSession.getIdentifier());
         }
         if (closedSessionIdentifiers.size() == END_SESSIONS_BATCH_SIZE) {
-            endClosedSessions();
+            endClosedSessions(new ArrayList<BsonDocument>(closedSessionIdentifiers));
+            clearClosedSessionIdentifiers();
         }
     }
 
-    private void endClosedSessions() {
-        if (closedSessionIdentifiers.isEmpty()) {
+    private void endClosedSessions(final List<BsonDocument> identifiers) {
+        if (identifiers.isEmpty()) {
             return;
         }
 
@@ -142,17 +143,20 @@ public class ServerSessionPool {
                 return Collections.emptyList();
             }
         }).getConnection();
-        synchronized (closeLock) {
-            try {
-                connection.command("admin",
-                        new BsonDocument("endSessions", new BsonArray(closedSessionIdentifiers)), new NoOpFieldNameValidator(),
-                        ReadPreference.primaryPreferred(), new BsonDocumentCodec(), NoOpSessionContext.INSTANCE);
-            } catch (MongoException e) {
-                // ignore exceptions
-            } finally {
-                closedSessionIdentifiers.clear();
-                connection.release();
-            }
+        try {
+            connection.command("admin",
+                    new BsonDocument("endSessions", new BsonArray(identifiers)), new NoOpFieldNameValidator(),
+                    ReadPreference.primaryPreferred(), new BsonDocumentCodec(), NoOpSessionContext.INSTANCE);
+        } catch (MongoException e) {
+            // ignore exceptions
+        } finally {
+            connection.release();
+        }
+    }
+
+    private void clearClosedSessionIdentifiers() {
+        synchronized (this) {
+            closedSessionIdentifiers.clear();
         }
     }
 
