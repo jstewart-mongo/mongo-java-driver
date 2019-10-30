@@ -94,10 +94,17 @@ public class ServerSessionPool {
         try {
             closing = true;
             serverSessionPool.close();
-            endClosedSessions(new ArrayList<BsonDocument>(closedSessionIdentifiers));
+
+            List<BsonDocument> identifiers;
+            synchronized (this) {
+                identifiers = new ArrayList<BsonDocument>(closedSessionIdentifiers);
+            }
+            endClosedSessions(identifiers);
         } finally {
             closed = true;
-            clearClosedSessionIdentifiers();
+            synchronized (this) {
+                closedSessionIdentifiers.clear();
+            }
         }
     }
 
@@ -116,8 +123,14 @@ public class ServerSessionPool {
             closedSessionIdentifiers.add(serverSession.getIdentifier());
         }
         if (closedSessionIdentifiers.size() == END_SESSIONS_BATCH_SIZE) {
-            endClosedSessions(new ArrayList<BsonDocument>(closedSessionIdentifiers));
-            clearClosedSessionIdentifiers();
+            List<BsonDocument> identifiers;
+            synchronized (this) {
+                identifiers = new ArrayList<BsonDocument>(closedSessionIdentifiers);
+            }
+            endClosedSessions(identifiers);
+            synchronized (this) {
+                closedSessionIdentifiers.clear();
+            }
         }
     }
 
@@ -151,12 +164,6 @@ public class ServerSessionPool {
             // ignore exceptions
         } finally {
             connection.release();
-        }
-    }
-
-    private void clearClosedSessionIdentifiers() {
-        synchronized (this) {
-            closedSessionIdentifiers.clear();
         }
     }
 
