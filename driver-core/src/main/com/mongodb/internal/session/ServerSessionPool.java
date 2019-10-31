@@ -98,13 +98,11 @@ public class ServerSessionPool {
             List<BsonDocument> identifiers;
             synchronized (this) {
                 identifiers = new ArrayList<BsonDocument>(closedSessionIdentifiers);
+                closedSessionIdentifiers.clear();
             }
             endClosedSessions(identifiers);
         } finally {
             closed = true;
-            synchronized (this) {
-                closedSessionIdentifiers.clear();
-            }
         }
     }
 
@@ -119,18 +117,16 @@ public class ServerSessionPool {
             return;
         }
 
+        List<BsonDocument> identifiers = null;
         synchronized (this) {
             closedSessionIdentifiers.add(serverSession.getIdentifier());
-        }
-        if (closedSessionIdentifiers.size() == END_SESSIONS_BATCH_SIZE) {
-            List<BsonDocument> identifiers;
-            synchronized (this) {
+            if (closedSessionIdentifiers.size() == END_SESSIONS_BATCH_SIZE) {
                 identifiers = new ArrayList<BsonDocument>(closedSessionIdentifiers);
-            }
-            endClosedSessions(identifiers);
-            synchronized (this) {
                 closedSessionIdentifiers.clear();
             }
+        }
+        if (identifiers != null) {
+            endClosedSessions(identifiers);
         }
     }
 
