@@ -119,6 +119,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
 
         SessionBindingConnectionSource(final ConnectionSource wrapped) {
             this.wrapped = wrapped;
+            ClientSessionBinding.this.retain();
         }
 
         @Override
@@ -140,6 +141,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
         @SuppressWarnings("checkstyle:methodlength")
         public ConnectionSource retain() {
             wrapped = wrapped.retain();
+            ClientSessionBinding.this.retain();
             return this;
         }
 
@@ -151,7 +153,7 @@ public class ClientSessionBinding implements ReadWriteBinding {
         @Override
         public void release() {
             wrapped.release();
-            closeSessionIfCountIsZero();
+            ClientSessionBinding.this.release();
         }
     }
 
