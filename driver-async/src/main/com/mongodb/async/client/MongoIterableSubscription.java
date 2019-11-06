@@ -30,6 +30,7 @@ final class MongoIterableSubscription<TResult> extends AbstractSubscription<TRes
     /* protected by `this` */
     private boolean isReading;
     private boolean completed;
+    private boolean terminateWhenRead;
     /* protected by `this` */
 
     private volatile AsyncBatchCursor<TResult> batchCursor;
@@ -67,7 +68,17 @@ final class MongoIterableSubscription<TResult> extends AbstractSubscription<TRes
     void postTerminate() {
         try {
             if (batchCursor != null) {
-                batchCursor.close();
+                boolean closeCursor = false;
+                synchronized (this) {
+                    if (!isReading) {
+                        closeCursor = true;
+                    } else {
+                        terminateWhenRead = true;
+                    }
+                }
+                if (closeCursor) {
+                    batchCursor.close();
+                }
             }
         } catch (Exception e) {
             // do nothing
@@ -91,6 +102,9 @@ final class MongoIterableSubscription<TResult> extends AbstractSubscription<TRes
                 public void onResult(final List<TResult> result, final Throwable t) {
                     synchronized (MongoIterableSubscription.this) {
                         isReading = false;
+                    }
+                    if (terminateWhenRead) {
+                        postTerminate();
                     }
 
                     if (t != null) {
