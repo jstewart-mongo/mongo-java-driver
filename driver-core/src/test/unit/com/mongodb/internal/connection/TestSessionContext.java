@@ -103,4 +103,13 @@ class TestSessionContext implements SessionContext {
     public void unpinServerAddress() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void markSessionDirty() {
+    }
+
+    @Override
+    public boolean isMarkedDirty() {
+        return false;
+    }
 }

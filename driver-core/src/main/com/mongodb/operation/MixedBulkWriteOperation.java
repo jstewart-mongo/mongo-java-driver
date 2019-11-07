@@ -19,6 +19,7 @@ package com.mongodb.operation;
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
+import com.mongodb.MongoSocketException;
 import com.mongodb.WriteConcern;
 import com.mongodb.WriteConcernResult;
 import com.mongodb.async.SingleResultCallback;
@@ -273,6 +274,10 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             }
         } catch (MongoException e) {
             exception = e;
+
+            if (e instanceof MongoSocketException) {
+                binding.getSessionContext().markSessionDirty();
+            }
         } finally {
             connection.release();
         }
@@ -480,6 +485,9 @@ public class MixedBulkWriteOperation implements AsyncWriteOperation<BulkWriteRes
             @Override
             public void onResult(final BsonDocument result, final Throwable t) {
                 if (t != null) {
+                    if (t instanceof MongoSocketException) {
+                        binding.getSessionContext().markSessionDirty();
+                    }
                     if (isSecondAttempt || !shouldAttemptToRetryWrite(retryWrites, t)) {
                         if (retryWrites && !isSecondAttempt) {
                             logUnableToRetry(batch.getPayload().getPayloadType().toString(), t);

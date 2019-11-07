@@ -322,8 +322,8 @@ public abstract class AbstractTransactionsTest {
 
                 ClientSession clientSession = receiver.startsWith("session") ? sessionsMap.get(receiver) : null;
                 if (clientSession == null) {
-                    clientSession = operation.getDocument("arguments").containsKey("session")
-                            ? sessionsMap.get(operation.getDocument("arguments").getString("session").getValue()) : null;
+                    clientSession = operation.containsKey("arguments") ? (operation.getDocument("arguments").containsKey("session")
+                            ? sessionsMap.get(operation.getDocument("arguments").getString("session").getValue()) : null) : null;
                 }
                 try {
                     if (operationName.equals("startTransaction")) {
@@ -382,6 +382,8 @@ public abstract class AbstractTransactionsTest {
                         } else {
                             assertFalse(session.hasActiveTransaction());
                         }
+                    } else if (operationName.equals("endSession")) {
+                        clientSession.close();
                     } else if (operation.getBoolean("error", BsonBoolean.FALSE).getValue()) {
                         try {
                             helper.getOperationResults(operation, clientSession);
@@ -389,7 +391,7 @@ public abstract class AbstractTransactionsTest {
                         } catch (Exception e) {
                             // Expected failure ignore
                         }
-                    } else {
+                    } else if (!processExtendedTestOperation(operation, clientSession)) {
                         BsonDocument actualOutcome = helper.getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
                             BsonValue actualResult = actualOutcome.get("result");
@@ -456,6 +458,14 @@ public abstract class AbstractTransactionsTest {
                 failPoint.disableFailPoint();
             }
         }
+    }
+
+    boolean processExtendedTestOperation(final BsonDocument operation, final ClientSession clientSession) {
+        return false;
+    }
+
+    protected TestCommandListener getCommandListener() {
+        return commandListener;
     }
 
     private TransactionOptions createTransactionOptions(final BsonDocument options) {

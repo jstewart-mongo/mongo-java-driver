@@ -52,20 +52,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import util.JsonPoweredTestHelper;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.getMultiMongosConnectionString;
-import static com.mongodb.JsonTestServerVersionChecker.skipTest;
 import static com.mongodb.async.client.Fixture.getConnectionString;
 import static com.mongodb.async.client.Fixture.getDefaultDatabaseName;
 import static com.mongodb.async.client.Fixture.isSharded;
@@ -84,7 +78,7 @@ import static org.junit.Assume.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/transactions/tests
 @RunWith(Parameterized.class)
-public class TransactionsTest {
+public abstract class AbstractTransactionsTest {
 
     private final String filename;
     private final String description;
@@ -104,8 +98,8 @@ public class TransactionsTest {
 
     private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
-    public TransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition,
-                            final boolean skipTest) {
+    public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition,
+                                    final boolean skipTest) {
         this.filename = filename;
         this.description = description;
         this.databaseName = getDefaultDatabaseName();
@@ -353,8 +347,8 @@ public class TransactionsTest {
                 BsonValue expectedResult = operation.get("result");
                 String receiver = operation.getString("object").getValue();
                 final ClientSession clientSession = receiver.startsWith("session") ? sessionsMap.get(receiver)
-                        : (operation.getDocument("arguments").containsKey("session")
-                        ? sessionsMap.get(operation.getDocument("arguments").getString("session").getValue()) : null);
+                        : (operation.containsKey("arguments") ? (operation.getDocument("arguments").containsKey("session")
+                        ? sessionsMap.get(operation.getDocument("arguments").getString("session").getValue()) : null) : null);
                 try {
                     if (operationName.equals("startTransaction")) {
                         BsonDocument arguments = operation.getDocument("arguments", new BsonDocument());
@@ -401,6 +395,8 @@ public class TransactionsTest {
                         } else {
                             assertFalse(session.hasActiveTransaction());
                         }
+                    } else if (operationName.equals("endSession")) {
+                        clientSession.close();
                     } else if (operation.getBoolean("error", BsonBoolean.FALSE).getValue()) {
                         try {
                             helper.getOperationResults(operation, clientSession);
@@ -408,7 +404,7 @@ public class TransactionsTest {
                         } catch (Exception e) {
                             // Expected failure ignore
                         }
-                    } else {
+                    } else if (!processExtendedTestOperation(operation, clientSession)) {
                         BsonDocument actualOutcome = helper.getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
                             BsonValue actualResult = actualOutcome.get("result");
@@ -475,6 +471,14 @@ public class TransactionsTest {
                 failPoint.disableFailPoint();
             }
         }
+    }
+
+    protected TestCommandListener getCommandListener() {
+        return commandListener;
+    }
+
+    boolean processExtendedTestOperation(final BsonDocument operation, final ClientSession clientSession) {
+        return false;
     }
 
     private TransactionOptions createTransactionOptions(final BsonDocument options) {
@@ -552,19 +556,6 @@ public class TransactionsTest {
             throw new IllegalArgumentException("clientSession can't be null in this context");
         }
         return clientSession;
-    }
-
-    @Parameterized.Parameters(name = "{0}: {1}")
-    public static Collection<Object[]> data() throws URISyntaxException, IOException {
-        List<Object[]> data = new ArrayList<Object[]>();
-        for (File file : JsonPoweredTestHelper.getTestFiles("/transactions")) {
-            BsonDocument testDocument = JsonPoweredTestHelper.getTestDocument(file);
-            for (BsonValue test : testDocument.getArray("tests")) {
-                data.add(new Object[]{file.getName(), test.asDocument().getString("description").getValue(),
-                        testDocument.getArray("data"), test.asDocument(), skipTest(testDocument, test.asDocument())});
-            }
-        }
-        return data;
     }
 
     private class TargetedFailPoint {

@@ -222,6 +222,10 @@ final class CommandOperationHelper {
         } catch (MongoException e) {
             exception = e;
 
+            if (e instanceof MongoSocketException) {
+                binding.getSessionContext().markSessionDirty();
+            }
+
             if (!shouldAttemptToRetryRead(retryReads, e)) {
                 if (retryReads) {
                     logUnableToRetry(command.getFirstKey(), e);
@@ -486,6 +490,9 @@ final class CommandOperationHelper {
             }
 
             private void checkRetryableException(final Throwable originalError, final SingleResultCallback<R> callback) {
+                if (originalError instanceof MongoSocketException) {
+                    binding.getSessionContext().markSessionDirty();
+                }
                 if (!shouldAttemptToRetryRead(retryReads, originalError)) {
                     if (retryReads) {
                         logUnableToRetry(originalCommand.getFirstKey(), originalError);
