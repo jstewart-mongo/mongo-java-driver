@@ -225,15 +225,6 @@ is available via [OpenJDK](http://openjdk.java.net/install/).
 
 ### Forcing TLS 1.2
 
-Some applications may want to force only the TLS 1.2 protocol. To do this, get an instance of [`javax.net.ssl.SSLContext`](https://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) that implements the TLS 1.2 protocol and set the `socketFactory` property, as in:
-
-```java
-SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-MongoClientOptions options = MongoClientOptions.builder()
-        .sslEnabled(true)
-        .sslInvalidHostNameAllowed(true)
-        .socketFactory(sslContext.getSocketFactory())
-        .build();
-```
+Some applications may want to force only the TLS 1.2 protocol. To do this, set the `jdk.tls.client.protocols` system property to "TLSv1.2".
 
 Java runtime environments prior to Java 8 started to enable the TLS 1.2 protocol only in later updates, as shown in the previous section. For the driver to force the use of the TLS 1.2 protocol with a Java runtime environment prior to Java 8, ensure that the update has TLS 1.2 enabled.
