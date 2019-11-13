@@ -70,10 +70,10 @@ final class MongoIterableSubscription<TResult> extends AbstractSubscription<TRes
             if (batchCursor != null) {
                 boolean closeCursor = false;
                 synchronized (this) {
-                    if (!isReading) {
-                        closeCursor = true;
-                    } else {
+                    if (isReading) {
                         terminateWhenRead = true;
+                    } else {
+                        closeCursor = true;
                     }
                 }
                 if (closeCursor) {
