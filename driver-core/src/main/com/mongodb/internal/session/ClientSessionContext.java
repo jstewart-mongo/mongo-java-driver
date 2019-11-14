@@ -96,7 +96,7 @@ public abstract class ClientSessionContext implements SessionContext {
     }
 
     @Override
-    public boolean isMarkedDirty() {
+    public boolean isSessionMarkedDirty() {
         return clientSession.getServerSession().isMarkedDirty();
     }
 }

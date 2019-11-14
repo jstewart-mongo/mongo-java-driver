@@ -33,7 +33,9 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.mongodb.JsonTestServerVersionChecker.skipTest;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -51,12 +53,12 @@ public class SessionsTest extends AbstractTransactionsTest {
 
         if (operationName.equals("assertDifferentLsidOnLastTwoCommands")) {
             List<CommandEvent> events = lastTwoCommandEvents();
-            assertFalse(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid").equals(
-                    ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid")));
+            assertNotEquals(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid"),
+                    ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid"));
         } else if (operationName.equals("assertSameLsidOnLastTwoCommands")) {
             List<CommandEvent> events = lastTwoCommandEvents();
-            assertTrue(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid").equals(
-                    ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid")));
+            assertEquals(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid"),
+                    ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid"));
         } else if (operationName.equals("assertSessionDirty")) {
             assertNotNull(clientSession);
             assertNotNull(clientSession.getServerSession());

@@ -222,7 +222,7 @@ final class CommandOperationHelper {
         } catch (MongoException e) {
             exception = e;
 
-            if (e instanceof MongoSocketException) {
+            if (binding.getSessionContext().hasSession() && e instanceof MongoSocketException) {
                 binding.getSessionContext().markSessionDirty();
             }
 
@@ -490,7 +490,7 @@ final class CommandOperationHelper {
             }
 
             private void checkRetryableException(final Throwable originalError, final SingleResultCallback<R> callback) {
-                if (originalError instanceof MongoSocketException) {
+                if (binding.getSessionContext().hasSession() && originalError instanceof MongoSocketException) {
                     binding.getSessionContext().markSessionDirty();
                 }
                 if (!shouldAttemptToRetryRead(retryReads, originalError)) {

@@ -153,5 +153,5 @@ public interface SessionContext {
      * @return true if the session has been marked dirty
      * @since 3.12
      */
-    boolean isMarkedDirty();
+    boolean isSessionMarkedDirty();
 }

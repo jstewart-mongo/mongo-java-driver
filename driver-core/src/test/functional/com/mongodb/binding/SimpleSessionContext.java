@@ -118,7 +118,7 @@ class SimpleSessionContext implements SessionContext {
     }
 
     @Override
-    public boolean isMarkedDirty() {
+    public boolean isSessionMarkedDirty() {
         return false;
     }
 

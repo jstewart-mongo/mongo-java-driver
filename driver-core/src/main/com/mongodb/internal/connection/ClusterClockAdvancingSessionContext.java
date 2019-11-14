@@ -113,7 +113,7 @@ public final class ClusterClockAdvancingSessionContext implements SessionContext
     }
 
     @Override
-    public boolean isMarkedDirty() {
-        return wrapped.isMarkedDirty();
+    public boolean isSessionMarkedDirty() {
+        return wrapped.isSessionMarkedDirty();
     }
 }

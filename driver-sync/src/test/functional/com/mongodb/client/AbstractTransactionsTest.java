@@ -322,8 +322,8 @@ public abstract class AbstractTransactionsTest {
 
                 ClientSession clientSession = receiver.startsWith("session") ? sessionsMap.get(receiver) : null;
                 if (clientSession == null) {
-                    clientSession = operation.containsKey("arguments") ? (operation.getDocument("arguments").containsKey("session")
-                            ? sessionsMap.get(operation.getDocument("arguments").getString("session").getValue()) : null) : null;
+                    clientSession = operation.getDocument("arguments", new BsonDocument()).containsKey("session")
+                            ? sessionsMap.get(operation.getDocument("arguments").getString("session").getValue()) : null;
                 }
                 try {
                     if (operationName.equals("startTransaction")) {
