@@ -220,6 +220,9 @@ class DefaultServer implements ClusterableServer {
                 invalidate();
                 return (T) e.getResponse();
             } catch (MongoException e) {
+                if (e instanceof MongoSocketException && sessionContext.hasSession()) {
+                    sessionContext.markSessionDirty();
+                }
                 invalidate(e);
                 throw e;
             }
@@ -238,6 +241,9 @@ class DefaultServer implements ClusterableServer {
                             invalidate();
                             callback.onResult((T) ((MongoWriteConcernWithResponseException) t).getResponse(), null);
                         } else {
+                            if (t instanceof MongoSocketException && sessionContext.hasSession()) {
+                                sessionContext.markSessionDirty();
+                            }
                             invalidate(t);
                             callback.onResult(null, t);
                         }
