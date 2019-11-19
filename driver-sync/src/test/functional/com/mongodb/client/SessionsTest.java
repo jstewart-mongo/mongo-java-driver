@@ -16,8 +16,6 @@
 
 package com.mongodb.client;
 
-import com.mongodb.event.CommandEvent;
-import com.mongodb.event.CommandStartedEvent;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -33,48 +31,13 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.mongodb.JsonTestServerVersionChecker.skipTest;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/sessions/tests
 @RunWith(Parameterized.class)
-public class SessionsTest extends AbstractTransactionsTest {
+public class SessionsTest extends AbstractUnifiedTest {
     public SessionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition,
                         final boolean skipTest) {
         super(filename, description, data, definition, skipTest);
-    }
-
-    @Override
-    public boolean processExtendedTestOperation(final BsonDocument operation, final ClientSession clientSession) {
-        String operationName = operation.getString("name").getValue();
-
-        if (operationName.equals("assertDifferentLsidOnLastTwoCommands")) {
-            List<CommandEvent> events = lastTwoCommandEvents();
-            assertFalse(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid").equals(
-                    ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid")));
-        } else if (operationName.equals("assertSameLsidOnLastTwoCommands")) {
-            List<CommandEvent> events = lastTwoCommandEvents();
-            assertTrue(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid").equals(
-                    ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid")));
-        } else if (operationName.equals("assertSessionDirty")) {
-            assertNotNull(clientSession);
-            assertNotNull(clientSession.getServerSession());
-            assertTrue(clientSession.getServerSession().isMarkedDirty());
-        } else if (operationName.equals("assertSessionNotDirty")) {
-            assertNotNull(clientSession);
-            assertNotNull(clientSession.getServerSession());
-            assertFalse(clientSession.getServerSession().isMarkedDirty());
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    private List<CommandEvent> lastTwoCommandEvents() {
-        List<CommandEvent> events = getCommandListener().getCommandStartedEvents();
-        assertTrue(events.size() >= 2);
-        return events.subList(events.size() - 2, events.size());
     }
 
     @Parameterized.Parameters(name = "{0}: {1}")

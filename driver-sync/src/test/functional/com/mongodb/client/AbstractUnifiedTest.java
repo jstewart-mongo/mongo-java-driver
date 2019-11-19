@@ -36,6 +36,7 @@ import com.mongodb.connection.ClusterSettings;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.SocketSettings;
 import com.mongodb.event.CommandEvent;
+import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
@@ -69,6 +70,7 @@ import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -77,7 +79,7 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
-public abstract class AbstractTransactionsTest {
+public abstract class AbstractUnifiedTest {
     private final String filename;
     private final String description;
     private final String databaseName;
@@ -96,8 +98,8 @@ public abstract class AbstractTransactionsTest {
 
     private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
 
-    public AbstractTransactionsTest(final String filename, final String description, final BsonArray data, final BsonDocument definition,
-                                    final boolean skipTest) {
+    public AbstractUnifiedTest(final String filename, final String description, final BsonArray data, final BsonDocument definition,
+                               final boolean skipTest) {
         this.filename = filename;
         this.description = description;
         this.databaseName = getDefaultDatabaseName();
@@ -391,7 +393,23 @@ public abstract class AbstractTransactionsTest {
                         } catch (Exception e) {
                             // Expected failure ignore
                         }
-                    } else if (!processExtendedTestOperation(operation, clientSession)) {
+                    } else if (operationName.equals("assertDifferentLsidOnLastTwoCommands")) {
+                        List<CommandEvent> events = lastTwoCommandEvents();
+                        assertNotEquals(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid"),
+                                ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid"));
+                    } else if (operationName.equals("assertSameLsidOnLastTwoCommands")) {
+                        List<CommandEvent> events = lastTwoCommandEvents();
+                        assertEquals(((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid"),
+                                ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid"));
+                    } else if (operationName.equals("assertSessionDirty")) {
+                        assertNotNull(clientSession);
+                        assertNotNull(clientSession.getServerSession());
+                        assertTrue(clientSession.getServerSession().isMarkedDirty());
+                    } else if (operationName.equals("assertSessionNotDirty")) {
+                        assertNotNull(clientSession);
+                        assertNotNull(clientSession.getServerSession());
+                        assertFalse(clientSession.getServerSession().isMarkedDirty());
+                    } else {
                         BsonDocument actualOutcome = helper.getOperationResults(operation, clientSession);
                         if (expectedResult != null) {
                             BsonValue actualResult = actualOutcome.get("result");
@@ -409,46 +427,7 @@ public abstract class AbstractTransactionsTest {
                     assertFalse(String.format("Expected error code '%s' but none thrown for operation %s",
                             getErrorCodeNameField(expectedResult), operationName), hasErrorCodeNameField(expectedResult));
                 } catch (RuntimeException e) {
-                    boolean passedAssertion = false;
-                    if (hasErrorLabelsContainField(expectedResult)) {
-                        if (e instanceof MongoException) {
-                            MongoException mongoException = (MongoException) e;
-                            for (String curErrorLabel : getErrorLabelsContainField(expectedResult)) {
-                                assertTrue(String.format("Expected error label '%s but found labels '%s' for operation %s",
-                                        curErrorLabel, mongoException.getErrorLabels(), operationName),
-                                        mongoException.hasErrorLabel(curErrorLabel));
-                            }
-                            passedAssertion = true;
-                        }
-                    }
-                    if (hasErrorLabelsOmitField(expectedResult)) {
-                        if (e instanceof MongoException) {
-                            MongoException mongoException = (MongoException) e;
-                            for (String curErrorLabel : getErrorLabelsOmitField(expectedResult)) {
-                                assertFalse(String.format("Expected error label '%s omitted but found labels '%s' for operation %s",
-                                        curErrorLabel, mongoException.getErrorLabels(), operationName),
-                                        mongoException.hasErrorLabel(curErrorLabel));
-                            }
-                            passedAssertion = true;
-                        }
-                    }
-                    if (hasErrorContainsField(expectedResult)) {
-                        String expectedError = getErrorContainsField(expectedResult);
-                        assertTrue(String.format("Expected '%s' but got '%s' for operation %s", expectedError, e.getMessage(),
-                                operationName), e.getMessage().toLowerCase().contains(expectedError.toLowerCase()));
-                        passedAssertion = true;
-                    }
-                    if (hasErrorCodeNameField(expectedResult)) {
-                        String expectedErrorCodeName = getErrorCodeNameField(expectedResult);
-                        if (e instanceof MongoCommandException) {
-                            assertEquals(expectedErrorCodeName, ((MongoCommandException) e).getErrorCodeName());
-                            passedAssertion = true;
-                        } else if (e instanceof MongoWriteConcernException) {
-                            assertEquals(expectedErrorCodeName, ((MongoWriteConcernException) e).getWriteConcernError().getCodeName());
-                            passedAssertion = true;
-                        }
-                    }
-                    if (!passedAssertion || throwExceptions) {
+                    if (!hasPassedAssertions(e, expectedResult, operationName) || throwExceptions) {
                         throw e;
                     }
                 }
@@ -460,12 +439,53 @@ public abstract class AbstractTransactionsTest {
         }
     }
 
-    boolean processExtendedTestOperation(final BsonDocument operation, final ClientSession clientSession) {
-        return false;
+    private boolean hasPassedAssertions(final RuntimeException e, final BsonValue expectedResult, final String operationName) {
+        boolean passedAssertion = false;
+        if (hasErrorLabelsContainField(expectedResult)) {
+            if (e instanceof MongoException) {
+                MongoException mongoException = (MongoException) e;
+                for (String curErrorLabel : getErrorLabelsContainField(expectedResult)) {
+                    assertTrue(String.format("Expected error label '%s but found labels '%s' for operation %s",
+                            curErrorLabel, mongoException.getErrorLabels(), operationName),
+                            mongoException.hasErrorLabel(curErrorLabel));
+                }
+                passedAssertion = true;
+            }
+        }
+        if (hasErrorLabelsOmitField(expectedResult)) {
+            if (e instanceof MongoException) {
+                MongoException mongoException = (MongoException) e;
+                for (String curErrorLabel : getErrorLabelsOmitField(expectedResult)) {
+                    assertFalse(String.format("Expected error label '%s omitted but found labels '%s' for operation %s",
+                            curErrorLabel, mongoException.getErrorLabels(), operationName),
+                            mongoException.hasErrorLabel(curErrorLabel));
+                }
+                passedAssertion = true;
+            }
+        }
+        if (hasErrorContainsField(expectedResult)) {
+            String expectedError = getErrorContainsField(expectedResult);
+            assertTrue(String.format("Expected '%s' but got '%s' for operation %s", expectedError, e.getMessage(),
+                    operationName), e.getMessage().toLowerCase().contains(expectedError.toLowerCase()));
+            passedAssertion = true;
+        }
+        if (hasErrorCodeNameField(expectedResult)) {
+            String expectedErrorCodeName = getErrorCodeNameField(expectedResult);
+            if (e instanceof MongoCommandException) {
+                assertEquals(expectedErrorCodeName, ((MongoCommandException) e).getErrorCodeName());
+                passedAssertion = true;
+            } else if (e instanceof MongoWriteConcernException) {
+                assertEquals(expectedErrorCodeName, ((MongoWriteConcernException) e).getWriteConcernError().getCodeName());
+                passedAssertion = true;
+            }
+        }
+        return passedAssertion;
     }
 
-    protected TestCommandListener getCommandListener() {
-        return commandListener;
+    private List<CommandEvent> lastTwoCommandEvents() {
+        List<CommandEvent> events = commandListener.getCommandStartedEvents();
+        assertTrue(events.size() >= 2);
+        return events.subList(events.size() - 2, events.size());
     }
 
     private TransactionOptions createTransactionOptions(final BsonDocument options) {
