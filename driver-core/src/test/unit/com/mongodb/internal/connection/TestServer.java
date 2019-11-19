@@ -25,7 +25,6 @@ import com.mongodb.connection.ServerDescription;
 import com.mongodb.connection.ServerId;
 import com.mongodb.event.ServerDescriptionChangedEvent;
 import com.mongodb.event.ServerListener;
-import com.mongodb.session.SessionContext;
 
 import static com.mongodb.connection.ServerConnectionState.CONNECTING;
 
@@ -58,11 +57,6 @@ public class TestServer implements ClusterableServer {
 
     @Override
     public void invalidate(final Throwable reason) {
-        invalidate();
-    }
-
-    @Override
-    public void invalidate(final Throwable reason, final SessionContext sessionContext) {
         invalidate();
     }
 

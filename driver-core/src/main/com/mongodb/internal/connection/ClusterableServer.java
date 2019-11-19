@@ -17,7 +17,6 @@
 package com.mongodb.internal.connection;
 
 import com.mongodb.connection.Server;
-import com.mongodb.session.SessionContext;
 
 /**
  * A logical connection to a MongoDB server that supports clustering along with other servers.
@@ -34,15 +33,6 @@ interface ClusterableServer extends Server {
      * @param reason the reason for invalidation.
      */
     void invalidate(Throwable reason);
-
-    /**
-     * Invalidate the description of this server due to the passed in reason.
-     * @param reason the reason for invalidation.
-     * @param sessionContext the session context.
-     *
-     * @since 3.12
-     */
-    void invalidate(Throwable reason, SessionContext sessionContext);
 
     /**
      * <p>Closes the server.  Instances that have been closed will no longer be available for use.</p>

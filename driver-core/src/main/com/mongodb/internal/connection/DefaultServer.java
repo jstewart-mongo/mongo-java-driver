@@ -158,7 +158,6 @@ class DefaultServer implements ClusterableServer {
         }
     }
 
-    @Override
     public void invalidate(final Throwable t, final SessionContext sessionContext) {
         notNull("sessionContext", sessionContext);
         invalidate(t);

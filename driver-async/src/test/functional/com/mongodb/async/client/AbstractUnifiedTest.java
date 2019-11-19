@@ -440,7 +440,7 @@ public abstract class AbstractUnifiedTest {
                     assertFalse(String.format("Expected error code '%s' but none thrown for operation %s",
                             getErrorCodeNameField(expectedResult), operationName), hasErrorCodeNameField(expectedResult));
                 } catch (RuntimeException e) {
-                    if (!hasPassedAssertions(e, expectedResult, operationName) || throwExceptions) {
+                    if (!assertExceptionState(e, expectedResult, operationName) || throwExceptions) {
                         throw e;
                     }
                 }
@@ -452,7 +452,7 @@ public abstract class AbstractUnifiedTest {
         }
     }
 
-    private boolean hasPassedAssertions(final RuntimeException e, final BsonValue expectedResult, final String operationName) {
+    private boolean assertExceptionState(final RuntimeException e, final BsonValue expectedResult, final String operationName) {
         boolean passedAssertion = false;
         if (hasErrorLabelsContainField(expectedResult)) {
             if (e instanceof MongoException) {
