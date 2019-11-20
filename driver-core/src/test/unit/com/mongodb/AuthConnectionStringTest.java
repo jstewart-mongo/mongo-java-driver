@@ -30,7 +30,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 // See https://github.com/mongodb/specifications/tree/master/source/auth/tests
 @RunWith(Parameterized.class)
@@ -93,26 +92,14 @@ public class AuthConnectionStringTest extends TestCase {
         }
 
         MongoCredential credential = connectionString.getCredential();
-        assertString("auth.db", credential.getSource());
-        assertString("auth.username", credential.getUserName());
+        if (credential != null) {
+            assertString("credential.source", credential.getSource());
+            assertString("credential.username", credential.getUserName());
 
-        // Passwords for certain auth mechanisms are ignored.
-        String password = credential.getPassword() != null ? new String(credential.getPassword()) : null;
-        if (password != null) {
-            assertString("auth.password", password);
-        }
-        if (definition.get("options").isDocument()) {
-            for (Map.Entry<String, BsonValue> option : definition.getDocument("options").entrySet()) {
-                if (option.getKey().equals("authmechanism")) {
-                    String expected = option.getValue().asString().getValue();
-                    if (expected.equals("MONGODB-CR")) {
-                        assertNotNull(connectionString.getCredential());
-                        assertNull(connectionString.getCredential().getAuthenticationMechanism());
-                    } else {
-                        String actual = connectionString.getCredential().getAuthenticationMechanism().getMechanismName();
-                        assertEquals(expected, actual);
-                    }
-                }
+            // Passwords for certain auth mechanisms are ignored.
+            String password = credential.getPassword() != null ? new String(credential.getPassword()) : null;
+            if (password != null) {
+                assertString("credential.password", password);
             }
         }
     }
