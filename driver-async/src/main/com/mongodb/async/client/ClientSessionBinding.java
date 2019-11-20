@@ -156,6 +156,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
 
         SessionBindingAsyncConnectionSource(final AsyncConnectionSource wrapped) {
             this.wrapped = wrapped;
+            ClientSessionBinding.this.retain();
         }
 
         @Override
@@ -176,6 +177,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
         @Override
         public AsyncConnectionSource retain() {
             wrapped = wrapped.retain();
+            ClientSessionBinding.this.retain();
             return this;
         }
 
@@ -187,7 +189,7 @@ class ClientSessionBinding implements AsyncReadWriteBinding {
         @Override
         public void release() {
             wrapped.release();
-            closeSessionIfCountIsZero();
+            ClientSessionBinding.this.release();
         }
     }
 

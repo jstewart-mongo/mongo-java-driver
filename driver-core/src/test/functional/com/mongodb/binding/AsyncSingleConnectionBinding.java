@@ -208,16 +208,13 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
         }
 
         public AsyncConnectionSource retain() {
-            super.retain();
+            AsyncSingleConnectionBinding.this.retain();
             return this;
         }
 
         @Override
         public void release() {
-            super.release();
-            if (super.getCount() == 0) {
-                AsyncSingleConnectionBinding.this.release();
-            }
+            AsyncSingleConnectionBinding.this.release();
         }
     }
 }
