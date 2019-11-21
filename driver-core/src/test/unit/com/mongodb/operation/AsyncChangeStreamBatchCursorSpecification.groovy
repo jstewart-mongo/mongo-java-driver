@@ -16,6 +16,7 @@
 
 package com.mongodb.operation
 
+import com.mongodb.MongoException
 import com.mongodb.async.SingleResultCallback
 import com.mongodb.binding.AsyncReadBinding
 import spock.lang.Specification
@@ -24,11 +25,13 @@ class AsyncChangeStreamBatchCursorSpecification extends Specification {
 
     def 'should call the underlying AsyncQueryBatchCursor'() {
         given:
-        def changeStreamOpertation = Stub(ChangeStreamOperation)
-        def binding = Mock(AsyncReadBinding)
+        def changeStreamOperation = Stub(ChangeStreamOperation)
+        def binding = Mock(AsyncReadBinding) {
+            getCount() >>> [2, 1, 0]
+        }
         def wrapped = Mock(AsyncQueryBatchCursor)
         def callback = Stub(SingleResultCallback)
-        def cursor = new AsyncChangeStreamBatchCursor(changeStreamOpertation, wrapped, binding, null)
+        def cursor = new AsyncChangeStreamBatchCursor(changeStreamOperation, wrapped, binding, null)
 
         when:
         cursor.setBatchSize(10)
@@ -41,14 +44,38 @@ class AsyncChangeStreamBatchCursorSpecification extends Specification {
 
         then:
         1 * wrapped.tryNext(_) >> { it[0].onResult(null, null) }
+        1 * binding.retain()
+        1 * binding.release()
 
         when:
         cursor.next(callback)
 
         then:
         1 * wrapped.next(_) >> { it[0].onResult(null, null) }
+        1 * binding.retain()
+        1 * binding.release()
 
         when:
+        cursor.next(callback)
+
+        then:
+        1 * wrapped.next(_) >> { it[0].onResult(null, new MongoException(11601, 'Failure')) }
+        1 * binding.retain()
+        1 * binding.release()
+
+        when:
+        cursor.retain()
+        cursor.close()
+
+        then:
+        1 * wrapped.isClosed() >> {
+            false
+        }
+        0 * wrapped.close()
+        0 * binding.release()
+
+        when:
+        cursor.release()
         cursor.close()
 
         then:
@@ -56,7 +83,7 @@ class AsyncChangeStreamBatchCursorSpecification extends Specification {
             false
         }
         1 * wrapped.close()
-        1 * binding.release()
+        2 * binding.release()
 
         when:
         cursor.close()

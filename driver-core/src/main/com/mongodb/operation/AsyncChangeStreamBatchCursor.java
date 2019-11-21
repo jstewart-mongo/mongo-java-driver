@@ -20,8 +20,10 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
+import com.mongodb.internal.binding.AbstractReferenceCounted;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
+import com.mongodb.binding.ReferenceCounted;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithSource;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -35,7 +37,7 @@ import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableErr
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.withAsyncReadConnection;
 
-final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
+final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted implements AsyncAggregateResponseBatchCursor<T> {
     private final AsyncReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
@@ -59,6 +61,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public void next(final SingleResultCallback<List<T>> callback) {
+        retain();
         resumeableOperation(new AsyncBlock() {
             @Override
             public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
@@ -71,6 +74,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public void tryNext(final SingleResultCallback<List<T>> callback) {
+        retain();
         resumeableOperation(new AsyncBlock() {
             @Override
             public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
@@ -83,9 +87,9 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public void close() {
-        if (!isClosed()) {
+        if (!isClosed() && getCount() == 1) {
             wrapped.close();
-            binding.release();
+            this.release();
         }
     }
 
@@ -117,6 +121,19 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     @Override
     public boolean isFirstBatchEmpty() {
         return wrapped.isFirstBatchEmpty();
+    }
+
+    @Override
+    public ReferenceCounted retain() {
+        super.retain();
+        binding.retain();
+        return this;
+    }
+
+    @Override
+    public void release() {
+        super.release();
+        binding.release();
     }
 
     private void cachePostBatchResumeToken(final AsyncAggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
@@ -160,11 +177,13 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
             @Override
             public void onResult(final List<RawBsonDocument> result, final Throwable t) {
                 if (t == null) {
+                    AsyncChangeStreamBatchCursor.this.release();
                     callback.onResult(result, null);
                 } else if (isRetryableError(t)) {
                     wrapped.close();
                     retryOperation(asyncBlock, callback);
                 } else {
+                    AsyncChangeStreamBatchCursor.this.release();
                     callback.onResult(null, t);
                 }
             }
