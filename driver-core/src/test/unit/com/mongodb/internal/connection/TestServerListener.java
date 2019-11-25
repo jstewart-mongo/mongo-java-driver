@@ -47,7 +47,9 @@ class TestServerListener implements ServerListener {
     @Override
     public void serverDescriptionChanged(final ServerDescriptionChangedEvent event) {
         notNull("event", event);
-        serverDescriptionChangedEvents.add(event);
+        if (event.getShouldEventBePublished()) {
+            serverDescriptionChangedEvents.add(event);
+        }
     }
 
     public ServerOpeningEvent getServerOpeningEvent() {

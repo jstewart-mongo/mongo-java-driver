@@ -140,7 +140,7 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
     private final class DefaultServerStateListener implements ServerListener {
         @Override
         public void serverDescriptionChanged(final ServerDescriptionChangedEvent event) {
-            onChange(event);
+            onChange(event, event.getShouldEventBePublished());
         }
     }
 
@@ -172,7 +172,7 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
         }
     }
 
-    private void onChange(final ServerDescriptionChangedEvent event) {
+    private void onChange(final ServerDescriptionChangedEvent event, final boolean shouldEventChangeBePublished) {
         ClusterDescription oldClusterDescription = null;
         ClusterDescription newClusterDescription = null;
         boolean shouldUpdateDescription = true;
@@ -226,7 +226,7 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
                 newClusterDescription = updateDescription();
             }
         }
-        if (shouldUpdateDescription) {
+        if (shouldUpdateDescription && shouldEventChangeBePublished) {
             fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), newClusterDescription, oldClusterDescription));
         }
     }

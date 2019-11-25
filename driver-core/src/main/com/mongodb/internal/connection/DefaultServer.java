@@ -260,7 +260,8 @@ class DefaultServer implements ClusterableServer {
         public void stateChanged(final ChangeEvent<ServerDescription> event) {
             ServerDescription oldDescription = description;
             description = event.getNewValue();
-            serverListener.serverDescriptionChanged(new ServerDescriptionChangedEvent(serverId, description, oldDescription));
+            serverListener.serverDescriptionChanged(new ServerDescriptionChangedEvent(serverId, description, oldDescription,
+                    DefaultServerMonitor.shouldLogStageChange(oldDescription, description)));
         }
     }
 }

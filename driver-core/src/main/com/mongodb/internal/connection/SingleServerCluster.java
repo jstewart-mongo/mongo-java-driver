@@ -57,7 +57,7 @@ public final class SingleServerCluster extends BaseCluster {
         // In other words, we are leaking a reference to "this" from the constructor.
         synchronized (this) {
             this.server = createServer(settings.getHosts().get(0), new DefaultServerStateListener());
-            publishDescription(server.getDescription());
+            publishDescription(server.getDescription(), true);
         }
     }
 
@@ -104,11 +104,11 @@ public final class SingleServerCluster extends BaseCluster {
                     }
                 }
             }
-            publishDescription(newDescription);
+            publishDescription(descriptionToPublish, event.getShouldEventBePublished());
         }
     }
 
-    private void publishDescription(final ServerDescription serverDescription) {
+    private void publishDescription(final ServerDescription serverDescription, final boolean shouldChangeEventBePublished) {
         ClusterType clusterType = getSettings().getRequiredClusterType();
         if (clusterType == ClusterType.UNKNOWN && serverDescription != null) {
             clusterType = serverDescription.getClusterType();
@@ -123,6 +123,8 @@ public final class SingleServerCluster extends BaseCluster {
                 getServerFactory().getSettings());
 
         updateDescription(description);
-        fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), description, currentDescription));
+        if (shouldChangeEventBePublished) {
+            fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), description, currentDescription));
+        }
     }
 }
