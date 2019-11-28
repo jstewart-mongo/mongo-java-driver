@@ -226,7 +226,7 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
                 newClusterDescription = updateDescription();
             }
         }
-        if (shouldUpdateDescription && event.getShouldEventBePublished()) {
+        if (shouldUpdateDescription) {
             fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), newClusterDescription, oldClusterDescription));
         }
     }

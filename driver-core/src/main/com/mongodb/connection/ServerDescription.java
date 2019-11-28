@@ -780,40 +780,11 @@ public class ServerDescription {
 
         ServerDescription that = (ServerDescription) o;
 
+        if (shouldPublishChangeEvent(this, that)) {
+            return false;
+        }
+
         if (maxDocumentSize != that.maxDocumentSize) {
-            return false;
-        }
-        if (ok != that.ok) {
-            return false;
-        }
-        if (!address.equals(that.address)) {
-            return false;
-        }
-        if (!arbiters.equals(that.arbiters)) {
-            return false;
-        }
-        if (canonicalAddress != null ? !canonicalAddress.equals(that.canonicalAddress) : that.canonicalAddress != null) {
-            return false;
-        }
-        if (!hosts.equals(that.hosts)) {
-            return false;
-        }
-        if (!passives.equals(that.passives)) {
-            return false;
-        }
-        if (primary != null ? !primary.equals(that.primary) : that.primary != null) {
-            return false;
-        }
-        if (setName != null ? !setName.equals(that.setName) : that.setName != null) {
-            return false;
-        }
-        if (state != that.state) {
-            return false;
-        }
-        if (!tagSet.equals(that.tagSet)) {
-            return false;
-        }
-        if (type != that.type) {
             return false;
         }
         if (minWireVersion != that.minWireVersion) {
@@ -822,40 +793,95 @@ public class ServerDescription {
         if (maxWireVersion != that.maxWireVersion) {
             return false;
         }
-        if (electionId != null ? !electionId.equals(that.electionId) : that.electionId != null) {
-            return false;
-        }
-        if (setVersion != null ? !setVersion.equals(that.setVersion) : that.setVersion != null) {
-            return false;
-        }
         if (lastWriteDate != null ? !lastWriteDate.equals(that.lastWriteDate) : that.lastWriteDate != null) {
             return false;
         }
-
         if (lastUpdateTimeNanos != that.lastUpdateTimeNanos) {
             return false;
         }
-
         if (logicalSessionTimeoutMinutes != null
                     ? !logicalSessionTimeoutMinutes.equals(that.logicalSessionTimeoutMinutes)
                     : that.logicalSessionTimeoutMinutes != null) {
             return false;
         }
 
-        // Compare class equality and message as exceptions rarely override equals
-        Class<?> thisExceptionClass = exception != null ? exception.getClass() : null;
-        Class<?> thatExceptionClass = that.exception != null ? that.exception.getClass() : null;
-        if (thisExceptionClass != null ? !thisExceptionClass.equals(thatExceptionClass) : thatExceptionClass != null) {
-            return false;
-        }
-
-        String thisExceptionMessage = exception != null ? exception.getMessage() : null;
-        String thatExceptionMessage = that.exception != null ? that.exception.getMessage() : null;
-        if (thisExceptionMessage != null ? !thisExceptionMessage.equals(thatExceptionMessage) : thatExceptionMessage != null) {
-            return false;
-        }
-
         return true;
+    }
+
+    /**
+     * Returns true if this instance can be published for SDAM change events.
+     *
+     * @param currentDescription the current server description
+     * @param previousDescription the previous server description
+     * @return true if this instance can be published for SDAM change events
+     */
+    public static boolean shouldPublishChangeEvent(final ServerDescription currentDescription,
+                                                   final ServerDescription previousDescription) {
+        if (currentDescription == null) {
+            return previousDescription == null;
+        }
+        if (previousDescription == null) {
+            return true;
+        }
+        if (currentDescription.ok != previousDescription.ok) {
+            return true;
+        }
+        if (!currentDescription.address.equals(previousDescription.address)) {
+            return true;
+        }
+        if (currentDescription.canonicalAddress != null ? !currentDescription.canonicalAddress.equals(previousDescription.canonicalAddress)
+                : previousDescription.canonicalAddress != null) {
+            return true;
+        }
+        if (minWireVersion != that.minWireVersion) {
+            return false;
+        }
+        if (!currentDescription.passives.equals(previousDescription.passives)) {
+            return true;
+        }
+        if (currentDescription.primary != null ? !currentDescription.primary.equals(previousDescription.primary)
+                : previousDescription.primary != null) {
+            return true;
+        }
+        if (currentDescription.setName != null ? !currentDescription.setName.equals(previousDescription.setName)
+                : previousDescription.setName != null) {
+            return true;
+        }
+        if (currentDescription.state != previousDescription.state) {
+            return true;
+        }
+        if (!currentDescription.tagSet.equals(previousDescription.tagSet)) {
+            return true;
+        }
+        if (currentDescription.type != previousDescription.type) {
+            return true;
+        }
+        if (!currentDescription.version.equals(previousDescription.version)) {
+            return true;
+        }
+        if (currentDescription.electionId != null ? !currentDescription.electionId.equals(previousDescription.electionId)
+                : previousDescription.electionId != null) {
+            return true;
+        }
+        if (currentDescription.setVersion != null ? !currentDescription.setVersion.equals(previousDescription.setVersion)
+                : previousDescription.setVersion != null) {
+            return true;
+        }
+
+        // Compare class equality and message as exceptions rarely override equals
+        Class<?> thisExceptionClass = currentDescription.exception != null ? currentDescription.exception.getClass() : null;
+        Class<?> thatExceptionClass = previousDescription.exception != null ? previousDescription.exception.getClass() : null;
+        if (thisExceptionClass != null ? !thisExceptionClass.equals(thatExceptionClass) : thatExceptionClass != null) {
+            return true;
+        }
+
+        String thisExceptionMessage = currentDescription.exception != null ? currentDescription.exception.getMessage() : null;
+        String thatExceptionMessage = previousDescription.exception != null ? previousDescription.exception.getMessage() : null;
+        if (thisExceptionMessage != null ? !thisExceptionMessage.equals(thatExceptionMessage) : thatExceptionMessage != null) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override

@@ -38,7 +38,7 @@ import static com.mongodb.ClusterFixture.getSslSettings
 import static com.mongodb.connection.ServerConnectionState.CONNECTED
 import static com.mongodb.connection.ServerConnectionState.CONNECTING
 import static com.mongodb.connection.ServerDescription.builder
-import static com.mongodb.internal.connection.DefaultServerMonitor.shouldLogStageChange
+import static com.mongodb.connection.ServerDescription.shouldPublishChangeEvent
 import static java.util.Arrays.asList
 
 class ServerMonitorSpecification extends OperationFunctionalSpecification {
@@ -79,93 +79,93 @@ class ServerMonitorSpecification extends OperationFunctionalSpecification {
         ServerDescription otherDescription
 
         expect:
-        !shouldLogStageChange(description, builder.build())
+        !shouldPublishChangeEvent(description, builder.build())
 
         when:
         otherDescription = createBuilder().address(new ServerAddress('localhost:27018')).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().type(ServerType.STANDALONE).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().tagSet(null).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().setName('test2').build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().primary('localhost:27018').build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().canonicalAddress('localhost:27018').build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().hosts(new HashSet<String>(asList('localhost:27018'))).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().arbiters(new HashSet<String>(asList('localhost:27018'))).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().passives(new HashSet<String>(asList('localhost:27018'))).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().ok(false).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().state(CONNECTING).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().electionId(new ObjectId()).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         when:
         otherDescription = createBuilder().setVersion(3).build();
 
         then:
-        shouldLogStageChange(description, otherDescription)
+        shouldPublishChangeEvent(description, otherDescription)
 
         // test exception state changes
-        shouldLogStageChange(createBuilder().exception(new IOException()).build(),
+        shouldPublishChangeEvent(createBuilder().exception(new IOException()).build(),
                 createBuilder().exception(new RuntimeException()).build())
-        shouldLogStageChange(createBuilder().exception(new IOException('message one')).build(),
+        shouldPublishChangeEvent(createBuilder().exception(new IOException('message one')).build(),
                 createBuilder().exception(new IOException('message two')).build())
     }
 

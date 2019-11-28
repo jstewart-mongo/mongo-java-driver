@@ -32,6 +32,7 @@ import com.mongodb.event.ServerDescriptionChangedEvent;
 import com.mongodb.event.ServerListener;
 
 import static com.mongodb.assertions.Assertions.isTrue;
+import static com.mongodb.connection.ServerDescription.shouldPublishChangeEvent;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -57,7 +58,7 @@ public final class SingleServerCluster extends BaseCluster {
         // In other words, we are leaking a reference to "this" from the constructor.
         synchronized (this) {
             this.server = createServer(settings.getHosts().get(0), new DefaultServerStateListener());
-            publishDescription(server.getDescription(), true);
+            publishDescription(server.getDescription());
         }
     }
 
@@ -104,11 +105,13 @@ public final class SingleServerCluster extends BaseCluster {
                     }
                 }
             }
-            publishDescription(descriptionToPublish, event.getShouldEventBePublished());
+            if (shouldPublishChangeEvent(event.getNewDescription(), event.getPreviousDescription())) {
+                publishDescription(descriptionToPublish);
+            }
         }
     }
 
-    private void publishDescription(final ServerDescription serverDescription, final boolean shouldChangeEventBePublished) {
+    private void publishDescription(final ServerDescription serverDescription) {
         ClusterType clusterType = getSettings().getRequiredClusterType();
         if (clusterType == ClusterType.UNKNOWN && serverDescription != null) {
             clusterType = serverDescription.getClusterType();
@@ -123,8 +126,6 @@ public final class SingleServerCluster extends BaseCluster {
                 getServerFactory().getSettings());
 
         updateDescription(description);
-        if (shouldChangeEventBePublished) {
-            fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), description, currentDescription));
-        }
+        fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), description, currentDescription));
     }
 }
