@@ -60,11 +60,8 @@ ext {
 }
 
 jar {
-    manifest {
-        instruction 'Automatic-Module-Name', 'org.mongodb.driver.reactivestreams'
-        instruction 'Build-Version', project.gitVersion
-        instruction 'Import-Package',
-                'org.bson.*',
-                'com.mongodb.*'
-    }
+    bnd ('Automatic-Module-Name': 'org.mongodb.driver.reactivestreams',
+         'Build-Version': project.gitVersion,
+         'Import-Package': 'org.bson.*,com.mongodb.*'
+    )
 }
