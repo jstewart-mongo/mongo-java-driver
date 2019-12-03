@@ -49,6 +49,7 @@ import static com.mongodb.connection.ServerConnectionState.CONNECTING;
 import static com.mongodb.connection.ServerType.REPLICA_SET_GHOST;
 import static com.mongodb.connection.ServerType.SHARD_ROUTER;
 import static com.mongodb.connection.ServerType.STANDALONE;
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 import static java.lang.String.format;
 
 public abstract class AbstractMultiServerCluster extends BaseCluster {
@@ -226,7 +227,7 @@ public abstract class AbstractMultiServerCluster extends BaseCluster {
                 newClusterDescription = updateDescription();
             }
         }
-        if (shouldUpdateDescription) {
+        if (shouldUpdateDescription && shouldPublishChangeEvent(event.getNewDescription(), event.getPreviousDescription())) {
             fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), newClusterDescription, oldClusterDescription));
         }
     }

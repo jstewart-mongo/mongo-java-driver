@@ -38,7 +38,7 @@ import static com.mongodb.ClusterFixture.getSslSettings
 import static com.mongodb.connection.ServerConnectionState.CONNECTED
 import static com.mongodb.connection.ServerConnectionState.CONNECTING
 import static com.mongodb.connection.ServerDescription.builder
-import static com.mongodb.connection.ServerDescription.shouldPublishChangeEvent
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent
 import static java.util.Arrays.asList
 
 class ServerMonitorSpecification extends OperationFunctionalSpecification {

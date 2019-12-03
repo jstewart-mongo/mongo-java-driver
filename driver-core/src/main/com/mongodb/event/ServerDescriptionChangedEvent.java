@@ -31,7 +31,6 @@ public final class ServerDescriptionChangedEvent {
     private final ServerId serverId;
     private final ServerDescription newDescription;
     private final ServerDescription previousDescription;
-    private final boolean shouldEventBePublished;
 
     /**
      * Construct an instance.
@@ -42,26 +41,10 @@ public final class ServerDescriptionChangedEvent {
      */
     public ServerDescriptionChangedEvent(final ServerId serverId, final ServerDescription newDescription,
                                          final ServerDescription previousDescription) {
-        this(serverId, newDescription, previousDescription, true);
-    }
-    /**
-     * Construct an instance.
-     *
-     * @param serverId            the non-null serverId
-     * @param newDescription      the non-null new description
-     * @param previousDescription the non-null previous description
-     * @param shouldEventBePublished true if the server description changed event should be published
-     *
-     * @since 3.12
-     */
-    public ServerDescriptionChangedEvent(final ServerId serverId, final ServerDescription newDescription,
-        final ServerDescription previousDescription, final boolean shouldEventBePublished) {
         this.serverId = notNull("serverId", serverId);
         this.newDescription = notNull("newDescription", newDescription);
         this.previousDescription = notNull("previousDescription", previousDescription);
-        this.shouldEventBePublished = shouldEventBePublished;
     }
-
 
     /**
      * Gets the serverId.
@@ -88,16 +71,6 @@ public final class ServerDescriptionChangedEvent {
      */
     public ServerDescription getPreviousDescription() {
         return previousDescription;
-    }
-
-    /**
-     * Gets the value to determine whether the change event should be published.
-     *
-     * @return the value of whether the change event should be published
-     * @since 3.12
-     */
-    public boolean getShouldEventBePublished() {
-        return shouldEventBePublished;
     }
 
     @Override

@@ -36,10 +36,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerConnectionState.CONNECTING;
-import static com.mongodb.connection.ServerDescription.shouldPublishChangeEvent;
 import static com.mongodb.connection.ServerType.UNKNOWN;
 import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.DescriptionHelper.createServerDescription;
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 import static com.mongodb.internal.event.EventListenerHelper.getServerMonitorListener;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

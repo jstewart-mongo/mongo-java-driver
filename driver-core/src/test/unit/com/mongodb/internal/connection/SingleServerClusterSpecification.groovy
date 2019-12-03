@@ -180,11 +180,6 @@ class SingleServerClusterSpecification extends Specification {
 
         then:
         1 * listener.clusterOpening { it.clusterId == CLUSTER_ID }
-        1 * listener.clusterDescriptionChanged {
-            it.clusterId == CLUSTER_ID &&
-                    it.previousDescription == new ClusterDescription(SINGLE, UNKNOWN, []) &&
-                    it.newDescription == initialDescription
-        }
 
         when:
         factory.getServer(firstServer).sendNotification(serverDescription)

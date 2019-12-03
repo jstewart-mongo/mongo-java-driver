@@ -26,7 +26,7 @@ import java.util.List;
 
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.connection.ServerDescription.shouldPublishChangeEvent;
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 
 class TestServerListener implements ServerListener {
     private ServerOpeningEvent serverOpeningEvent;
