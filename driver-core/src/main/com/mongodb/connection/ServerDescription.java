@@ -837,8 +837,8 @@ public class ServerDescription {
         }
 
         if (logicalSessionTimeoutMinutes != null
-                ? !logicalSessionTimeoutMinutes.equals(that.logicalSessionTimeoutMinutes)
-                : that.logicalSessionTimeoutMinutes != null) {
+                    ? !logicalSessionTimeoutMinutes.equals(that.logicalSessionTimeoutMinutes)
+                    : that.logicalSessionTimeoutMinutes != null) {
             return false;
         }
 

@@ -46,6 +46,7 @@ public final class ServerDescriptionChangedEvent {
         this.previousDescription = notNull("previousDescription", previousDescription);
     }
 
+
     /**
      * Gets the serverId.
      *

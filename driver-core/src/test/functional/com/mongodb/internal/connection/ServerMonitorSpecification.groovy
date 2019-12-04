@@ -19,8 +19,6 @@ package com.mongodb.internal.connection
 import com.mongodb.MongoSocketException
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.ServerAddress
-import com.mongodb.Tag
-import com.mongodb.TagSet
 import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerId
@@ -35,11 +33,7 @@ import java.util.concurrent.CountDownLatch
 import static com.mongodb.ClusterFixture.getCredentialWithCache
 import static com.mongodb.ClusterFixture.getPrimary
 import static com.mongodb.ClusterFixture.getSslSettings
-import static com.mongodb.connection.ServerConnectionState.CONNECTED
-import static com.mongodb.connection.ServerConnectionState.CONNECTING
-import static com.mongodb.connection.ServerDescription.builder
-import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent
-import static java.util.Arrays.asList
+import static com.mongodb.connection.ConnectionFixture.getCredentialListWithCache
 
 class ServerMonitorSpecification extends OperationFunctionalSpecification {
     ServerDescription newDescription
@@ -70,119 +64,6 @@ class ServerMonitorSpecification extends OperationFunctionalSpecification {
 
         then:
         newDescription.exception instanceof MongoSocketException
-    }
-
-    def 'should log state change if significant properties have changed'() {
-        given:
-        ServerDescription.Builder builder = createBuilder();
-        ServerDescription description = builder.build();
-        ServerDescription otherDescription
-
-        expect:
-        !shouldPublishChangeEvent(description, builder.build())
-
-        when:
-        otherDescription = createBuilder().address(new ServerAddress('localhost:27018')).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().type(ServerType.STANDALONE).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().tagSet(null).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().setName('test2').build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().primary('localhost:27018').build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().canonicalAddress('localhost:27018').build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().hosts(new HashSet<String>(asList('localhost:27018'))).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().arbiters(new HashSet<String>(asList('localhost:27018'))).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().passives(new HashSet<String>(asList('localhost:27018'))).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().ok(false).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().state(CONNECTING).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().electionId(new ObjectId()).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().setVersion(3).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        // test exception state changes
-        shouldPublishChangeEvent(createBuilder().exception(new IOException()).build(),
-                createBuilder().exception(new RuntimeException()).build())
-        shouldPublishChangeEvent(createBuilder().exception(new IOException('message one')).build(),
-                createBuilder().exception(new IOException('message two')).build())
-    }
-
-    private static ServerDescription.Builder createBuilder() {
-        builder().ok(true)
-                .state(CONNECTED)
-                .address(new ServerAddress())
-                .type(ServerType.SHARD_ROUTER)
-                .tagSet(new TagSet(asList(new Tag('dc', 'ny'))))
-                .setName('test')
-                .primary('localhost:27017')
-                .canonicalAddress('localhost:27017')
-                .hosts(new HashSet<String>(asList('localhost:27017', 'localhost:27018')))
-                .passives(new HashSet<String>(asList('localhost:27019')))
-                .arbiters(new HashSet<String>(asList('localhost:27020')))
-                .electionId(new ObjectId('abcdabcdabcdabcdabcdabcd'))
-                .setVersion(2)
     }
 
     def initializeServerMonitor(ServerAddress address) {
