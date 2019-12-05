@@ -26,6 +26,7 @@ import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.QueryResult;
+import com.mongodb.internal.binding.AbstractReferenceCounted;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
@@ -54,7 +55,7 @@ import static com.mongodb.operation.QueryHelper.translateCommandException;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
-class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
+class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements AsyncAggregateResponseBatchCursor<T> {
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
     private static final String CURSOR = "cursor";
     private static final String POST_BATCH_RESUME_TOKEN = "postBatchResumeToken";
@@ -108,8 +109,9 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
 
     @Override
     public void close() {
-        if (!isClosed.getAndSet(true)) {
+        if (getCount() == 1 && !isClosed.getAndSet(true)) {
             killCursorOnClose();
+            release();
         }
     }
 
@@ -173,6 +175,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
                 isClosed.set(true);
                 callback.onResult(null, null);
             } else {
+                retain();
                 getMore(localCursor, callback, tryNext);
             }
         }
@@ -187,6 +190,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
             @Override
             public void onResult(final AsyncConnection connection, final Throwable t) {
                 if (t != null) {
+                    release();
                     callback.onResult(null, t);
                 } else {
                     getMore(connection, cursor, callback, tryNext);
@@ -298,6 +302,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
                     connectionSource.release();
                 }
             }
+            AsyncQueryBatchCursor.this.release();
 
             if (result.getResults().isEmpty()) {
                 callback.onResult(null, null);
@@ -328,6 +333,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
                         ? translateCommandException((MongoCommandException) t, cursor)
                         : t;
                 connection.release();
+                AsyncQueryBatchCursor.this.release();
                 callback.onResult(null, translatedException);
             } else {
                 QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(result.getDocument(CURSOR),
@@ -354,6 +360,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
         public void onResult(final QueryResult<T> result, final Throwable t) {
             if (t != null) {
                 connection.release();
+                AsyncQueryBatchCursor.this.release();
                 callback.onResult(null, t);
             } else {
                 handleGetMoreQueryResult(connection, callback, result, tryNext);
