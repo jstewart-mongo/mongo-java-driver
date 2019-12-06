@@ -271,7 +271,7 @@ System.out.println(collection.countDocuments());
 
 ## Query the Collection
 
-To query the collection, you can use the collection's [`find()`]({{< apiref "com/mongodb/client/MongoCollection.html#find()-">}}) method. You can call the method without any arguments to query all documents in a collection or pass a filter to query for documents that match the filter criteria.
+To query the collection, you can use the collection's [`find()`]({{< apiref "com/mongodb/client/MongoCollection.html#find()">}}) method. You can call the method without any arguments to query all documents in a collection or pass a filter to query for documents that match the filter criteria.
 
 The [`find()`]({{< apiref "com/mongodb/client/MongoCollection.html#find()">}}) method returns a [`FindIterable()`]({{< apiref "com/mongodb/client/FindIterable.html" >}}) instance that provides a fluent interface for chaining other methods.
 
