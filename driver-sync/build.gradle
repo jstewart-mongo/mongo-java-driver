@@ -44,8 +44,6 @@ tasks.withType(Checkstyle) {
 jar {
     bnd ('Automatic-Module-Name': 'org.mongodb.driver.sync.client',
          'Build-Version': project.gitVersion,
-         'Import-Package': '\
-            org.bson.*,\
-            com.mongodb.*'
+         'Import-Package': 'org.bson.*,com.mongodb.*'
     )
 }
