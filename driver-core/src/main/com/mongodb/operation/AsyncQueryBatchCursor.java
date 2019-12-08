@@ -26,7 +26,6 @@ import com.mongodb.async.SingleResultCallback;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.connection.AsyncConnection;
 import com.mongodb.connection.QueryResult;
-import com.mongodb.internal.binding.AbstractReferenceCounted;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
@@ -55,7 +54,7 @@ import static com.mongodb.operation.QueryHelper.translateCommandException;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
-class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements AsyncAggregateResponseBatchCursor<T> {
+class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator();
     private static final String CURSOR = "cursor";
     private static final String POST_BATCH_RESUME_TOKEN = "postBatchResumeToken";
@@ -74,6 +73,7 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
     private volatile BsonDocument postBatchResumeToken;
     private volatile BsonTimestamp operationTime;
     private volatile boolean firstBatchEmpty;
+    private final AtomicBoolean noOperationInProgress = new AtomicBoolean(true);
 
     AsyncQueryBatchCursor(final QueryResult<T> firstBatch, final int limit, final int batchSize, final long maxTimeMS,
                           final Decoder<T> decoder, final AsyncConnectionSource connectionSource, final AsyncConnection connection) {
@@ -109,9 +109,8 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
 
     @Override
     public void close() {
-        if (getCount() == 1 && !isClosed.getAndSet(true)) {
+        if (!isClosed.getAndSet(true)) {
             killCursorOnClose();
-            release();
         }
     }
 
@@ -175,7 +174,7 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
                 isClosed.set(true);
                 callback.onResult(null, null);
             } else {
-                retain();
+                noOperationInProgress.set(false);
                 getMore(localCursor, callback, tryNext);
             }
         }
@@ -190,7 +189,7 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
             @Override
             public void onResult(final AsyncConnection connection, final Throwable t) {
                 if (t != null) {
-                    release();
+                    endOperationInProgress();
                     callback.onResult(null, t);
                 } else {
                     getMore(connection, cursor, callback, tryNext);
@@ -227,18 +226,20 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
     }
 
     private void killCursorOnClose() {
-        final ServerCursor localCursor = getServerCursor();
-        if (localCursor != null) {
-            connectionSource.getConnection(new SingleResultCallback<AsyncConnection>() {
-                @Override
-                public void onResult(final AsyncConnection connection, final Throwable t) {
-                    if (t != null) {
-                        connectionSource.release();
-                    } else {
-                        killCursorAsynchronouslyAndReleaseConnectionAndSource(connection, localCursor);
+        if (noOperationInProgress.get()) {
+            final ServerCursor localCursor = getServerCursor();
+            if (localCursor != null) {
+                connectionSource.getConnection(new SingleResultCallback<AsyncConnection>() {
+                    @Override
+                    public void onResult(final AsyncConnection connection, final Throwable t) {
+                        if (t != null) {
+                            connectionSource.release();
+                        } else {
+                            killCursorAsynchronouslyAndReleaseConnectionAndSource(connection, localCursor);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
@@ -278,16 +279,16 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
                 .append("cursors", new BsonArray(singletonList(new BsonInt64(localCursor.getId()))));
     }
 
+    private void endOperationInProgress() {
+        noOperationInProgress.set(true);
+        if (isClosed()) {
+            killCursorOnClose();
+        }
+    }
+
 
     private void handleGetMoreQueryResult(final AsyncConnection connection, final SingleResultCallback<List<T>> callback,
                                           final QueryResult<T> result, final boolean tryNext) {
-        if (isClosed()) {
-            connection.release();
-            callback.onResult(null, new MongoException(format("The cursor was closed before %s completed.",
-                    tryNext ? "tryNext()" : "next()")));
-            return;
-        }
-
         cursor.getAndSet(result.getCursor());
         if (!tryNext && result.getResults().isEmpty() && result.getCursor() != null) {
             getMore(connection, result.getCursor(), callback, false);
@@ -302,7 +303,7 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
                     connectionSource.release();
                 }
             }
-            AsyncQueryBatchCursor.this.release();
+            endOperationInProgress();
 
             if (result.getResults().isEmpty()) {
                 callback.onResult(null, null);
@@ -333,7 +334,7 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
                         ? translateCommandException((MongoCommandException) t, cursor)
                         : t;
                 connection.release();
-                AsyncQueryBatchCursor.this.release();
+                endOperationInProgress();
                 callback.onResult(null, translatedException);
             } else {
                 QueryResult<T> queryResult = getMoreCursorDocumentToQueryResult(result.getDocument(CURSOR),
@@ -360,7 +361,7 @@ class AsyncQueryBatchCursor<T> extends AbstractReferenceCounted implements Async
         public void onResult(final QueryResult<T> result, final Throwable t) {
             if (t != null) {
                 connection.release();
-                AsyncQueryBatchCursor.this.release();
+                endOperationInProgress();
                 callback.onResult(null, t);
             } else {
                 handleGetMoreQueryResult(connection, callback, result, tryNext);

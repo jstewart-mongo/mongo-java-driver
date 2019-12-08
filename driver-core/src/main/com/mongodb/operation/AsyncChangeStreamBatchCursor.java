@@ -20,10 +20,8 @@ import com.mongodb.MongoChangeStreamException;
 import com.mongodb.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.async.AsyncBatchCursor;
 import com.mongodb.async.SingleResultCallback;
-import com.mongodb.internal.binding.AbstractReferenceCounted;
 import com.mongodb.binding.AsyncConnectionSource;
 import com.mongodb.binding.AsyncReadBinding;
-import com.mongodb.binding.ReferenceCounted;
 import com.mongodb.operation.OperationHelper.AsyncCallableWithSource;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -31,18 +29,21 @@ import org.bson.RawBsonDocument;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
 import static com.mongodb.operation.OperationHelper.LOGGER;
 import static com.mongodb.operation.OperationHelper.withAsyncReadConnection;
 
-final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted implements AsyncAggregateResponseBatchCursor<T> {
+final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private final AsyncReadBinding binding;
     private final ChangeStreamOperation<T> changeStreamOperation;
 
     private volatile BsonDocument resumeToken;
     private volatile AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped;
+    private final AtomicBoolean isClosed = new AtomicBoolean();
+    private final AtomicBoolean noOperationInProgress = new AtomicBoolean(true);
 
     AsyncChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
                                  final AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped,
@@ -61,7 +62,6 @@ final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted imp
 
     @Override
     public void next(final SingleResultCallback<List<T>> callback) {
-        retain();
         resumeableOperation(new AsyncBlock() {
             @Override
             public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
@@ -74,7 +74,6 @@ final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted imp
 
     @Override
     public void tryNext(final SingleResultCallback<List<T>> callback) {
-        retain();
         resumeableOperation(new AsyncBlock() {
             @Override
             public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
@@ -87,9 +86,9 @@ final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted imp
 
     @Override
     public void close() {
-        if (!isClosed() && getCount() == 1) {
+        if (!isClosed.getAndSet(true) && noOperationInProgress.get()) {
             wrapped.close();
-            this.release();
+            binding.release();
         }
     }
 
@@ -105,7 +104,7 @@ final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted imp
 
     @Override
     public boolean isClosed() {
-        return wrapped.isClosed();
+        return isClosed.get();
     }
 
     @Override
@@ -123,22 +122,16 @@ final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted imp
         return wrapped.isFirstBatchEmpty();
     }
 
-    @Override
-    public ReferenceCounted retain() {
-        super.retain();
-        binding.retain();
-        return this;
-    }
-
-    @Override
-    public void release() {
-        super.release();
-        binding.release();
-    }
-
     private void cachePostBatchResumeToken(final AsyncAggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
         if (queryBatchCursor.getPostBatchResumeToken() != null) {
             resumeToken = queryBatchCursor.getPostBatchResumeToken();
+        }
+    }
+
+    private void endOperationInProgress() {
+        noOperationInProgress.set(true);
+        if (isClosed()) {
+            close();
         }
     }
 
@@ -173,17 +166,18 @@ final class AsyncChangeStreamBatchCursor<T> extends AbstractReferenceCounted imp
     }
 
     private void resumeableOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
+        noOperationInProgress.set(false);
         asyncBlock.apply(wrapped, new SingleResultCallback<List<RawBsonDocument>>() {
             @Override
             public void onResult(final List<RawBsonDocument> result, final Throwable t) {
                 if (t == null) {
-                    AsyncChangeStreamBatchCursor.this.release();
+                    endOperationInProgress();
                     callback.onResult(result, null);
                 } else if (isRetryableError(t)) {
                     wrapped.close();
                     retryOperation(asyncBlock, callback);
                 } else {
-                    AsyncChangeStreamBatchCursor.this.release();
+                    endOperationInProgress();
                     callback.onResult(null, t);
                 }
             }

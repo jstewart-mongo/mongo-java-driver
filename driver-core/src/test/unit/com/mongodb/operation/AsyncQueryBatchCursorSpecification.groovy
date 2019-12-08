@@ -115,7 +115,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         then:
         connection.getCount() == 0
         connectionSource.getCount() == 0
-        cursor.getCount() == 0
 
         where:
         serverVersion                | firstBatch
@@ -133,19 +132,16 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         def cursor = new AsyncQueryBatchCursor<Document>(queryResult(FIRST_BATCH, 0), 0, 0, 0, CODEC, connectionSource, null)
 
         then:
-        cursor.getCount() == 1
         nextBatch(cursor) == FIRST_BATCH
 
         then:
         connectionSource.getCount() == 0
-        cursor.getCount() == 1
 
         then:
         nextBatch(cursor) == null
 
         then:
         connectionSource.getCount() == 0
-        cursor.getCount() == 1
 
         when:
         nextBatch(cursor)
@@ -166,16 +162,10 @@ class AsyncQueryBatchCursorSpecification extends Specification {
 
         when:
         def cursor = new AsyncQueryBatchCursor<Document>(queryResult(firstBatch), 6, 2, 0, CODEC, connectionSource, null)
-
-        then:
-        cursor.getCount() == 1
-
-        when:
         def batch = nextBatch(cursor)
 
         then:
         batch == firstBatch
-        cursor.getCount() == 1
 
         when:
         batch = tryNextBatch(cursor)
@@ -191,7 +181,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         batch == null
         connectionA.getCount() == 0
         connectionSource.getCount() == 1
-        cursor.getCount() == 1
 
         when:
         batch = tryNextBatch(cursor)
@@ -216,7 +205,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         batch == thirdBatch
         connectionB.getCount() == 0
         connectionSource.getCount() == 0
-        cursor.getCount() == 1
 
         when:
         batch = tryNextBatch(cursor)
@@ -224,7 +212,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         then:
         batch == null
         connectionSource.getCount() == 0
-        cursor.getCount() == 1
 
         where:
         serverVersion                | commandAsync
@@ -321,7 +308,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
                 it[2].onResult(null, null)
             }
         }
-        cursor.getCount() == 1
 
         when:
         cursor.close()
@@ -332,7 +318,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         then:
         connection.getCount() == 0
         connectionSource.getCount() == 0
-        cursor.getCount() == 0
 
         where:
         serverVersion << [new ServerVersion([3, 2, 0]), new ServerVersion([3, 0, 0])]
@@ -482,7 +467,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         then:
         connectionA.getCount() == 0
         connectionSource.getCount() == 0
-        cursor.getCount() == 1
 
         where:
         serverVersion                | commandAsync         | response
@@ -517,7 +501,6 @@ class AsyncQueryBatchCursorSpecification extends Specification {
 
         then:
         nextBatch(cursor)
-        cursor.getCount() == 1
 
         when:
         nextBatch(cursor)
@@ -527,14 +510,12 @@ class AsyncQueryBatchCursorSpecification extends Specification {
 
         then:
         connectionSource.getCount() == 1
-        cursor.getCount() == 1
 
         when:
         cursor.close()
 
         then:
         connectionSource.getCount() == 0
-        cursor.getCount() == 0
     }
 
     def 'should handle errors when calling getMore'() {
