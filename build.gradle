@@ -82,6 +82,10 @@ configure(javaProjects) {
             java.srcDirs = ['src/main']
         }
     }
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
 }
 
 configure(scalaProjects) {
@@ -119,6 +123,10 @@ configure(scalaProjects) {
         scalaCompileOptions.deprecation = false
     }
 
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
 }
 
 configure(javaMainProjects) {

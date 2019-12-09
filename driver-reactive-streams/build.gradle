@@ -60,8 +60,10 @@ ext {
 }
 
 jar {
-    bnd ('Automatic-Module-Name': 'org.mongodb.driver.reactivestreams',
-         'Build-Version': project.gitVersion,
-         'Import-Package': 'org.bson.*,com.mongodb.*'
+    bnd (
+        '-exportcontents': "*;-noimport:=true",
+        'Automatic-Module-Name': 'org.mongodb.driver.reactivestreams',
+        'Build-Version': project.gitVersion,
+        'Import-Package': 'org.bson.*,com.mongodb.*'
     )
 }
