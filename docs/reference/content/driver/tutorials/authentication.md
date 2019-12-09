@@ -51,7 +51,7 @@ In MongoDB 3.0, MongoDB changed the default authentication mechanism from [`MONG
 
 To create a credential that will authenticate using the default
 authentication mechanism regardless of server version, create a
-credential using the [`createCredential`]({{<apiref "com/mongodb/MongoCredential.html#createCredential(java.lang.String,java.lang.String,char:A)">}})
+credential using the [`createCredential`]({{<apiref "com/mongodb/MongoCredential.html#createCredential(java.lang.String,java.lang.String,char[])">}})
 static factory method:
 
 ```java
