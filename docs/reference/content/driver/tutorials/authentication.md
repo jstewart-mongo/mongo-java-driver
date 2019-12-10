@@ -111,7 +111,7 @@ which uses the `SHA-256` hashing function.
 Requires MongoDB 4.0 and `featureCompatibilityVersion` to be set to 4.0.
 
 To explicitly create a credential of type [`SCRAM-SHA-256`]({{<docsref "core/security-scram/">}}), use the
-[`createScramSha256Credential`]({{<apiref "com/mongodb/MongoCredential.html#createScramSha256Credential(java.lang.String,java.lang.String,char:A)">}})
+[`createScramSha256Credential`]({{<apiref "com/mongodb/MongoCredential.html#createScramSha256Credential(java.lang.String,java.lang.String,char[])">}})
 method:
 
 ```java
@@ -156,7 +156,7 @@ MongoClient mongoClient = new MongoClient(uri);
 ### SCRAM-SHA-1
 
 To explicitly create a credential of type [`SCRAM-SHA-1`]({{<docsref "core/security-scram/">}}), use the 
-[`createScramSha1Credential`]({{<apiref "com/mongodb/MongoCredential.html#createScramSha1Credential(java.lang.String,java.lang.String,char:A)">}}) 
+[`createScramSha1Credential`]({{<apiref "com/mongodb/MongoCredential.html#createScramSha1Credential(java.lang.String,java.lang.String,char[])">}}) 
 method:
 
 ```java
@@ -207,7 +207,7 @@ For information on upgrading to `SCRAM`, see Upgrade to [SCRAM]({{<docsref "rele
 {{% /note %}}
 
 
-To explicitly create a credential of type [`MONGODB-CR`]({{<docsref "core/security-mongodb-cr">}}) use the [`createMongCRCredential`]({{<apiref "com/mongodb/MongoCredential.html#createMongoCRCredential(java.lang.String,java.lang.String,char:A)">}})
+To explicitly create a credential of type [`MONGODB-CR`]({{<docsref "core/security-mongodb-cr">}}) use the [`createMongCRCredential`]({{<apiref "com/mongodb/MongoCredential.html#createMongoCRCredential(java.lang.String,java.lang.String,char[])">}})
 static factory method:
 
 ```java
@@ -404,7 +404,7 @@ interoperability with Windows Active Directory and in particular the ability to 
 ## LDAP (PLAIN)
 
 [MongoDB Enterprise](http://www.mongodb.com/products/mongodb-enterprise) supports proxy authentication through a Lightweight Directory Access Protocol (LDAP) service. To create a credential of type [LDAP]({{<apiref "core/authentication/#ldap-proxy-authority-authentication">}}) use the
-[`createPlainCredential`]({{<apiref "com/mongodb/MongoCredential.html#createPlainCredential(java.lang.String,java.lang.String,char:A)">}}) static factory method:
+[`createPlainCredential`]({{<apiref "com/mongodb/MongoCredential.html#createPlainCredential(java.lang.String,java.lang.String,char[])">}}) static factory method:
 
 ```java
 String user;          // The LDAP user name
