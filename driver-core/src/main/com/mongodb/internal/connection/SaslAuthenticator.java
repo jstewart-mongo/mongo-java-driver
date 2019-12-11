@@ -55,7 +55,7 @@ abstract class SaslAuthenticator extends Authenticator {
 
                     BsonInt32 conversationId = res.getInt32("conversationId");
 
-                    while (!(res.getBoolean("done")).getValue()) {
+                    while (!(res.getBoolean("done")).getValue() || !saslClient.isComplete()) {
                         response = saslClient.evaluateChallenge((res.getBinary("payload")).getData());
 
                         if (response == null) {
