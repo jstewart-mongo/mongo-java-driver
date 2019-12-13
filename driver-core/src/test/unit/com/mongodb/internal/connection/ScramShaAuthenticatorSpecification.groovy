@@ -360,11 +360,28 @@ class ScramShaAuthenticatorSpecification extends Specification {
         async << [true, false]
     }
 
-    def createConnection(List<String> serverResponses) {
+    def 'should complete authentication when done is set to true prematurely SHA-256'() {
+        when:
+        def serverResponses = createMessages('''
+            S: r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096
+            S: v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4=
+        ''').last()
+        def authenticator = new ScramShaAuthenticator(SHA256_CREDENTIAL, { 'rOprNGfwEbeRWgbNEkqO' }, { 'pencil' })
+        def connection = createConnection(serverResponses, true)
+        authenticate(connection, authenticator, async)
+
+        then:
+        connection.countRepliesInQueue() == 1  // last reply to indicate done is not consumed
+
+        where:
+        async << [true, false]
+    }
+
+    def createConnection(List<String> serverResponses, boolean replyDone = false) {
         TestInternalConnection connection = new TestInternalConnection(serverId)
         serverResponses.each {
             connection.enqueueReply(
-                    buildSuccessfulReply("{conversationId: 1, payload: BinData(0, '${encode64(it)}'), done: false, ok: 1}")
+                    buildSuccessfulReply("{conversationId: 1, payload: BinData(0, '${encode64(it)}'), done: ${replyDone}, ok: 1}")
             ) }
         connection.enqueueReply(buildSuccessfulReply('{conversationId: 1, done: true, ok: 1}'))
         connection
