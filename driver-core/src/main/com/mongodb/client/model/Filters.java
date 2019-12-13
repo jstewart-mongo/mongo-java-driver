@@ -1023,29 +1023,10 @@ public final class Filters {
             } else if (document.size() == 1 && document.keySet().iterator().next().equals("$and")) {
                 document.get("$and").asArray().add(new BsonDocument(clause.getKey(), clause.getValue()));
             } else if (document.containsKey(clause.getKey())) {
-                if (document.get(clause.getKey()).isDocument() && clause.getValue().isDocument()) {
-                    BsonDocument existingClauseValue = document.get(clause.getKey()).asDocument();
-                    BsonDocument clauseValue = clause.getValue().asDocument();
-                    if (keysIntersect(clauseValue, existingClauseValue)) {
-                        promoteRenderableToDollarForm(document, clause);
-                    } else {
-                        existingClauseValue.putAll(clauseValue);
-                    }
-                } else {
-                    promoteRenderableToDollarForm(document, clause);
-                }
+                promoteRenderableToDollarForm(document, clause);
             } else {
                 document.append(clause.getKey(), clause.getValue());
             }
-        }
-
-        private boolean keysIntersect(final BsonDocument first, final BsonDocument second) {
-            for (String name : first.keySet()) {
-                if (second.containsKey(name)) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         private void promoteRenderableToDollarForm(final BsonDocument document, final Map.Entry<String, BsonValue> clause) {
