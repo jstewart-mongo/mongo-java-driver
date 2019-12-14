@@ -153,10 +153,10 @@ class FiltersSpecification extends Specification {
         toBson(and()) == parse('{$and : []}')
     }
 
-    def 'and should render and without using $and'() {
+    def 'and should render using $and'() {
         expect:
-        toBson(and([eq('x', 1), eq('y', 2)])) == parse('{x : 1, y : 2}')
-        toBson(and(eq('x', 1), eq('y', 2))) == parse('{x : 1, y : 2}')
+        toBson(and([eq('x', 1), eq('y', 2)])) == parse('{$and: [{x : 1}, {y : 2}]}')
+        toBson(and(eq('x', 1), eq('y', 2))) == parse('{$and: [{x : 1}, {y : 2}]}')
     }
 
     def 'and should render $and with clashing keys'() {
@@ -164,12 +164,16 @@ class FiltersSpecification extends Specification {
         toBson(and([eq('a', 1), eq('a', 2)])) == parse('{$and: [{a: 1}, {a: 2}]}');
     }
 
-    def 'and should flatten nested'() {
+    def 'and should not flatten nested'() {
         expect:
-        toBson(and([and([eq('a', 1), eq('b', 2)]), eq('c', 3)])) == parse('{a : 1, b : 2, c : 3}')
-        toBson(and([and([eq('a', 1), eq('a', 2)]), eq('c', 3)])) == parse('{$and:[{a : 1}, {a : 2}, {c : 3}] }')
-        toBson(and([lt('a', 1), lt('b', 2)])) == parse('{a : {$lt : 1}, b : {$lt : 2} }')
-        toBson(and([lt('a', 1), lt('a', 2)])) == parse('{$and : [{a : {$lt : 1}}, {a : {$lt : 2}}]}')
+        toBson(and([and([eq('a', 1), eq('b', 2)]), eq('c', 3)])) ==
+                parse('{$and: [{$and: [{a : 1}, {b : 2}]}, {c : 3}]}')
+        toBson(and([and([eq('a', 1), eq('a', 2)]), eq('c', 3)])) ==
+                parse('{$and:[{$and: [{a : 1}, {a : 2}]}, {c : 3}]} }')
+        toBson(and([lt('a', 1), lt('b', 2)])) ==
+                parse('{$and: [{a : {$lt : 1}}, {b : {$lt : 2}}]}')
+        toBson(and([lt('a', 1), lt('a', 2)])) ==
+                parse('{$and : [{a : {$lt : 1}}, {a : {$lt : 2}}]}')
     }
 
     def '$and should be explicit when using $not'() {
@@ -219,7 +223,7 @@ class FiltersSpecification extends Specification {
                 parse('{results : {$elemMatch : {$gte: 80, $lt: 85}}}')
 
         toBson(elemMatch('results', and(eq('product', 'xyz'), gt('score', 8)))) ==
-                parse('{ results : {$elemMatch : {product : "xyz", score : {$gt : 8}}}}')
+                parse('{ results : {$elemMatch : {$and: [{product : "xyz"}, {score : {$gt : 8}}]}}}')
     }
 
     def 'should render $in'() {
