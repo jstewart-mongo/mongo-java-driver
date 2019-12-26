@@ -87,9 +87,6 @@ class TestInternalConnection implements InternalConnection {
         return sent;
     }
 
-    public int countRepliesInQueue() {
-        return replies.size();
-    }
     @Override
     public ConnectionDescription getDescription() {
         return description;

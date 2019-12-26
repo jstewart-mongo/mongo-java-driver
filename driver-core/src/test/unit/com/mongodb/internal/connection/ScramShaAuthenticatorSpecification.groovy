@@ -371,7 +371,8 @@ class ScramShaAuthenticatorSpecification extends Specification {
         authenticate(connection, authenticator, async)
 
         then:
-        connection.countRepliesInQueue() == 1  // last reply to indicate done is not consumed
+        def e = thrown(MongoSecurityException)
+        e.getMessage().contains('server completed challenges before client completed responses')
 
         where:
         async << [true, false]
