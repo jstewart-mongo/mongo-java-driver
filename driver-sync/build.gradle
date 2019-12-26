@@ -21,11 +21,11 @@ ext {
 }
 
 dependencies {
-    compile project(':bson')
-    compile project(':driver-core')
+    implementation project(path: ':bson', configuration: 'archives')
+    implementation project(':driver-core')
 
-    testCompile project(':bson').sourceSets.test.output
-    testCompile project(':driver-core').sourceSets.test.output
+    testImplementation project(':bson').sourceSets.test.output
+    testImplementation project(':driver-core').sourceSets.test.output
 }
 
 sourceSets {
@@ -43,9 +43,14 @@ tasks.withType(Checkstyle) {
 
 jar {
     bnd (
-        '-exportcontents': "*;-noimport:=true",
+        '-exportcontents': "*",
         'Automatic-Module-Name': 'org.mongodb.driver.sync.client',
         'Build-Version': project.gitVersion,
+        'Bundle-Version': project.version,
+        'Bundle-Name': archivesBaseName,
+        'Bundle-SymbolicName': project.group + '.' + project.name,
         'Import-Package': 'org.bson.*,com.mongodb.*'
     )
 }
+
+artifacts { archives jar }

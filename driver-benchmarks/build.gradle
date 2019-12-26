@@ -30,8 +30,10 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':driver-sync')
-    compile 'ch.qos.logback:logback-classic:1.1.1'
+    implementation project(path: ':bson', configuration: 'archives')
+    implementation project(':driver-core')
+    implementation project(':driver-sync')
+    implementation 'ch.qos.logback:logback-classic:1.1.1'
 }
 
 javadoc {
@@ -41,3 +43,12 @@ javadoc {
 applicationDefaultJvmArgs = ["-Dorg.mongodb.benchmarks.data=" + System.getProperty('org.mongodb.benchmarks.data'),
                              "-Dorg.mongodb.benchmarks.output=" + System.getProperty('org.mongodb.benchmarks.output')]
 
+
+jar {
+    bnd (
+         '-exportcontents': "*",
+         'Bundle-Version': project.version,
+         'Bundle-Name': archivesBaseName,
+         'Bundle-SymbolicName': project.group + '.' + project.name
+    )
+}

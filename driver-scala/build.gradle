@@ -18,19 +18,24 @@ description = "A Scala wrapper / extension to the bson library"
 archivesBaseName = 'mongo-scala-driver'
 
 dependencies {
-    compile project(':bson-scala')
-    compile project(':driver-reactive-streams')
+    implementation project(path: ':bson', configuration: 'archives')
+    implementation project(':bson-scala')
+    implementation project(path: ':driver-core', configuration: 'archives')
+    implementation project(path: ':driver-reactive-streams', configuration: 'archives')
+    implementation project(path: ':driver-sync', configuration: 'archives')
 
-    testCompile project(':util')
-    testCompile project(':driver-sync')
-    testCompile project(':bson').sourceSets.test.output
-    testCompile project(':driver-sync').sourceSets.test.output
-    testCompile project(':driver-core').sourceSets.test.output
+    implementation 'org.reactivestreams:reactive-streams:1.0.2'
+
+    testImplementation project(':util')
+    testImplementation project(':driver-sync')
+    testImplementation project(':bson').sourceSets.test.output
+    testImplementation project(':driver-sync').sourceSets.test.output
+    testImplementation project(':driver-core').sourceSets.test.output
 }
 
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntime.extendsFrom testRuntime
 }
 
@@ -96,6 +101,9 @@ jar {
         '-exportcontents': "*;-noimport:=true",
         'Automatic-Module-Name': 'org.mongodb.scala.mongo-scala-driver',
         'Build-Version': project.gitVersion,
+        'Bundle-Version': project.version,
+        'Bundle-Name': archivesBaseName,
+        'Bundle-SymbolicName': project.group + '.' + archivesBaseName,
         'Import-Package': 'org.bson.*,com.mongodb.*'
     )
 }

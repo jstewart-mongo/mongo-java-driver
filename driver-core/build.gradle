@@ -31,17 +31,17 @@ ext {
 sourceSets.main.resources.srcDirs = ['src/resources']
 
 dependencies {
-    compile project(':bson')
+    implementation project(path: ':bson', configuration: 'archives')
 
-    compile "com.github.jnr:jnr-unixsocket:$jnrUnixsocketVersion", optional
-    compile "io.netty:netty-buffer:$nettyVersion", optional
-    compile "io.netty:netty-transport:$nettyVersion", optional
-    compile "io.netty:netty-handler:$nettyVersion", optional
-    compile "org.xerial.snappy:snappy-java:$snappyVersion", optional
-    compile "com.github.luben:zstd-jni:$zstdVersion", optional
-    compile "org.mongodb:mongodb-crypt:$mongoCryptVersion", optional
+    implementation "com.github.jnr:jnr-unixsocket:$jnrUnixsocketVersion", optional
+    implementation "io.netty:netty-buffer:$nettyVersion", optional
+    implementation "io.netty:netty-transport:$nettyVersion", optional
+    implementation "io.netty:netty-handler:$nettyVersion", optional
+    implementation "org.xerial.snappy:snappy-java:$snappyVersion", optional
+    implementation "com.github.luben:zstd-jni:$zstdVersion", optional
+    api "org.mongodb:mongodb-crypt:$mongoCryptVersion", optional
 
-    testCompile project(':bson').sourceSets.test.output
+    testImplementation project(':bson').sourceSets.test.output
 }
 
 buildConfig {
@@ -57,6 +57,9 @@ jar {
             '-exportcontents': "*;-noimport:=true",
             'Automatic-Module-Name': 'org.mongodb.driver.core',
             'Build-Version': project.gitVersion,
+            'Bundle-Version': project.version,
+            'Bundle-Name': archivesBaseName,
+            'Bundle-SymbolicName': project.group + '.' + project.name,
             'Import-Package': [
                     'org.bson.*',                       // unfortunate that this is necessary, but if it's left out then it's not included
                     'javax.crypto.*',
@@ -77,3 +80,5 @@ jar {
             ].join(',')
     )
 }
+
+artifacts { archives jar }

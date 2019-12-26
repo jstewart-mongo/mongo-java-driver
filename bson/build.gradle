@@ -24,9 +24,14 @@ ext {
 
 jar {
     bnd (
-        '-exportcontents': "*;-noimport:=true",
+         '-exportcontents': "*;-noimport:=true",
          'Automatic-Module-Name': 'org.mongodb.bson',
          'Build-Version': project.gitVersion,
+         'Bundle-Version': project.version,
+         'Bundle-Name': archivesBaseName,
+         'Bundle-SymbolicName': project.group + '.' + project.name,
          'Import-Package': 'org.slf4j;resolution:=optional'
     )
 }
+
+artifacts { archives jar }
