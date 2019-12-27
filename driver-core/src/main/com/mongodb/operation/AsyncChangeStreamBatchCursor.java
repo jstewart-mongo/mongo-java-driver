@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.operation.ChangeStreamBatchCursorHelper.isRetryableError;
 import static com.mongodb.operation.OperationHelper.LOGGER;
@@ -44,6 +45,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     private volatile AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped;
     private final AtomicBoolean isClosed = new AtomicBoolean();
     private final AtomicBoolean noOperationInProgress = new AtomicBoolean(true);
+    private final AtomicBoolean closePending = new AtomicBoolean(false);
 
     AsyncChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
                                  final AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped,
@@ -86,7 +88,17 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public void close() {
-        if (!isClosed.getAndSet(true) && noOperationInProgress.get()) {
+        boolean closed;
+        boolean noOpInProgress;
+        synchronized (this) {
+            closed = !closePending.get() && isClosed.getAndSet(true);
+            noOpInProgress = noOperationInProgress.get();
+            if (!closed && !noOpInProgress) {
+                closePending.set(true);
+            }
+        }
+
+        if (!closed && noOpInProgress) {
             wrapped.close();
             binding.release();
         }
@@ -104,7 +116,11 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public boolean isClosed() {
-        return isClosed.get();
+        boolean closed = false;
+        synchronized (this) {
+            closed = isClosed.get();
+        }
+        return closed;
     }
 
     @Override
@@ -129,8 +145,12 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     private void endOperationInProgress() {
-        noOperationInProgress.set(true);
-        if (isClosed()) {
+        boolean pendingClose = false;
+        synchronized (this) {
+            noOperationInProgress.set(true);
+            pendingClose = closePending.get();
+        }
+        if (pendingClose) {
             close();
         }
     }
@@ -166,7 +186,10 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     private void resumeableOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback) {
-        noOperationInProgress.set(false);
+        synchronized (this) {
+            isTrue("open", !isClosed.get() || closePending.get());
+            noOperationInProgress.set(false);
+        }
         asyncBlock.apply(wrapped, new SingleResultCallback<List<RawBsonDocument>>() {
             @Override
             public void onResult(final List<RawBsonDocument> result, final Throwable t) {

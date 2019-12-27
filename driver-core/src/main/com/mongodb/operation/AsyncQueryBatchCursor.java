@@ -74,6 +74,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private volatile BsonTimestamp operationTime;
     private volatile boolean firstBatchEmpty;
     private final AtomicBoolean noOperationInProgress = new AtomicBoolean(true);
+    private final AtomicBoolean closePending = new AtomicBoolean(false);
 
     AsyncQueryBatchCursor(final QueryResult<T> firstBatch, final int limit, final int batchSize, final long maxTimeMS,
                           final Decoder<T> decoder, final AsyncConnectionSource connectionSource, final AsyncConnection connection) {
@@ -109,7 +110,17 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
 
     @Override
     public void close() {
-        if (!isClosed.getAndSet(true)) {
+        boolean closed;
+        boolean noOpInProgress;
+        synchronized (this) {
+            closed = !closePending.get() && isClosed.getAndSet(true);
+            noOpInProgress = noOperationInProgress.get();
+            if (!closed && !noOpInProgress) {
+                closePending.set(true);
+            }
+        }
+
+        if (!closed && noOpInProgress) {
             killCursorOnClose();
         }
     }
@@ -126,19 +137,25 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
 
     @Override
     public void setBatchSize(final int batchSize) {
-        isTrue("open", !isClosed.get());
+        synchronized (this) {
+            isTrue("open", !isClosed.get());
+        }
         this.batchSize = batchSize;
     }
 
     @Override
     public int getBatchSize() {
-        isTrue("open", !isClosed.get());
+        synchronized (this) {
+            isTrue("open", !isClosed.get());
+        }
         return batchSize;
     }
 
     @Override
     public boolean isClosed() {
-        return isClosed.get();
+        synchronized (this) {
+            return isClosed.get();
+        }
     }
 
     @Override
@@ -171,10 +188,15 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
         } else {
             ServerCursor localCursor = getServerCursor();
             if (localCursor == null) {
-                isClosed.set(true);
+                synchronized (this) {
+                    isClosed.set(true);
+                }
                 callback.onResult(null, null);
             } else {
-                noOperationInProgress.set(false);
+                synchronized (this) {
+                    isTrue("open", !isClosed.get() || closePending.get());
+                    noOperationInProgress.set(false);
+                }
                 getMore(localCursor, callback, tryNext);
             }
         }
@@ -226,20 +248,18 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     }
 
     private void killCursorOnClose() {
-        if (noOperationInProgress.get()) {
-            final ServerCursor localCursor = getServerCursor();
-            if (localCursor != null) {
-                connectionSource.getConnection(new SingleResultCallback<AsyncConnection>() {
-                    @Override
-                    public void onResult(final AsyncConnection connection, final Throwable t) {
-                        if (t != null) {
-                            connectionSource.release();
-                        } else {
-                            killCursorAsynchronouslyAndReleaseConnectionAndSource(connection, localCursor);
-                        }
+        final ServerCursor localCursor = getServerCursor();
+        if (localCursor != null) {
+            connectionSource.getConnection(new SingleResultCallback<AsyncConnection>() {
+                @Override
+                public void onResult(final AsyncConnection connection, final Throwable t) {
+                    if (t != null) {
+                        connectionSource.release();
+                    } else {
+                        killCursorAsynchronouslyAndReleaseConnectionAndSource(connection, localCursor);
                     }
-                });
-            }
+                }
+            });
         }
     }
 
@@ -280,12 +300,15 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     }
 
     private void endOperationInProgress() {
-        noOperationInProgress.set(true);
-        if (isClosed()) {
-            killCursorOnClose();
+        boolean pendingClose = false;
+        synchronized (this) {
+            noOperationInProgress.set(true);
+            pendingClose = closePending.get();
+        }
+        if (pendingClose) {
+            close();
         }
     }
-
 
     private void handleGetMoreQueryResult(final AsyncConnection connection, final SingleResultCallback<List<T>> callback,
                                           final QueryResult<T> result, final boolean tryNext) {
