@@ -387,6 +387,27 @@ class ScramShaAuthenticatorSpecification extends Specification {
         async << [true, false]
     }
 
+    def 'should throw exception when done is set to true prematurely and server response is invalid SHA-256'() {
+        given:
+        def serverResponses = createMessages('''
+            S: r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096
+            S: v=invalidResponse
+        ''').last()
+        def authenticator = new ScramShaAuthenticator(SHA256_CREDENTIAL, { 'rOprNGfwEbeRWgbNEkqO' }, { 'pencil' })
+
+        when:
+        // server sends done=true on second response, client throws exception on invalid server response
+        authenticate(createConnection(serverResponses, 1), authenticator, async)
+
+        then:
+        def e = thrown(MongoSecurityException)
+        e.getCause() instanceof SaslException
+        e.getCause().getMessage() == 'Server signature was invalid.'
+
+        where:
+        async << [true, false]
+    }
+
     def createConnection(List<String> serverResponses, int responseWhereDoneIsTrue = -1) {
         TestInternalConnection connection = new TestInternalConnection(serverId)
         serverResponses.eachWithIndex { response, index ->
