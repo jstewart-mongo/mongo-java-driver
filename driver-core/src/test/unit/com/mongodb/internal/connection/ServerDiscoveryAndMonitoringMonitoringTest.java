@@ -70,6 +70,7 @@ public class ServerDiscoveryAndMonitoringMonitoringTest extends AbstractServerDi
             }
             BsonDocument outcome = phase.asDocument().getDocument("outcome");
             assertEvents(outcome.getArray("events"));
+            clusterListener.clearClusterDescriptionChangedEvents();
         }
     }
 
