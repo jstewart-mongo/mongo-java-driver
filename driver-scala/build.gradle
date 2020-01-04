@@ -18,24 +18,24 @@ description = "A Scala wrapper / extension to the bson library"
 archivesBaseName = 'mongo-scala-driver'
 
 dependencies {
-    implementation project(path: ':bson', configuration: 'archives')
-    implementation project(':bson-scala')
-    implementation project(path: ':driver-core', configuration: 'archives')
-    implementation project(path: ':driver-reactive-streams', configuration: 'archives')
-    implementation project(path: ':driver-sync', configuration: 'archives')
+    compile project(path: ':bson', configuration: 'archives')
+    compile project(':bson-scala')
+    compile project(path: ':driver-core', configuration: 'archives')
+    compile project(path: ':driver-reactive-streams', configuration: 'archives')
+    compile project(':driver-sync')
 
-    implementation 'org.reactivestreams:reactive-streams:1.0.2'
+    compile 'org.reactivestreams:reactive-streams:1.0.2'
 
-    testImplementation project(':util')
-    testImplementation project(':driver-sync')
-    testImplementation project(':bson').sourceSets.test.output
-    testImplementation project(':driver-sync').sourceSets.test.output
-    testImplementation project(':driver-core').sourceSets.test.output
+    testCompile project(':util')
+    testCompile project(':driver-sync')
+    testCompile project(':bson').sourceSets.test.output
+    testCompile project(':driver-sync').sourceSets.test.output
+    testCompile project(':driver-core').sourceSets.test.output
 }
 
 
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
 

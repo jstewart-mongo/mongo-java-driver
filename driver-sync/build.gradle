@@ -21,11 +21,11 @@ ext {
 }
 
 dependencies {
-    implementation project(path: ':bson', configuration: 'archives')
-    implementation project(':driver-core')
+    compile project(':bson')
+    compile project(':driver-core')
 
-    testImplementation project(':bson').sourceSets.test.output
-    testImplementation project(':driver-core').sourceSets.test.output
+    testCompile project(':bson').sourceSets.test.output
+    testCompile project(':driver-core').sourceSets.test.output
 }
 
 sourceSets {
@@ -52,5 +52,3 @@ jar {
         'Import-Package': 'org.bson.*,com.mongodb.*'
     )
 }
-
-artifacts { archives jar }

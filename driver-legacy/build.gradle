@@ -30,18 +30,18 @@ test {
 }
 
 dependencies {
-    implementation project(path: ':bson', configuration: 'archives')
-    implementation project(':driver-core')
-    implementation project(':driver-sync')
+    compile project(':bson')
+    compile project(':driver-core')
+    compile project(':driver-sync')
 
-    testImplementation project(':bson').sourceSets.test.output
-    testImplementation project(':driver-core').sourceSets.test.output
-    testImplementation project(':driver-sync').sourceSets.test.output
+    testCompile project(':bson').sourceSets.test.output
+    testCompile project(':driver-core').sourceSets.test.output
+    testCompile project(':driver-sync').sourceSets.test.output
 }
 
 jar {
     bnd (
-        '-exportcontents': "*",
+         '-exportcontents': "*",
          'Bundle-Version': project.version,
          'Bundle-Name': archivesBaseName,
          'Bundle-SymbolicName': project.group + '.' + project.name
