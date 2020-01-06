@@ -43,12 +43,18 @@ tasks.withType(Checkstyle) {
 
 jar {
     bnd (
-        '-exportcontents': "*",
+        '-exportcontents': "*;-noimport:=true",
         'Automatic-Module-Name': 'org.mongodb.driver.sync.client',
         'Build-Version': project.gitVersion,
         'Bundle-Version': project.version,
         'Bundle-Name': archivesBaseName,
         'Bundle-SymbolicName': project.group + '.' + project.name,
-        'Import-Package': 'org.bson.*,com.mongodb.*'
+        'Import-Package': [
+            'org.bson.*',
+            'com.mongodb.*',
+            'com.mongodb.client',
+            'com.mongodb.client.internal',
+            'com.mongodb.client.vault'
+        ].join(',')
     )
 }

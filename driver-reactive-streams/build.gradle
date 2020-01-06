@@ -61,11 +61,16 @@ ext {
 
 jar {
     bnd (
-        '-exportcontents': "*",
+        '-exportcontents': "*;-noimport:=true",
         'Automatic-Module-Name': 'org.mongodb.driver.reactivestreams',
         'Build-Version': project.gitVersion,
         'Bundle-Version': project.version,
         'Bundle-Name': archivesBaseName,
         'Bundle-SymbolicName': project.group + '.driver-reactivestreams',
+        'Import-Package': [
+            'org.bson.*',
+            'com.mongodb.*',
+            'com.mongodb.reactivestreams.*'
+        ].join(',')
     )
 }

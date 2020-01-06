@@ -41,12 +41,3 @@ javadoc {
 
 applicationDefaultJvmArgs = ["-Dorg.mongodb.benchmarks.data=" + System.getProperty('org.mongodb.benchmarks.data'),
                              "-Dorg.mongodb.benchmarks.output=" + System.getProperty('org.mongodb.benchmarks.output')]
-
-jar {
-    bnd (
-         '-exportcontents': "*",
-         'Bundle-Version': project.version,
-         'Bundle-Name': archivesBaseName,
-         'Bundle-SymbolicName': project.group + '.' + project.name
-    )
-}

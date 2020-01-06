@@ -38,12 +38,3 @@ dependencies {
     testCompile project(':driver-core').sourceSets.test.output
     testCompile project(':driver-sync').sourceSets.test.output
 }
-
-jar {
-    bnd (
-         '-exportcontents': "*",
-         'Bundle-Version': project.version,
-         'Bundle-Name': archivesBaseName,
-         'Bundle-SymbolicName': project.group + '.' + project.name
-    )
-}
