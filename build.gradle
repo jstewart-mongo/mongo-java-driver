@@ -83,6 +83,7 @@ configure(javaProjects) {
         }
     }
 
+
     tasks.withType(GenerateModuleMetadata) {
         enabled = false
     }
@@ -122,7 +123,6 @@ configure(scalaProjects) {
     tasks.withType(ScalaCompile) {
         scalaCompileOptions.deprecation = false
     }
-
 
     tasks.withType(GenerateModuleMetadata) {
         enabled = false

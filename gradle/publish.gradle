@@ -92,6 +92,16 @@ configure(javaProjects) { project ->
     }
 
     afterEvaluate {
+        // Common manifest attributes for all JAR files
+        jar {
+            manifest.attributes['-exportcontents'] =  "*;-noimport:=true"
+            manifest.attributes['Automatic-Module-Name'] =  project.group + '.' + project.archivesBaseName
+            manifest.attributes['Build-Version'] =  project.gitVersion
+            manifest.attributes['Bundle-Version'] =  project.version
+            manifest.attributes['Bundle-Name'] =  project.archivesBaseName
+            manifest.attributes['Bundle-SymbolicName'] =  project.group + '.' + project.archivesBaseName
+        }
+
         publishing.publications.mavenJava.artifactId = project.archivesBaseName
         signing {
             sign publishing.publications.mavenJava
@@ -130,6 +140,16 @@ configure(scalaProjects) { project ->
     }
 
     afterEvaluate {
+        // Common manifest attributes for all JAR files
+        jar {
+            manifest.attributes['-exportcontents'] =  "*;-noimport:=true"
+            manifest.attributes['Automatic-Module-Name'] =  project.group + '.' + project.archivesBaseName
+            manifest.attributes['Build-Version'] =  project.gitVersion
+            manifest.attributes['Bundle-Version'] =  project.version
+            manifest.attributes['Bundle-Name'] =  project.archivesBaseName
+            manifest.attributes['Bundle-SymbolicName'] =  project.group + '.' + project.archivesBaseName
+        }
+        
         signing {
             sign publishing.publications.mavenJava
         }

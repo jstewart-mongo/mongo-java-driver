@@ -21,8 +21,8 @@ ext {
 }
 
 dependencies {
-    compile project(':bson')
-    compile project(':driver-core')
+    compile project(path: ':bson', configuration: 'default')
+    compile project(path: ':driver-core', configuration: 'default')
 
     testCompile project(':bson').sourceSets.test.output
     testCompile project(':driver-core').sourceSets.test.output
@@ -41,20 +41,11 @@ tasks.withType(Checkstyle) {
     classpath = files(project(':driver-core').sourceSets.main.output, sourceSets.main.output)
 }
 
-jar {
-    bnd (
-        '-exportcontents': "*;-noimport:=true",
-        'Automatic-Module-Name': 'org.mongodb.driver.sync.client',
-        'Build-Version': project.gitVersion,
-        'Bundle-Version': project.version,
-        'Bundle-Name': archivesBaseName,
-        'Bundle-SymbolicName': project.group + '.' + project.name,
-        'Import-Package': [
-            'org.bson.*',
-            'com.mongodb.*',
-            'com.mongodb.client',
-            'com.mongodb.client.internal',
-            'com.mongodb.client.vault'
-        ].join(',')
-    )
+afterEvaluate {
+    jar.manifest.attributes['Import-Package'] = [
+        'org.bson.*',
+        'com.mongodb.*'
+    ].join(',')
+    jar.manifest.attributes['Automatic-Module-Name'] = 'org.mongodb.driver.sync.client'
+    jar.manifest.attributes['Bundle-SymbolicName'] = 'org.mongodb.driver-sync'
 }

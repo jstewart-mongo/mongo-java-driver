@@ -30,12 +30,15 @@ sourceSets {
 }
 
 dependencies {
-    compile project(path: ':bson', configuration: 'archives')
+    compile project(':bson')
     compile project(':driver-sync')
     compile 'ch.qos.logback:logback-classic:1.1.1'
 }
 
 javadoc {
+    enabled = false
+}
+jar {
     enabled = false
 }
 
