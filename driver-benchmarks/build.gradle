@@ -37,9 +37,6 @@ dependencies {
 javadoc {
     enabled = false
 }
-jar {
-    enabled = false
-}
 
 applicationDefaultJvmArgs = ["-Dorg.mongodb.benchmarks.data=" + System.getProperty('org.mongodb.benchmarks.data'),
                              "-Dorg.mongodb.benchmarks.output=" + System.getProperty('org.mongodb.benchmarks.output')]
