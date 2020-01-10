@@ -149,7 +149,7 @@ configure(scalaProjects) { project ->
             manifest.attributes['Bundle-Name'] =  project.archivesBaseName
             manifest.attributes['Bundle-SymbolicName'] =  project.group + '.' + project.archivesBaseName
         }
-        
+
         signing {
             sign publishing.publications.mavenJava
         }

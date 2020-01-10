@@ -30,7 +30,6 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':bson')
     compile project(':driver-sync')
     compile 'ch.qos.logback:logback-classic:1.1.1'
 }
@@ -44,3 +43,4 @@ jar {
 
 applicationDefaultJvmArgs = ["-Dorg.mongodb.benchmarks.data=" + System.getProperty('org.mongodb.benchmarks.data'),
                              "-Dorg.mongodb.benchmarks.output=" + System.getProperty('org.mongodb.benchmarks.output')]
+

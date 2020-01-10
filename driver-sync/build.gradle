@@ -42,10 +42,7 @@ tasks.withType(Checkstyle) {
 }
 
 afterEvaluate {
-    jar.manifest.attributes['Import-Package'] = [
-        'org.bson.*',
-        'com.mongodb.*'
-    ].join(',')
+    jar.manifest.attributes['Import-Package'] = 'org.bson.*,com.mongodb.*'
     jar.manifest.attributes['Automatic-Module-Name'] = 'org.mongodb.driver.sync.client'
     jar.manifest.attributes['Bundle-SymbolicName'] = 'org.mongodb.driver-sync'
 }
