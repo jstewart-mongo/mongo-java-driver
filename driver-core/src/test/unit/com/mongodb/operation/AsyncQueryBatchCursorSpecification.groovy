@@ -467,11 +467,57 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         then:
         connectionA.getCount() == 0
         connectionSource.getCount() == 0
+        cursor.isClosed()
 
         where:
         serverVersion                | commandAsync         | response
         new ServerVersion([3, 2, 0]) | true                 | documentResponse([], 0)
         new ServerVersion([3, 0, 0]) | false                | new QueryResult(NAMESPACE, [], 0, SERVER_ADDRESS)
+    }
+
+    def 'should not kill the cursor in the getMore callback if it was closed before getMore throws exception'() {
+        given:
+        def connectionA = referenceCountedAsyncConnection(serverVersion)
+        def connectionB = referenceCountedAsyncConnection(serverVersion)
+        def connectionSource = getAsyncConnectionSource(connectionA, connectionB)
+        def initialResult = queryResult()
+
+        when:
+        def cursor = new AsyncQueryBatchCursor<Document>(initialResult, 0, 0, 0, CODEC, connectionSource, null)
+        def batch = nextBatch(cursor)
+
+        then:
+        batch == FIRST_BATCH
+
+        when:
+        batch = nextBatch(cursor)
+
+        then:
+        if (commandAsync) {
+            1 * connectionA.commandAsync(_, _, _, _, _, _, _) >> {
+                // Simulate the user calling close while the getMore is throwing a MongoException
+                cursor.close()
+                it[6].onResult(null, MONGO_EXCEPTION)
+            }
+        } else {
+            1 * connectionA.getMoreAsync(_, _, _, _, _) >> {
+                // Simulate the user calling close while the getMore is throwing a MongoException
+                cursor.close()
+                it[4].onResult(null, MONGO_EXCEPTION)
+            }
+        }
+
+        then:
+        thrown(MongoException)
+
+        then:
+        connectionA.getCount() == 0
+        cursor.isClosed()
+
+        where:
+        serverVersion                | commandAsync
+        new ServerVersion([3, 2, 0]) | true
+        new ServerVersion([3, 0, 0]) | false
     }
 
     def 'should handle errors when calling close'() {

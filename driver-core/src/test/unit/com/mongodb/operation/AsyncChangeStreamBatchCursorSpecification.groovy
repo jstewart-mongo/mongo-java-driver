@@ -62,4 +62,28 @@ class AsyncChangeStreamBatchCursorSpecification extends Specification {
         0 * wrapped.close()
         0 * binding.release()
     }
+
+    def 'should not close the cursor in next if the cursor was closed before next completed'() {
+        def changeStreamOpertation = Stub(ChangeStreamOperation)
+        def binding = Mock(AsyncReadBinding)
+        def wrapped = Mock(AsyncQueryBatchCursor)
+        def callback = Stub(SingleResultCallback)
+        def cursor = new AsyncChangeStreamBatchCursor(changeStreamOpertation, wrapped, binding, null)
+
+        when:
+        cursor.next(callback)
+
+        then:
+        1 * wrapped.next(_) >> {
+            // Simulate the user calling close while wrapped.next() is in flight
+            cursor.close()
+            it[0].onResult(null, null)
+        }
+
+        then:
+        noExceptionThrown()
+
+        then:
+        cursor.isClosed()
+    }
 }

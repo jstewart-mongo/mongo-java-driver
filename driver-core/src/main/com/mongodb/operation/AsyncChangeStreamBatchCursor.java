@@ -91,18 +91,18 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public void close() {
-        boolean closed;
-        boolean opInProgress;
+        boolean closeCursor = false;
+
         synchronized (this) {
-            closed = !isClosePending && isClosed;
-            opInProgress = isOperationInProgress;
-            if (!closed && opInProgress) {
+            if (isOperationInProgress) {
                 isClosePending = true;
+            } else {
+                closeCursor = !isClosed;
+                isClosed = true;
             }
-            isClosed = true;
         }
 
-        if (!closed && !opInProgress) {
+        if (closeCursor) {
             wrapped.close();
             binding.release();
         }
@@ -120,11 +120,9 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     @Override
     public boolean isClosed() {
-        boolean closed = false;
         synchronized (this) {
-            closed = isClosed;
+            return isClosed;
         }
-        return closed;
     }
 
     @Override
