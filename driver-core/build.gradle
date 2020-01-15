@@ -33,13 +33,13 @@ sourceSets.main.resources.srcDirs = ['src/resources']
 dependencies {
     api project(path: ':bson', configuration: 'default')
 
-    implementation "com.github.jnr:jnr-unixsocket:$jnrUnixsocketVersion", optional
-    implementation "io.netty:netty-buffer:$nettyVersion", optional
-    implementation "io.netty:netty-transport:$nettyVersion", optional
-    implementation "io.netty:netty-handler:$nettyVersion", optional
-    implementation "org.xerial.snappy:snappy-java:$snappyVersion", optional
-    implementation "com.github.luben:zstd-jni:$zstdVersion", optional
-    implementation "org.mongodb:mongodb-crypt:$mongoCryptVersion", optional
+    api "com.github.jnr:jnr-unixsocket:$jnrUnixsocketVersion", optional
+    api "io.netty:netty-buffer:$nettyVersion", optional
+    api "io.netty:netty-transport:$nettyVersion", optional
+    api "io.netty:netty-handler:$nettyVersion", optional
+    api "org.xerial.snappy:snappy-java:$snappyVersion", optional
+    api "com.github.luben:zstd-jni:$zstdVersion", optional
+    api "org.mongodb:mongodb-crypt:$mongoCryptVersion", optional
 
     testImplementation project(':bson').sourceSets.test.output
 }

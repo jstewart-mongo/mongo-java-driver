@@ -21,7 +21,7 @@ dependencies {
     api project(path: ':bson', configuration: 'default')
     api project(path: ':driver-core', configuration: 'default')
 
-    implementation 'org.reactivestreams:reactive-streams:1.0.2'
+    api 'org.reactivestreams:reactive-streams:1.0.2'
 
     testImplementation project(':bson').sourceSets.test.output
     testImplementation project(':driver-sync')

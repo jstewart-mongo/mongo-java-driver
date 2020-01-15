@@ -18,13 +18,13 @@ description = "A Scala wrapper / extension to the bson library"
 archivesBaseName = 'mongo-scala-driver'
 
 dependencies {
-    api project(path: ':bson', configuration: 'default')
-    api project(path: ':bson-scala', configuration: 'default')
-    api project(path: ':driver-core', configuration: 'default')
-    implementation project(path: ':driver-reactive-streams', configuration: 'default')
-    implementation project(path: ':driver-sync', configuration: 'default')
+    compile project(path: ':bson', configuration: 'default')
+    compile project(path: ':bson-scala', configuration: 'default')
+    compile project(path: ':driver-core', configuration: 'default')
+    compile project(path: ':driver-reactive-streams', configuration: 'default')
+    compile project(path: ':driver-sync', configuration: 'default')
 
-    implementation 'org.reactivestreams:reactive-streams:1.0.2'
+    compile 'org.reactivestreams:reactive-streams:1.0.2'
 
     testImplementation project(':util')
     testImplementation project(':driver-sync')
