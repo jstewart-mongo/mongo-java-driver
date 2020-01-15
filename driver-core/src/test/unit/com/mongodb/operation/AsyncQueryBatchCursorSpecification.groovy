@@ -147,7 +147,15 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         nextBatch(cursor)
 
         then:
-        thrown(MongoException)
+        def exception = thrown(MongoException)
+        exception.getMessage() == 'next() called after the cursor was closed.'
+
+        when:
+        tryNextBatch(cursor)
+
+        then:
+        exception = thrown(MongoException)
+        exception.getMessage() == 'tryNext() called after the cursor was closed.'
     }
 
     def 'should return the expected results from tryNext'() {
@@ -429,7 +437,7 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         new ServerVersion([3, 0, 0]) | false                | queryResult(SECOND_BATCH)
     }
 
-    def 'should not kill the cursor in the getMore callback if it was closed before getMore returned'() {
+    def 'should close cursor after getMore finishes if cursor was closed while getMore was in progress and getMore returns a response'() {
         given:
         def connectionA = referenceCountedAsyncConnection(serverVersion)
         def connectionB = referenceCountedAsyncConnection(serverVersion)
@@ -444,20 +452,24 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         batch == FIRST_BATCH
 
         when:
-        batch = nextBatch(cursor)
+        nextBatch(cursor)
 
         then:
         if (commandAsync) {
-            1 * connectionA.commandAsync(_, _, _, _, _, _, _) >> {
+            _ * connectionA.commandAsync(_, _, _, _, _, _, _) >> {
                 // Simulate the user calling close while the getMore is in flight
                 cursor.close()
                 it[6].onResult(response, null)
+            } >> {
+                it[6].onResult(response2, null)
             }
         } else {
-            1 * connectionA.getMoreAsync(_, _, _, _, _) >> {
+            _ * connectionA.getMoreAsync(_, _, _, _, _) >> {
                 // Simulate the user calling close while the getMore is in flight
                 cursor.close()
                 it[4].onResult(response, null)
+            } >> {
+                it[4].onResult(response2, null)
             }
         }
 
@@ -470,12 +482,15 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         cursor.isClosed()
 
         where:
-        serverVersion                | commandAsync         | response
-        new ServerVersion([3, 2, 0]) | true                 | documentResponse([], 0)
-        new ServerVersion([3, 0, 0]) | false                | new QueryResult(NAMESPACE, [], 0, SERVER_ADDRESS)
+        serverVersion                | commandAsync  | response                | response2
+        new ServerVersion([3, 2, 0]) | true          | documentResponse([])    | documentResponse([], 0)
+        new ServerVersion([3, 2, 0]) | true          | documentResponse([], 0) | null
+        new ServerVersion([3, 0, 0]) | false         | new QueryResult(NAMESPACE, [], 42, SERVER_ADDRESS) |
+                new QueryResult(NAMESPACE, [], 0, SERVER_ADDRESS)
+        new ServerVersion([3, 0, 0]) | false         | new QueryResult(NAMESPACE, [], 0, SERVER_ADDRESS) | null
     }
 
-    def 'should not kill the cursor in the getMore callback if it was closed before getMore throws exception'() {
+    def 'should close cursor after getMore finishes if cursor was closed while getMore was in progress and getMore throws exception'() {
         given:
         def connectionA = referenceCountedAsyncConnection(serverVersion)
         def connectionB = referenceCountedAsyncConnection(serverVersion)
@@ -490,7 +505,7 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         batch == FIRST_BATCH
 
         when:
-        batch = nextBatch(cursor)
+        nextBatch(cursor)
 
         then:
         if (commandAsync) {
@@ -530,11 +545,19 @@ class AsyncQueryBatchCursorSpecification extends Specification {
         nextBatch(cursor)
 
         then:
-        thrown(MongoException)
+        def exception = thrown(MongoException)
+        exception.getMessage() == 'next() called after the cursor was closed.'
 
         then:
         cursor.isClosed()
         connectionSource.getCount() == 0
+
+        when:
+        tryNextBatch(cursor)
+
+        then:
+        exception = thrown(MongoException)
+        exception.getMessage() == 'tryNext() called after the cursor was closed.'
     }
 
 

@@ -120,6 +120,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
             } else {
                 killCursor = !isClosed;
                 isClosed = true;
+                isClosePending = false;
             }
         }
 
@@ -197,7 +198,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
                 callback.onResult(null, null);
             } else {
                 synchronized (this) {
-                    if (isClosed && !isClosePending) {
+                    if (isClosed) {
                         callback.onResult(null, new MongoException(format("%s called after the cursor was closed.",
                                 tryNext ? "tryNext()" : "next()")));
                         return;

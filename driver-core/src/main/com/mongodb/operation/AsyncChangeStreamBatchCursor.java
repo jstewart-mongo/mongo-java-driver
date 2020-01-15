@@ -99,6 +99,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
             } else {
                 closeCursor = !isClosed;
                 isClosed = true;
+                isClosePending = false;
             }
         }
 
@@ -190,7 +191,7 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     private void resumeableOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<RawBsonDocument>> callback,
                                      final boolean tryNext) {
         synchronized (this) {
-            if (isClosed && !isClosePending) {
+            if (isClosed) {
                 callback.onResult(null, new MongoException(format("%s called after the cursor was closed.",
                         tryNext ? "tryNext()" : "next()")));
                 return;
