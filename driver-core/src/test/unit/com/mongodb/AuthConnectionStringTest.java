@@ -95,24 +95,20 @@ public class AuthConnectionStringTest extends TestCase {
         if (credential != null) {
             assertString("credential.source", credential.getSource());
             assertString("credential.username", credential.getUserName());
+            assertMechanismProperties(credential);
 
             // Passwords for certain auth mechanisms are ignored.
             String password = credential.getPassword() != null ? new String(credential.getPassword()) : null;
             if (password != null) {
                 assertString("credential.password", password);
             }
+
+            assertMechanism("credential.mechanism", credential.getMechanism());
         }
     }
 
     private void assertString(final String key, final String actual) {
-        BsonValue expected = definition;
-        if (key.contains(".")) {
-            for (String subKey : key.split("\\.")) {
-                expected = expected.asDocument().get(subKey);
-            }
-        } else {
-            expected = expected.asDocument().get(key);
-        }
+        BsonValue expected = getExpectedValue(key);
 
         if (expected.isNull()) {
             assertTrue(String.format("%s should be null", key), actual == null);
@@ -122,5 +118,47 @@ public class AuthConnectionStringTest extends TestCase {
         } else {
             assertTrue(String.format("%s should be %s but was %s", key, actual, expected), false);
         }
+    }
+
+    private void assertMechanism(final String key, final String actual) {
+        BsonValue expected = getExpectedValue(key);
+
+        if (expected.isString() && expected.asString().getValue().equals("MONGODB-CR")) {
+            assertTrue(String.format("%s should be null when the expected mechanism is MONGODB-CR", key), actual == null);
+        } else {
+            assertString(key, actual);
+        }
+    }
+
+    private void assertMechanismProperties(final MongoCredential credential) {
+        BsonValue expected = getExpectedValue("credential.mechanism_properties");
+
+        if (!expected.isNull()) {
+            BsonDocument document = expected.asDocument();
+            for (String key : document.keySet()) {
+                if (document.get(key).isString()) {
+                    String expectedValue = document.getString(key).getValue();
+                    if (credential.getMechanism().equals("GSSAPI") && key.equals("SERVICE_NAME") && expectedValue.equals("mongodb")) {
+                        assertNull(credential.getMechanismProperty(key, null));
+                    } else {
+                        assertEquals(expectedValue, credential.getMechanismProperty(key, null));
+                    }
+                } else {
+                    assertEquals(document.getBoolean(key).getValue(), credential.getMechanismProperty(key, (Boolean) null).booleanValue());
+                }
+            }
+        }
+    }
+
+    private BsonValue getExpectedValue(final String key) {
+        BsonValue expected = definition;
+        if (key.contains(".")) {
+            for (String subKey : key.split("\\.")) {
+                expected = expected.asDocument().get(subKey);
+            }
+        } else {
+            expected = expected.asDocument().get(key);
+        }
+        return expected;
     }
 }
