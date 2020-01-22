@@ -693,9 +693,6 @@ public class ConnectionString {
                     mechanism = AuthenticationMechanism.fromMechanismName(value);
                 }
             } else if (key.equals("authsource")) {
-                if (userName == null && !isSrvProtocol) {
-                    throw new IllegalArgumentException("A username is required when an authentication source is specified");
-                }
                 authSource = value;
             } else if (key.equals("gssapiservicename")) {
                 gssapiServiceName = value;
