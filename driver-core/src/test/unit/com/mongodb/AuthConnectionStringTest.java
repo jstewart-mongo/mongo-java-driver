@@ -111,7 +111,7 @@ public class AuthConnectionStringTest extends TestCase {
         BsonValue expected = getExpectedValue(key);
 
         if (expected.isNull()) {
-            assertTrue(String.format("%s should be null", key), actual == null);
+            assertNull(String.format("%s should be null", key), actual);
         } else if (expected.isString()) {
             String expectedString = expected.asString().getValue();
             assertTrue(String.format("%s should be %s but was %s", key, actual, expectedString), actual.equals(expectedString));
@@ -124,7 +124,7 @@ public class AuthConnectionStringTest extends TestCase {
         BsonValue expected = getExpectedValue(key);
 
         if (expected.isString() && expected.asString().getValue().equals("MONGODB-CR")) {
-            assertTrue(String.format("%s should be null when the expected mechanism is MONGODB-CR", key), actual == null);
+            assertNull(String.format("%s should be null when the expected mechanism is MONGODB-CR", key), actual);
         } else {
             assertString(key, actual);
         }
