@@ -138,6 +138,9 @@ public class AuthConnectionStringTest extends TestCase {
             for (String key : document.keySet()) {
                 if (document.get(key).isString()) {
                     String expectedValue = document.getString(key).getValue();
+
+                    // If the mechanism is "GSSAPI", the default SERVICE_NAME, which is stated as "mongodb" in the specification,
+                    // is set to null in the driver.
                     if (credential.getMechanism().equals("GSSAPI") && key.equals("SERVICE_NAME") && expectedValue.equals("mongodb")) {
                         assertNull(credential.getMechanismProperty(key, null));
                     } else {
