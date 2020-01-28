@@ -123,6 +123,7 @@ public class AuthConnectionStringTest extends TestCase {
     private void assertMechanism(final String key, final String actual) {
         BsonValue expected = getExpectedValue(key);
 
+        // MONGODB-CR was removed from the AuthenticationMechanism enum for the 4.0 release, so null will be assigned.
         if (expected.isString() && expected.asString().getValue().equals("MONGODB-CR")) {
             assertNull(String.format("%s should be null when the expected mechanism is MONGODB-CR", key), actual);
         } else {
