@@ -387,6 +387,24 @@ class ScramShaAuthenticatorSpecification extends Specification {
         async << [true, false]
     }
 
+    def 'should skip empty exchange on server authentication SHA-256'() {
+        given:
+        def serverResponses = createMessages('''
+            S: r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096
+            S: v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4=
+        ''').last()
+        def authenticator = new ScramShaAuthenticator(SHA256_CREDENTIAL, { 'rOprNGfwEbeRWgbNEkqO' }, { 'pencil' })
+
+        when:
+        authenticate(createConnection(serverResponses, 1), authenticator, async)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        async << [true, false]
+    }
+
     def 'should throw exception when done is set to true prematurely and server response is invalid SHA-256'() {
         given:
         def serverResponses = createMessages('''
@@ -427,7 +445,8 @@ class ScramShaAuthenticatorSpecification extends Specification {
         assert(clientMessages.size() == sent.size())
         sent.indices.each {
             def sentMessage = sent.get(it)
-            def messageStart = it == 0 ? "saslStart: 1, mechanism:'$mechanism'" : 'saslContinue: 1, conversationId: 1'
+            def messageStart = it == 0 ? "saslStart: 1, mechanism:'$mechanism', options: {skipEmptyExchange: 1}"
+                    : 'saslContinue: 1, conversationId: 1'
             def expectedMessage = BsonDocument.parse("{$messageStart, payload: BinData(0, '${encode64(clientMessages.get(it))}')}")
             assertEquals(expectedMessage, sentMessage)
         }

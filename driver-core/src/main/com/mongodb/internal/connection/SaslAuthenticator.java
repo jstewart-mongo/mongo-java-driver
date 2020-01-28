@@ -176,6 +176,7 @@ abstract class SaslAuthenticator extends Authenticator {
 
     private BsonDocument createSaslStartCommandDocument(final byte[] outToken) {
         return new BsonDocument("saslStart", new BsonInt32(1)).append("mechanism", new BsonString(getMechanismName()))
+                .append("options", new BsonDocument("skipEmptyExchange", new BsonInt32(1)))
                 .append("payload", new BsonBinary(outToken != null ? outToken : new byte[0]));
     }
 
