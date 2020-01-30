@@ -122,6 +122,11 @@ abstract class SaslAuthenticator extends Authenticator {
 
     protected abstract SaslClient createSaslClient(ServerAddress serverAddress);
 
+    protected BsonDocument createSaslStartCommandDocument(final byte[] outToken) {
+        return new BsonDocument("saslStart", new BsonInt32(1)).append("mechanism", new BsonString(getMechanismName()))
+                .append("payload", new BsonBinary(outToken != null ? outToken : new byte[0]));
+    }
+
     private void throwIfSaslClientIsNull(final SaslClient saslClient) {
         if (saslClient == null) {
             throw new MongoSecurityException(getMongoCredential(),
@@ -172,12 +177,6 @@ abstract class SaslAuthenticator extends Authenticator {
                                        final SingleResultCallback<BsonDocument> callback) {
         executeCommandAsync(getMongoCredential().getSource(), createSaslContinueDocument(conversationId, outToken), connection,
                 callback);
-    }
-
-    private BsonDocument createSaslStartCommandDocument(final byte[] outToken) {
-        return new BsonDocument("saslStart", new BsonInt32(1)).append("mechanism", new BsonString(getMechanismName()))
-                .append("options", new BsonDocument("skipEmptyExchange", new BsonInt32(1)))
-                .append("payload", new BsonBinary(outToken != null ? outToken : new byte[0]));
     }
 
     private BsonDocument createSaslContinueDocument(final BsonInt32 conversationId, final byte[] outToken) {
