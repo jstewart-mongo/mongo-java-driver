@@ -60,7 +60,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'fyko+d2lbbFgONRv9qkxdawL' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -83,7 +83,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'rOprNGfwEbeRWgbNEkqO' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -107,7 +107,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -130,7 +130,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -153,7 +153,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -176,7 +176,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -199,7 +199,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -222,7 +222,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -245,7 +245,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
@@ -268,7 +268,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def authenticator = new ScramShaAuthenticator(credential, { 'clientNONCE' }, { preppedPassword })
 
         then:
-        validateAuthentication(payloads, authenticator, async as boolean, emptyExchange as boolean)
+        validateAuthentication(payloads, authenticator, async, emptyExchange)
 
         where:
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
