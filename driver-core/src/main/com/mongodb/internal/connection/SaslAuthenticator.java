@@ -122,10 +122,7 @@ abstract class SaslAuthenticator extends Authenticator {
 
     protected abstract SaslClient createSaslClient(ServerAddress serverAddress);
 
-    protected BsonDocument createSaslStartCommandDocument(final byte[] outToken) {
-        return new BsonDocument("saslStart", new BsonInt32(1)).append("mechanism", new BsonString(getMechanismName()))
-                .append("payload", new BsonBinary(outToken != null ? outToken : new byte[0]));
-    }
+    protected void appendSaslStartOptions(final BsonDocument saslStartCommand) {}
 
     private void throwIfSaslClientIsNull(final SaslClient saslClient) {
         if (saslClient == null) {
@@ -160,7 +157,9 @@ abstract class SaslAuthenticator extends Authenticator {
     }
 
     private BsonDocument sendSaslStart(final byte[] outToken, final InternalConnection connection) {
-        return executeCommand(getMongoCredential().getSource(), createSaslStartCommandDocument(outToken), connection);
+        BsonDocument startDocument = createSaslStartCommandDocument(outToken);
+        appendSaslStartOptions(startDocument);
+        return executeCommand(getMongoCredential().getSource(), startDocument, connection);
     }
 
     private BsonDocument sendSaslContinue(final BsonInt32 conversationId, final byte[] outToken, final InternalConnection connection) {
@@ -169,14 +168,20 @@ abstract class SaslAuthenticator extends Authenticator {
 
     private void sendSaslStartAsync(final byte[] outToken, final InternalConnection connection,
                                     final SingleResultCallback<BsonDocument> callback) {
-        executeCommandAsync(getMongoCredential().getSource(), createSaslStartCommandDocument(outToken), connection,
-                callback);
+        BsonDocument startDocument = createSaslStartCommandDocument(outToken);
+        appendSaslStartOptions(startDocument);
+        executeCommandAsync(getMongoCredential().getSource(), startDocument, connection, callback);
     }
 
     private void sendSaslContinueAsync(final BsonInt32 conversationId, final byte[] outToken, final InternalConnection connection,
                                        final SingleResultCallback<BsonDocument> callback) {
         executeCommandAsync(getMongoCredential().getSource(), createSaslContinueDocument(conversationId, outToken), connection,
                 callback);
+    }
+
+    private BsonDocument createSaslStartCommandDocument(final byte[] outToken) {
+        return new BsonDocument("saslStart", new BsonInt32(1)).append("mechanism", new BsonString(getMechanismName()))
+                .append("payload", new BsonBinary(outToken != null ? outToken : new byte[0]));
     }
 
     private BsonDocument createSaslContinueDocument(final BsonInt32 conversationId, final byte[] outToken) {

@@ -20,11 +20,8 @@ import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import com.mongodb.internal.authentication.SaslPrep;
-import org.bson.BsonBinary;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
-import org.bson.BsonInt32;
-import org.bson.BsonString;
 import org.bson.internal.Base64;
 
 import javax.crypto.Mac;
@@ -78,11 +75,10 @@ class ScramShaAuthenticator extends SaslAuthenticator {
     }
 
     @Override
-    protected BsonDocument createSaslStartCommandDocument(final byte[] outToken) {
-        return new BsonDocument("saslStart", new BsonInt32(1)).append("mechanism", new BsonString(getMechanismName()))
-                .append("options", new BsonDocument("skipEmptyExchange", new BsonBoolean(true)))
-                .append("payload", new BsonBinary(outToken != null ? outToken : new byte[0]));
+    protected void appendSaslStartOptions(final BsonDocument saslStartCommand) {
+        saslStartCommand.append("options", new BsonDocument("skipEmptyExchange", new BsonBoolean(true)));
     }
+
 
     @Override
     protected SaslClient createSaslClient(final ServerAddress serverAddress) {
