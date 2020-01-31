@@ -291,7 +291,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
 
     def 'should throw if iteration count is below the minimium allowed count'() {
         when:
-        def serverResponses = createMessages('S: r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=QSXCR+Q6sek8bf92,i=4095').first()
+        def serverResponses = createMessages('S: r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=QSXCR+Q6sek8bf92,i=4095').last()
         def authenticator = new ScramShaAuthenticator(credential, { 'rOprNGfwEbeRWgbNEkqO' }, { 'pencil' })
         authenticate(createConnection(serverResponses), authenticator, async)
 
@@ -473,7 +473,7 @@ class ScramShaAuthenticatorSpecification extends Specification {
             }
         }
         if (emptyExchange) {
-            clientMessages += serverResponses.last()
+            clientMessages += ''
         }
         [clientMessages, serverResponses]
     }

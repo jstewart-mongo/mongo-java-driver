@@ -140,7 +140,7 @@ class ScramShaAuthenticator extends SaslAuthenticator {
             if (!MessageDigest.isEqual(decodeBase64(map.get("v")), serverSignature)) {
                 throw new SaslException("Server signature was invalid.");
             }
-            return challenge;
+            return new byte[0];
         }
 
         public boolean isComplete() {
