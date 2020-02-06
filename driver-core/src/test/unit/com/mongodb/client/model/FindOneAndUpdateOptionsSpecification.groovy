@@ -18,6 +18,7 @@ package com.mongodb.client.model
 
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonString
 import spock.lang.Specification
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS
@@ -130,5 +131,6 @@ class FindOneAndUpdateOptionsSpecification extends Specification {
 
         where:
         hint << [null, '_id_']
+        new UpdateOptions().hint(hint).getHint() == hint
     }
 }

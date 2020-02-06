@@ -24,10 +24,13 @@ import org.bson.BsonBinary
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonSerializationException
+import org.bson.BsonString
 import org.bson.codecs.BsonDocumentCodec
 import org.junit.experimental.categories.Category
+import spock.lang.IgnoreIf
 
 import static com.mongodb.ClusterFixture.getBinding
+import static com.mongodb.ClusterFixture.serverVersionAtLeast
 import static com.mongodb.WriteConcern.ACKNOWLEDGED
 import static com.mongodb.internal.bulk.WriteRequest.Type.REPLACE
 import static java.util.Arrays.asList
@@ -74,6 +77,35 @@ class UpdateOperationForReplacementSpecification extends OperationFunctionalSpec
 
         where:
         async << [true, false]
+    }
+
+    @IgnoreIf({ !serverVersionAtLeast(4, 2) })
+    def 'should support hint'() {
+        given:
+        def insert = new InsertRequest(new BsonDocument('_id', new BsonInt32(1)))
+        new InsertOperation(getNamespace(), true, ACKNOWLEDGED, false, asList(insert)).execute(getBinding())
+
+        def replacement = new UpdateRequest(new BsonDocument('_id', new BsonInt32(1)),
+                new BsonDocument('_id', new BsonInt32(1)).append('x', new BsonInt32(1)), REPLACE)
+                .hint(hint)
+        def operation = new UpdateOperation(getNamespace(), true, ACKNOWLEDGED, false, asList(replacement))
+
+        when:
+        def result = execute(operation, async)
+
+        then:
+        result.wasAcknowledged()
+        result.count == 1
+        result.upsertedId == null
+        result.isUpdateOfExisting()
+        asList(replacement.getUpdateValue()) == getCollectionHelper().find(new BsonDocumentCodec())
+        getCollectionHelper().find().get(0).keySet().iterator().next() == '_id'
+
+        where:
+        [async, hint] << [
+                [true, false],
+                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
+        ].combinations()
     }
 
     def 'should upsert a single document'() {

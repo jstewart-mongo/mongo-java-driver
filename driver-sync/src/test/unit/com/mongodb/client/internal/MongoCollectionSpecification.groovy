@@ -78,6 +78,8 @@ import com.mongodb.internal.operation.MixedBulkWriteOperation
 import com.mongodb.internal.operation.RenameCollectionOperation
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonString
+import org.bson.BsonValue
 import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.BsonValueCodecProvider
@@ -487,17 +489,19 @@ class MongoCollectionSpecification extends Specification {
             new MixedBulkWriteOperation(namespace, [
                     new InsertRequest(BsonDocument.parse('{_id: 1}')),
                     new UpdateRequest(BsonDocument.parse('{a: 2}'), BsonDocument.parse('{a: 200}'), REPLACE)
-                            .multi(false).upsert(true).collation(collation),
+                            .multi(false).upsert(true).collation(collation).hint(hint),
                     new UpdateRequest(BsonDocument.parse('{a: 3}'), BsonDocument.parse('{$set: {a: 1}}'), UPDATE)
-                            .multi(false).upsert(true).collation(collation).arrayFilters(arrayFilters),
+                            .multi(false).upsert(true).collation(collation).arrayFilters(arrayFilters)
+                            .hint(hint),
                     new UpdateRequest(BsonDocument.parse('{a: 4}'), BsonDocument.parse('{$set: {a: 1}}'), UPDATE).multi(true)
-                            .upsert(true).collation(collation).arrayFilters(arrayFilters),
+                            .upsert(true).collation(collation).arrayFilters(arrayFilters).hint(hint),
                     new DeleteRequest(BsonDocument.parse('{a: 5}')).multi(false),
                     new DeleteRequest(BsonDocument.parse('{a: 6}')).multi(true).collation(collation)
             ], ordered, wc, retryWrites).bypassDocumentValidation(bypassDocumentValidation)
         }
         def updateOptions = new UpdateOptions().upsert(true).collation(collation).arrayFilters(arrayFilters)
-        def replaceOptions = new ReplaceOptions().upsert(true).collation(collation)
+                .hint(hint)
+        def replaceOptions = new ReplaceOptions().upsert(true).collation(collation).hint(hint)
         def deleteOptions = new DeleteOptions().collation(collation)
         def bulkOperations = [new InsertOneModel(BsonDocument.parse('{_id: 1}')),
                               new ReplaceOneModel(BsonDocument.parse('{a: 2}'), BsonDocument.parse('{a: 200}'), replaceOptions),
@@ -532,9 +536,10 @@ class MongoCollectionSpecification extends Specification {
         expect operation, isTheSameAs(expectedOperation(false, writeConcern, false, arrayFilters))
 
         where:
-        [writeConcern, arrayFilters, session, retryWrites, retryReads] << [
+        [writeConcern, arrayFilters, hint, session, retryWrites, retryReads] << [
                 [ACKNOWLEDGED, UNACKNOWLEDGED],
                 [null, [], [new BsonDocument('a.b', new BsonInt32(42))]],
+                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))],
                 [null, Stub(ClientSession)],
                 [true, false]
         ].combinations()
@@ -797,14 +802,15 @@ class MongoCollectionSpecification extends Specification {
         def expectedOperation = { boolean upsert, WriteConcern wc, Boolean bypassDocumentValidation, Collation collation ->
             new MixedBulkWriteOperation(namespace,
                     [new UpdateRequest(new BsonDocument('a', new BsonInt32(1)), new BsonDocument('a', new BsonInt32(10)), REPLACE)
-                             .collation(collation).upsert(upsert)], true, wc, retryWrites)
+                             .collation(collation).upsert(upsert).hint(hint)], true, wc, retryWrites)
                     .bypassDocumentValidation(bypassDocumentValidation)
         }
         def replaceOneMethod = collection.&replaceOne
 
         when:
         def result = execute(replaceOneMethod, session, new Document('a', 1), new Document('a', 10),
-                new ReplaceOptions().upsert(true).bypassDocumentValidation(bypassDocumentValidation).collation(collation))
+                new ReplaceOptions().upsert(true).bypassDocumentValidation(bypassDocumentValidation).collation(collation)
+                        .hint(hint))
         executor.getClientSession() == session
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
@@ -813,13 +819,14 @@ class MongoCollectionSpecification extends Specification {
         result == expectedResult
 
         where:
-        [bypassDocumentValidation, modifiedCount, upsertedId, writeConcern, session, retryWrites] << [
+        [bypassDocumentValidation, modifiedCount, upsertedId, writeConcern, session, retryWrites, hint] << [
                 [null, true, false],
                 [1],
                 [null, new BsonInt32(42)],
                 [ACKNOWLEDGED, UNACKNOWLEDGED],
                 [null, Stub(ClientSession)],
-                [true, false]
+                [true, false],
+                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
         ].combinations()
     }
 
@@ -861,10 +868,11 @@ class MongoCollectionSpecification extends Specification {
         def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, executor)
         def expectedOperation = { boolean upsert, WriteConcern wc, Boolean bypassDocumentValidation, Collation collation,
-            List<Bson> arrayFilters ->
+                                  List<Bson> arrayFilters, BsonValue hint ->
             new MixedBulkWriteOperation(namespace,
                     [new UpdateRequest(new BsonDocument('a', new BsonInt32(1)), new BsonDocument('a', new BsonInt32(10)), UPDATE)
-                             .multi(false).upsert(upsert).collation(collation).arrayFilters(arrayFilters)], true, wc, retryWrites)
+                             .multi(false).upsert(upsert).collation(collation).arrayFilters(arrayFilters)
+                             .hint(hint)], true, wc, retryWrites)
                     .bypassDocumentValidation(bypassDocumentValidation)
         }
         def updateOneMethod = collection.&updateOne
@@ -874,27 +882,28 @@ class MongoCollectionSpecification extends Specification {
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
-        expect operation, isTheSameAs(expectedOperation(false, writeConcern, null, null, null))
+        expect operation, isTheSameAs(expectedOperation(false, writeConcern, null, null, null, null))
         executor.getClientSession() == session
         result == expectedResult
 
         when:
         result = execute(updateOneMethod, session, new Document('a', 1), new Document('a', 10),
                 new UpdateOptions().upsert(true).bypassDocumentValidation(true).collation(collation)
-                        .arrayFilters(arrayFilters))
+                        .arrayFilters(arrayFilters).hint(hint))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
-        expect operation, isTheSameAs(expectedOperation(true, writeConcern, true, collation, arrayFilters))
+        expect operation, isTheSameAs(expectedOperation(true, writeConcern, true, collation, arrayFilters, hint))
         executor.getClientSession() == session
         result == expectedResult
 
         where:
-        [writeConcern, arrayFilters, session, retryWrites] << [
+        [writeConcern, arrayFilters, session, retryWrites, hint] << [
                 [ACKNOWLEDGED, UNACKNOWLEDGED],
                 [null, [], [new BsonDocument('a.b', new BsonInt32(42))]],
                 [null, Stub(ClientSession)],
-                [true, false]
+                [true, false],
+                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
         ].combinations()
     }
 
@@ -907,10 +916,11 @@ class MongoCollectionSpecification extends Specification {
         def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, executor)
         def expectedOperation = { boolean upsert, WriteConcern wc, Boolean bypassDocumentValidation, Collation collation,
-                                  List<Bson> arrayFilters ->
+                                  List<Bson> arrayFilters, BsonValue hint ->
             new MixedBulkWriteOperation(namespace,
                     [new UpdateRequest(new BsonDocument('a', new BsonInt32(1)), new BsonDocument('a', new BsonInt32(10)), UPDATE)
-                             .multi(true).upsert(upsert).collation(collation).arrayFilters(arrayFilters)], true, wc, retryWrites)
+                             .multi(true).upsert(upsert).collation(collation).arrayFilters(arrayFilters)
+                             .hint(hint)], true, wc, retryWrites)
                     .bypassDocumentValidation(bypassDocumentValidation)
         }
         def updateManyMethod = collection.&updateMany
@@ -920,25 +930,26 @@ class MongoCollectionSpecification extends Specification {
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
-        expect operation, isTheSameAs(expectedOperation(false, writeConcern, null, null, null))
+        expect operation, isTheSameAs(expectedOperation(false, writeConcern, null, null, null, null))
         result == expectedResult
 
         when:
         result = execute(updateManyMethod, session, new Document('a', 1), new Document('a', 10),
                 new UpdateOptions().upsert(true).bypassDocumentValidation(true).collation(collation)
-                        .arrayFilters(arrayFilters))
+                        .arrayFilters(arrayFilters).hint(hint))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
-        expect operation, isTheSameAs(expectedOperation(true, writeConcern, true, collation, arrayFilters))
+        expect operation, isTheSameAs(expectedOperation(true, writeConcern, true, collation, arrayFilters, hint))
         result == expectedResult
 
         where:
-        [writeConcern, arrayFilters, session, retryWrites] << [
+        [writeConcern, arrayFilters, session, retryWrites, hint] << [
                 [ACKNOWLEDGED, UNACKNOWLEDGED],
                 [null, [], [new BsonDocument('a.b', new BsonInt32(42))]],
                 [null, Stub(ClientSession)],
-                [true, false]
+                [true, false],
+                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
         ].combinations()
     }
 

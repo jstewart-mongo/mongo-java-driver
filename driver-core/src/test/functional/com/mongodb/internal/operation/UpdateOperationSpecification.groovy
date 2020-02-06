@@ -26,6 +26,7 @@ import org.bson.BsonBinary
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
+import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.DocumentCodec
 import org.bson.types.ObjectId
@@ -300,6 +301,27 @@ class UpdateOperationSpecification extends OperationFunctionalSpecification {
 
         where:
         async << [true, false]
+    }
+
+    @IgnoreIf({ !serverVersionAtLeast(4, 2) })
+    def 'should support hint'() {
+        given:
+        getCollectionHelper().insertDocuments(Document.parse('{str: "foo"}'))
+        def requests = [new UpdateRequest(BsonDocument.parse('{str: "foo"}}'), BsonDocument.parse('{$set: {str: "bar"}}'), UPDATE)
+                                .hint(hint)]
+        def operation = new UpdateOperation(getNamespace(), false, ACKNOWLEDGED, false, requests)
+
+        when:
+        WriteConcernResult result = execute(operation, async)
+
+        then:
+        result.getCount() == 1
+
+        where:
+        [async, hint] << [
+                [true, false],
+                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
+        ].combinations()
     }
 
 }

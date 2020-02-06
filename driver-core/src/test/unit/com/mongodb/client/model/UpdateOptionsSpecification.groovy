@@ -18,6 +18,7 @@ package com.mongodb.client.model
 
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonString
 import spock.lang.Specification
 
 class UpdateOptionsSpecification extends Specification {
@@ -61,5 +62,13 @@ class UpdateOptionsSpecification extends Specification {
 
         where:
         arrayFilters << [null, [], [new BsonDocument('a.b', new BsonInt32(1))]]
+    }
+
+    def 'should set hint'() {
+        expect:
+        new UpdateOptions().hint(hint).getHint() == hint
+
+        where:
+        hint << [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
     }
 }

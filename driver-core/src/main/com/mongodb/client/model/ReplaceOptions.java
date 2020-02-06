@@ -17,6 +17,7 @@
 package com.mongodb.client.model;
 
 import com.mongodb.lang.Nullable;
+import org.bson.BsonValue;
 
 /**
  * The options to apply when replacing documents.
@@ -30,6 +31,7 @@ public class ReplaceOptions {
     private boolean upsert;
     private Boolean bypassDocumentValidation;
     private Collation collation;
+    private BsonValue hint;
 
     /**
      * Returns true if a new document should be inserted if there are no matches to the query filter.  The default is false.
@@ -98,12 +100,38 @@ public class ReplaceOptions {
         return this;
     }
 
+    /**
+     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @return the hint, which may be null
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    @Nullable
+    public BsonValue getHint() {
+        return hint;
+    }
+
+    /**
+     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @param hint the hint, which may be null
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    public ReplaceOptions hint(@Nullable final BsonValue hint) {
+        this.hint = hint;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ReplaceOptions{"
                 + "upsert=" + upsert
                 + ", bypassDocumentValidation=" + bypassDocumentValidation
                 + ", collation=" + collation
+                + ", hint=" + hint
                 + '}';
     }
 }

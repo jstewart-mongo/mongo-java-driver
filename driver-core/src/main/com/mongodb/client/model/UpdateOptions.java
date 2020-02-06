@@ -17,6 +17,7 @@
 package com.mongodb.client.model;
 
 import com.mongodb.lang.Nullable;
+import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class UpdateOptions {
     private Boolean bypassDocumentValidation;
     private Collation collation;
     private List<? extends Bson> arrayFilters;
+    private BsonValue hint;
 
     /**
      * Returns true if a new document should be inserted if there are no matches to the query filter.  The default is false.
@@ -131,6 +133,31 @@ public class UpdateOptions {
         return arrayFilters;
     }
 
+    /**
+     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @param hint the hint, which may be null
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    public UpdateOptions hint(@Nullable final BsonValue hint) {
+        this.hint = hint;
+        return this;
+    }
+
+    /**
+     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @return the hint, which may be null
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    @Nullable
+    public BsonValue getHint() {
+        return hint;
+    }
+
     @Override
     public String toString() {
         return "UpdateOptions{"
@@ -138,6 +165,7 @@ public class UpdateOptions {
                 + ", bypassDocumentValidation=" + bypassDocumentValidation
                 + ", collation=" + collation
                 + ", arrayFilters=" + arrayFilters
+                + ", hint=" + hint
                 + '}';
     }
 }

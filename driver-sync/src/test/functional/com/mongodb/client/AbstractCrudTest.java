@@ -22,6 +22,7 @@ import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandListener;
+import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -170,7 +171,12 @@ public abstract class AbstractCrudTest {
             List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), databaseName, null);
             List<CommandEvent> events = commandListener.getCommandStartedEvents();
 
-
+            // There are tests where BulkWriteBatch creates two separate commands for updates and replaceOne
+            // when performing a bulk write. Merge the "updates" field in the first command of the events list
+            // with the same field in the second event.
+            if (events.size() == 2) {
+                mergeCommandUpdates(events.get(0), events.get(1));
+            }
             assertEventsEquality(expectedEvents, events.subList(0, expectedEvents.size()));
         }
         if (expectedOutcome != null && expectedOutcome.containsKey("collection")) {
@@ -191,6 +197,15 @@ public abstract class AbstractCrudTest {
         if (expectedResult.isDocument() && !expectedResult.asDocument().containsKey(key)) {
             actualResult.asDocument().remove(key);
         }
+    }
+
+    private void mergeCommandUpdates(final CommandEvent updateEvent, final CommandEvent replaceEvent) {
+        if (!updateEvent.getCommandName().equals("update") || !replaceEvent.getCommandName().equals("update")) {
+            return;
+        }
+        CommandStartedEvent update = (CommandStartedEvent) updateEvent;
+        CommandStartedEvent replace = (CommandStartedEvent) replaceEvent;
+        update.getCommand().getArray("updates").addAll(replace.getCommand().getArray("updates"));
     }
 
     @Parameterized.Parameters(name = "{1}")

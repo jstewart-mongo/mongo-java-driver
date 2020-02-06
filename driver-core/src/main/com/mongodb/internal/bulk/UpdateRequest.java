@@ -37,6 +37,7 @@ public final class UpdateRequest extends WriteRequest {
     private boolean isUpsert = false;
     private Collation collation;
     private List<BsonDocument> arrayFilters;
+    private BsonValue hint;
 
     /**
      * Construct a new instance.
@@ -171,6 +172,30 @@ public final class UpdateRequest extends WriteRequest {
      */
     public List<BsonDocument> getArrayFilters() {
         return arrayFilters;
+    }
+
+    /**
+     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @param hint the hint, which may be null
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    public UpdateRequest hint(final BsonValue hint) {
+        this.hint = hint;
+        return this;
+    }
+
+    /**
+     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @return the hint, which may be null
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    public BsonValue getHint() {
+        return hint;
     }
 }
 
