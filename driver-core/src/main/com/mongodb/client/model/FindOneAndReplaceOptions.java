@@ -208,7 +208,7 @@ public class FindOneAndReplaceOptions {
      * @param hint the hint, which may be null
      * @return this
      * @since 4.1
-     * @mongodb.server.release 4.2
+     * @mongodb.server.release 4.4
      */
     public FindOneAndReplaceOptions hint(@Nullable final BsonValue hint) {
         this.hint = hint;
@@ -220,7 +220,7 @@ public class FindOneAndReplaceOptions {
      *
      * @return the hint, which may be null
      * @since 4.1
-     * @mongodb.server.release 4.2
+     * @mongodb.server.release 4.4
      */
     @Nullable
     public BsonValue getHint() {

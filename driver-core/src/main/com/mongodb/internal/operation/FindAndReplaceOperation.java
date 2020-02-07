@@ -16,6 +16,7 @@
 
 package com.mongodb.internal.operation;
 
+import com.mongodb.MongoClientException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.Collation;
@@ -44,6 +45,7 @@ import static com.mongodb.internal.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.internal.operation.DocumentHelper.putIfTrue;
 import static com.mongodb.internal.operation.OperationHelper.validateCollation;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionThreeDotTwo;
+import static com.mongodb.internal.operation.ServerVersionHelper.serverIsLessThanVersionFourDotTwo;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -287,7 +289,7 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
      * @param hint the hint, which may be null
      * @return this
      * @since 4.1
-     * @mongodb.server.release 4.2
+     * @mongodb.server.release 4.4
      */
     public FindAndReplaceOperation<T> hint(@Nullable final BsonValue hint) {
         this.hint = hint;
@@ -299,7 +301,7 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
      *
      * @return the hint, which may be null
      * @since 4.1
-     * @mongodb.server.release 4.2
+     * @mongodb.server.release 4.4
      */
     @Nullable
     public BsonValue getHint() {
@@ -355,6 +357,9 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
             commandDocument.put("collation", collation.asDocument());
         }
         if (hint != null) {
+            if (serverIsLessThanVersionFourDotTwo(connectionDescription)) {
+                throw new MongoClientException("Specifying a value for the hint option requires a minimum MongoDB version of 4.2");
+            }
             if (hint.isDocument()) {
                 commandDocument.put("hint", hint.asDocument());
             } else {

@@ -235,7 +235,7 @@ public class FindOneAndUpdateOptions {
      * @param hint the hint, which may be null
      * @return this
      * @since 4.1
-     * @mongodb.server.release 4.2
+     * @mongodb.server.release 4.4
      */
     public FindOneAndUpdateOptions hint(@Nullable final BsonValue hint) {
         this.hint = hint;
@@ -247,7 +247,7 @@ public class FindOneAndUpdateOptions {
      *
      * @return the hint, which may be null
      * @since 4.1
-     * @mongodb.server.release 4.2
+     * @mongodb.server.release 4.4
      */
     @Nullable
     public BsonValue getHint() {
