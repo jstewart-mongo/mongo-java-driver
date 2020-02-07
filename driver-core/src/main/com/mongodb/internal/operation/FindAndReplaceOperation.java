@@ -25,9 +25,11 @@ import com.mongodb.internal.validator.CollectibleDocumentFieldNameValidator;
 import com.mongodb.internal.validator.MappedFieldNameValidator;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import com.mongodb.internal.session.SessionContext;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
 
@@ -61,6 +63,7 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
     private boolean upsert;
     private Boolean bypassDocumentValidation;
     private Collation collation;
+    private BsonValue hint;
 
     /**
      * Construct a new instance.
@@ -279,6 +282,31 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
     }
 
     /**
+     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @param hint the hint, which may be null
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    public FindAndReplaceOperation<T> hint(@Nullable final BsonValue hint) {
+        this.hint = hint;
+        return this;
+    }
+
+    /**
+     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @return the hint, which may be null
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    @Nullable
+    public BsonValue getHint() {
+        return hint;
+    }
+
+    /**
      * Sets the collation options
      *
      * <p>A null value represents the server default.</p>
@@ -325,6 +353,13 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
         addWriteConcernToCommand(connectionDescription, commandDocument, sessionContext);
         if (collation != null) {
             commandDocument.put("collation", collation.asDocument());
+        }
+        if (hint != null) {
+            if (hint.isDocument()) {
+                commandDocument.put("hint", hint.asDocument());
+            } else {
+                commandDocument.put("hint", hint.asString());
+            }
         }
         addTxnNumberToCommand(serverDescription, connectionDescription, commandDocument, sessionContext);
         return commandDocument;

@@ -272,7 +272,8 @@ final class Operations<TDocument> {
                 .upsert(options.isUpsert())
                 .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
                 .bypassDocumentValidation(options.getBypassDocumentValidation())
-                .collation(options.getCollation());
+                .collation(options.getCollation())
+                .hint(options.getHint());
     }
 
     FindAndUpdateOperation<TDocument> findOneAndUpdate(final Bson filter, final Bson update, final FindOneAndUpdateOptions options) {
@@ -286,7 +287,8 @@ final class Operations<TDocument> {
                 .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
                 .bypassDocumentValidation(options.getBypassDocumentValidation())
                 .collation(options.getCollation())
-                .arrayFilters(toBsonDocumentList(options.getArrayFilters()));
+                .arrayFilters(toBsonDocumentList(options.getArrayFilters()))
+                .hint(options.getHint());
     }
 
     FindAndUpdateOperation<TDocument> findOneAndUpdate(final Bson filter, final List<? extends Bson> update,
@@ -300,7 +302,8 @@ final class Operations<TDocument> {
                 .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
                 .bypassDocumentValidation(options.getBypassDocumentValidation())
                 .collation(options.getCollation())
-                .arrayFilters(toBsonDocumentList(options.getArrayFilters()));
+                .arrayFilters(toBsonDocumentList(options.getArrayFilters()))
+                .hint(options.getHint());
     }
 
 

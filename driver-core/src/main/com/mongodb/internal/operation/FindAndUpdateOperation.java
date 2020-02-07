@@ -30,6 +30,7 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
 
@@ -66,6 +67,7 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
     private Boolean bypassDocumentValidation;
     private Collation collation;
     private List<BsonDocument> arrayFilters;
+    private BsonValue hint;
 
     /**
      * Construct a new instance.
@@ -354,6 +356,31 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         return arrayFilters;
     }
 
+    /**
+     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @param hint the hint, which may be null
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    public FindAndUpdateOperation<T> hint(@Nullable final BsonValue hint) {
+        this.hint = hint;
+        return this;
+    }
+
+    /**
+     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     *
+     * @return the hint, which may be null
+     * @since 4.1
+     * @mongodb.server.release 4.2
+     */
+    @Nullable
+    public BsonValue getHint() {
+        return hint;
+    }
+
     @Override
     protected String getDatabaseName() {
         return getNamespace().getDatabaseName();
@@ -400,6 +427,13 @@ public class FindAndUpdateOperation<T> extends BaseFindAndModifyOperation<T> {
         }
         if (arrayFilters != null) {
             commandDocument.put("arrayFilters", new BsonArray(arrayFilters));
+        }
+        if (hint != null) {
+            if (hint.isDocument()) {
+                commandDocument.put("hint", hint.asDocument());
+            } else {
+                commandDocument.put("hint", hint.asString());
+            }
         }
         addTxnNumberToCommand(serverDescription, connectionDescription, commandDocument, sessionContext);
         return commandDocument;

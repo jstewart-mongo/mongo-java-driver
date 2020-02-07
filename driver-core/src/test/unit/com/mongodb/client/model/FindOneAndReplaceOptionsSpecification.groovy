@@ -17,6 +17,8 @@
 package com.mongodb.client.model
 
 import org.bson.BsonDocument
+import org.bson.BsonInt32
+import org.bson.BsonString
 import spock.lang.Specification
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS
@@ -104,5 +106,13 @@ class FindOneAndReplaceOptionsSpecification extends Specification {
 
         where:
         returnDocument << [ReturnDocument.BEFORE, ReturnDocument.AFTER]
+    }
+
+    def 'should set hint'() {
+        expect:
+        new FindOneAndReplaceOptions().hint(hint).getHint() == hint
+
+        where:
+        hint << [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
     }
 }
