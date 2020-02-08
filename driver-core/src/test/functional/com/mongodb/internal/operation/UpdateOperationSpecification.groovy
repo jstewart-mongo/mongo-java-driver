@@ -26,7 +26,6 @@ import org.bson.BsonBinary
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
-import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.DocumentCodec
 import org.bson.types.ObjectId
@@ -308,7 +307,7 @@ class UpdateOperationSpecification extends OperationFunctionalSpecification {
         given:
         getCollectionHelper().insertDocuments(Document.parse('{str: "foo"}'))
         def requests = [new UpdateRequest(BsonDocument.parse('{str: "foo"}}'), BsonDocument.parse('{$set: {str: "bar"}}'), UPDATE)
-                                .hint(hint)]
+                                .hint(hint).hintString(hintString)]
         def operation = new UpdateOperation(getNamespace(), false, ACKNOWLEDGED, false, requests)
 
         when:
@@ -318,9 +317,10 @@ class UpdateOperationSpecification extends OperationFunctionalSpecification {
         result.getCount() == 1
 
         where:
-        [async, hint] << [
+        [async, hint, hintString] << [
                 [true, false],
-                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
+                [null, new BsonDocument('_id', new BsonInt32(1))],
+                [null, '_id_']
         ].combinations()
     }
 

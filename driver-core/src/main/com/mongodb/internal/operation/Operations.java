@@ -390,7 +390,8 @@ final class Operations<TDocument> {
                         WriteRequest.Type.REPLACE)
                         .upsert(replaceOneModel.getReplaceOptions().isUpsert())
                         .collation(replaceOneModel.getReplaceOptions().getCollation())
-                        .hint(replaceOneModel.getReplaceOptions().getHint());
+                        .hint(replaceOneModel.getReplaceOptions().getHint())
+                        .hintString(replaceOneModel.getReplaceOptions().getHintString());
             } else if (writeModel instanceof UpdateOneModel) {
                 UpdateOneModel<TDocument> updateOneModel = (UpdateOneModel<TDocument>) writeModel;
                 BsonValue update = updateOneModel.getUpdate() != null ? toBsonDocument(updateOneModel.getUpdate())
@@ -400,7 +401,8 @@ final class Operations<TDocument> {
                         .upsert(updateOneModel.getOptions().isUpsert())
                         .collation(updateOneModel.getOptions().getCollation())
                         .arrayFilters(toBsonDocumentList(updateOneModel.getOptions().getArrayFilters()))
-                        .hint(updateOneModel.getOptions().getHint());
+                        .hint(updateOneModel.getOptions().getHint())
+                        .hintString(updateOneModel.getOptions().getHintString());
             } else if (writeModel instanceof UpdateManyModel) {
                 UpdateManyModel<TDocument> updateManyModel = (UpdateManyModel<TDocument>) writeModel;
                 BsonValue update = updateManyModel.getUpdate() != null ? toBsonDocument(updateManyModel.getUpdate())
@@ -410,7 +412,8 @@ final class Operations<TDocument> {
                         .upsert(updateManyModel.getOptions().isUpsert())
                         .collation(updateManyModel.getOptions().getCollation())
                         .arrayFilters(toBsonDocumentList(updateManyModel.getOptions().getArrayFilters()))
-                        .hint(updateManyModel.getOptions().getHint());
+                        .hint(updateManyModel.getOptions().getHint())
+                        .hintString(updateManyModel.getOptions().getHintString());
             } else if (writeModel instanceof DeleteOneModel) {
                 DeleteOneModel<TDocument> deleteOneModel = (DeleteOneModel<TDocument>) writeModel;
                 writeRequest = new DeleteRequest(toBsonDocument(deleteOneModel.getFilter())).multi(false)

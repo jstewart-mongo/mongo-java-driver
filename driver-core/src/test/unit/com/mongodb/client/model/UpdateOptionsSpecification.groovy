@@ -18,7 +18,6 @@ package com.mongodb.client.model
 
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.BsonString
 import spock.lang.Specification
 
 class UpdateOptionsSpecification extends Specification {
@@ -69,6 +68,14 @@ class UpdateOptionsSpecification extends Specification {
         new UpdateOptions().hint(hint).getHint() == hint
 
         where:
-        hint << [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
+        hint << [null, new BsonDocument('_id', new BsonInt32(1))]
+    }
+
+    def 'should set hint string'() {
+        expect:
+        new UpdateOptions().hintString(hint).getHintString() == hint
+
+        where:
+        hint << [null, '_id_']
     }
 }

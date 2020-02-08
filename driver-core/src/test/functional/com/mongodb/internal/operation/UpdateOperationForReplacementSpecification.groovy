@@ -24,7 +24,6 @@ import org.bson.BsonBinary
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonSerializationException
-import org.bson.BsonString
 import org.bson.codecs.BsonDocumentCodec
 import org.junit.experimental.categories.Category
 import spock.lang.IgnoreIf
@@ -88,6 +87,7 @@ class UpdateOperationForReplacementSpecification extends OperationFunctionalSpec
         def replacement = new UpdateRequest(new BsonDocument('_id', new BsonInt32(1)),
                 new BsonDocument('_id', new BsonInt32(1)).append('x', new BsonInt32(1)), REPLACE)
                 .hint(hint)
+                .hintString(hintString)
         def operation = new UpdateOperation(getNamespace(), true, ACKNOWLEDGED, false, asList(replacement))
 
         when:
@@ -102,9 +102,10 @@ class UpdateOperationForReplacementSpecification extends OperationFunctionalSpec
         getCollectionHelper().find().get(0).keySet().iterator().next() == '_id'
 
         where:
-        [async, hint] << [
+        [async, hint, hintString] << [
                 [true, false],
-                [null, new BsonString('_id_'), new BsonDocument('_id', new BsonInt32(1))]
+                [null, new BsonDocument('_id', new BsonInt32(1))],
+                [null, '_id_']
         ].combinations()
     }
 

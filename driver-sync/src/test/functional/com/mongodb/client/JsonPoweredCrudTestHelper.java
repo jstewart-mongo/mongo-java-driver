@@ -750,7 +750,7 @@ public class JsonPoweredCrudTestHelper {
             if (arguments.isDocument("hint")) {
                 options.hint(arguments.getDocument("hint"));
             } else {
-                options.hint(arguments.getString("hint"));
+                options.hintString(arguments.getString("hint").getValue());
             }
         }
 
@@ -785,7 +785,7 @@ public class JsonPoweredCrudTestHelper {
             if (arguments.isDocument("hint")) {
                 options.hint(arguments.getDocument("hint"));
             } else {
-                options.hint(arguments.getString("hint"));
+                options.hintString(arguments.getString("hint").getValue());
             }
         }
 
@@ -831,7 +831,7 @@ public class JsonPoweredCrudTestHelper {
             if (arguments.isDocument("hint")) {
                 options.hint(arguments.getDocument("hint"));
             } else {
-                options.hint(arguments.getString("hint"));
+                options.hintString(arguments.getString("hint").getValue());
             }
         }
 
@@ -1080,7 +1080,7 @@ public class JsonPoweredCrudTestHelper {
             if (requestArguments.isDocument("hint")) {
                 options.hint(requestArguments.getDocument("hint"));
             } else {
-                options.hint(requestArguments.getString("hint"));
+                options.hintString(requestArguments.getString("hint").getValue());
             }
         }
         return options;
@@ -1106,7 +1106,7 @@ public class JsonPoweredCrudTestHelper {
             if (requestArguments.isDocument("hint")) {
                 options.hint(requestArguments.getDocument("hint"));
             } else {
-                options.hint(requestArguments.getString("hint"));
+                options.hintString(requestArguments.getString("hint").getValue());
             }
         }
         return options;

@@ -250,13 +250,11 @@ public final class SplittablePayload {
                     writer.writeEndArray();
                 }
                 if (update.getHint() != null) {
-                    if (update.getHint().isDocument()) {
-                        writer.writeName("hint");
-                        BsonDocument hint = update.getHint().asDocument();
-                        getCodec(hint).encode(writer, hint, EncoderContext.builder().build());
-                    } else {
-                        writer.writeString("hint", update.getHint().asString().getValue());
-                    }
+                    writer.writeName("hint");
+                    BsonDocument hint = update.getHint().toBsonDocument(BsonDocument.class, null);
+                    getCodec(hint).encode(writer, hint, EncoderContext.builder().build());
+                } else if (update.getHintString() != null) {
+                    writer.writeString("hint", update.getHintString());
                 }
                 writer.writeEndDocument();
             } else {
