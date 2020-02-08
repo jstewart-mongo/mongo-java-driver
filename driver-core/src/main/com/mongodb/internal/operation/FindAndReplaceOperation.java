@@ -30,9 +30,9 @@ import com.mongodb.lang.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.BsonValue;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
+import org.bson.conversions.Bson;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -65,7 +65,8 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
     private boolean upsert;
     private Boolean bypassDocumentValidation;
     private Collation collation;
-    private BsonValue hint;
+    private Bson hint;
+    private String hintString;
 
     /**
      * Construct a new instance.
@@ -284,28 +285,49 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
     }
 
     /**
-     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     * Returns the hint for which index to use. The default is not to set a hint.
      *
-     * @param hint the hint, which may be null
+     * @return the hint
+     * @since 4.1
+     */
+    @Nullable
+    public Bson getHint() {
+        return hint;
+    }
+
+    /**
+     * Sets the hint for which index to use. A null value means no hint is set.
+     *
+     * @param hint the hint
      * @return this
      * @since 4.1
-     * @mongodb.server.release 4.4
      */
-    public FindAndReplaceOperation<T> hint(@Nullable final BsonValue hint) {
+    public FindAndReplaceOperation<T> hint(@Nullable final Bson hint) {
         this.hint = hint;
         return this;
     }
 
     /**
-     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     * Gets the hint string to apply.
      *
-     * @return the hint, which may be null
+     * @return the hint string, which should be the name of an existing index
      * @since 4.1
-     * @mongodb.server.release 4.4
      */
     @Nullable
-    public BsonValue getHint() {
-        return hint;
+    public String getHintString() {
+        return hintString;
+    }
+
+    /**
+     * Sets the hint to apply.
+     *
+     * @param hint the name of the index which should be used for the operation
+     * @return this
+     * @since 4.1
+     */
+    public FindAndReplaceOperation<T> hintString(@Nullable final String hint) {
+        this.hintString = hint;
+        return this;
     }
 
     /**
@@ -356,14 +378,14 @@ public class FindAndReplaceOperation<T> extends BaseFindAndModifyOperation<T> {
         if (collation != null) {
             commandDocument.put("collation", collation.asDocument());
         }
-        if (hint != null) {
+        if (hint != null || hintString != null) {
             if (serverIsLessThanVersionFourDotTwo(connectionDescription)) {
                 throw new MongoClientException("Specifying a value for the hint option requires a minimum MongoDB version of 4.2");
             }
-            if (hint.isDocument()) {
-                commandDocument.put("hint", hint.asDocument());
+            if (hint != null) {
+                commandDocument.put("hint", hint.toBsonDocument(BsonDocument.class, null));
             } else {
-                commandDocument.put("hint", hint.asString());
+                commandDocument.put("hint", new BsonString(hintString));
             }
         }
         addTxnNumberToCommand(serverDescription, connectionDescription, commandDocument, sessionContext);

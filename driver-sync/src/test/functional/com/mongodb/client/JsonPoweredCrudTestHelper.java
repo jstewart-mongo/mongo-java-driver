@@ -608,7 +608,7 @@ public class JsonPoweredCrudTestHelper {
             if (arguments.isDocument("hint")) {
                 options.hint(arguments.getDocument("hint"));
             } else {
-                options.hint(arguments.getString("hint"));
+                options.hintString(arguments.getString("hint").getValue());
             }
         }
 
@@ -650,7 +650,7 @@ public class JsonPoweredCrudTestHelper {
             if (arguments.isDocument("hint")) {
                 options.hint(arguments.getDocument("hint"));
             } else {
-                options.hint(arguments.getString("hint"));
+                options.hintString(arguments.getString("hint").getValue());
             }
         }
         BsonDocument result;

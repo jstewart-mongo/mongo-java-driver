@@ -17,7 +17,6 @@
 package com.mongodb.client.model;
 
 import com.mongodb.lang.Nullable;
-import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
 import java.util.concurrent.TimeUnit;
@@ -39,7 +38,8 @@ public class FindOneAndReplaceOptions {
     private long maxTimeMS;
     private Boolean bypassDocumentValidation;
     private Collation collation;
-    private BsonValue hint;
+    private Bson hint;
+    private String hintString;
 
     /**
      * Gets a document describing the fields to return for all matching documents.
@@ -203,28 +203,49 @@ public class FindOneAndReplaceOptions {
     }
 
     /**
-     * Sets the hint option - a document or string that specifies the index to use to support the query predicate.
+     * Returns the hint for which index to use. The default is not to set a hint.
      *
-     * @param hint the hint, which may be null
+     * @return the hint
+     * @since 4.1
+     */
+    @Nullable
+    public Bson getHint() {
+        return hint;
+    }
+
+    /**
+     * Sets the hint for which index to use. A null value means no hint is set.
+     *
+     * @param hint the hint
      * @return this
      * @since 4.1
-     * @mongodb.server.release 4.4
      */
-    public FindOneAndReplaceOptions hint(@Nullable final BsonValue hint) {
+    public FindOneAndReplaceOptions hint(@Nullable final Bson hint) {
         this.hint = hint;
         return this;
     }
 
     /**
-     * Returns the hint option - a document or string that specifies the index to use to support the query predicate.
+     * Gets the hint string to apply.
      *
-     * @return the hint, which may be null
+     * @return the hint string, which should be the name of an existing index
      * @since 4.1
-     * @mongodb.server.release 4.4
      */
     @Nullable
-    public BsonValue getHint() {
-        return hint;
+    public String getHintString() {
+        return hintString;
+    }
+
+    /**
+     * Sets the hint to apply.
+     *
+     * @param hint the name of the index which should be used for the operation
+     * @return this
+     * @since 4.1
+     */
+    public FindOneAndReplaceOptions hintString(@Nullable final String hint) {
+        this.hintString = hint;
+        return this;
     }
 
     @Override
@@ -238,6 +259,7 @@ public class FindOneAndReplaceOptions {
                 + ", bypassDocumentValidation=" + bypassDocumentValidation
                 + ", collation=" + collation
                 + ", hint=" + hint
+                + ", hintString" + hintString
                 + '}';
     }
 }

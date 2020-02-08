@@ -273,7 +273,8 @@ final class Operations<TDocument> {
                 .maxTime(options.getMaxTime(MILLISECONDS), MILLISECONDS)
                 .bypassDocumentValidation(options.getBypassDocumentValidation())
                 .collation(options.getCollation())
-                .hint(options.getHint());
+                .hint(options.getHint())
+                .hintString(options.getHintString());
     }
 
     FindAndUpdateOperation<TDocument> findOneAndUpdate(final Bson filter, final Bson update, final FindOneAndUpdateOptions options) {
@@ -288,12 +289,14 @@ final class Operations<TDocument> {
                 .bypassDocumentValidation(options.getBypassDocumentValidation())
                 .collation(options.getCollation())
                 .arrayFilters(toBsonDocumentList(options.getArrayFilters()))
-                .hint(options.getHint());
+                .hint(options.getHint())
+                .hintString(options.getHintString());
     }
 
     FindAndUpdateOperation<TDocument> findOneAndUpdate(final Bson filter, final List<? extends Bson> update,
                                                        final FindOneAndUpdateOptions options) {
-        return new FindAndUpdateOperation<TDocument>(namespace, writeConcern, retryWrites, getCodec(), toBsonDocumentList(update))
+        return new FindAndUpdateOperation<TDocument>(namespace, writeConcern, retryWrites, getCodec(),
+                toBsonDocumentList(update))
                 .filter(toBsonDocument(filter))
                 .projection(toBsonDocument(options.getProjection()))
                 .sort(toBsonDocument(options.getSort()))
@@ -303,7 +306,8 @@ final class Operations<TDocument> {
                 .bypassDocumentValidation(options.getBypassDocumentValidation())
                 .collation(options.getCollation())
                 .arrayFilters(toBsonDocumentList(options.getArrayFilters()))
-                .hint(options.getHint());
+                .hint(options.getHint())
+                .hintString(options.getHintString());
     }
 
 
