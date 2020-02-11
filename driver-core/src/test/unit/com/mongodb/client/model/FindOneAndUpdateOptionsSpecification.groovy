@@ -116,7 +116,6 @@ class FindOneAndUpdateOptionsSpecification extends Specification {
         arrayFilters << [null, [], [new BsonDocument('a.b', new BsonInt32(1))]]
     }
 
-
     def 'should set hint'() {
         expect:
         new FindOneAndUpdateOptions().hint(hint).getHint() == hint

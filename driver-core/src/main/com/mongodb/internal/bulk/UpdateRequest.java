@@ -180,7 +180,6 @@ public final class UpdateRequest extends WriteRequest {
      * Returns the hint for which index to use. The default is not to set a hint.
      *
      * @return the hint
-     * @since 4.1
      */
     public Bson getHint() {
         return hint;
@@ -191,7 +190,6 @@ public final class UpdateRequest extends WriteRequest {
      *
      * @param hint the hint
      * @return this
-     * @since 4.1
      */
     public UpdateRequest hint(final Bson hint) {
         this.hint = hint;
@@ -202,7 +200,6 @@ public final class UpdateRequest extends WriteRequest {
      * Gets the hint string to apply.
      *
      * @return the hint string, which should be the name of an existing index
-     * @since 4.1
      */
     public String getHintString() {
         return hintString;
@@ -213,7 +210,6 @@ public final class UpdateRequest extends WriteRequest {
      *
      * @param hint the name of the index which should be used for the operation
      * @return this
-     * @since 4.1
      */
     public UpdateRequest hintString(final String hint) {
         this.hintString = hint;
