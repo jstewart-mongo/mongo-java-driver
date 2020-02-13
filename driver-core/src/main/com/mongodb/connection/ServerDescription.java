@@ -807,13 +807,13 @@ public class ServerDescription {
         if (setName != null ? !setName.equals(that.setName) : that.setName != null) {
             return false;
         }
-        if (minWireVersion != that.minWireVersion) {
+        if (state != that.state) {
+            return false;
+        }
+        if (!tagSet.equals(that.tagSet)) {
             return false;
         }
         if (type != that.type) {
-            return false;
-        }
-        if (!version.equals(that.version)) {
             return false;
         }
         if (minWireVersion != that.minWireVersion) {

@@ -23,17 +23,14 @@ import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerId
 import com.mongodb.connection.ServerSettings
-import com.mongodb.connection.ServerType
 import com.mongodb.connection.SocketSettings
 import com.mongodb.connection.SocketStreamFactory
-import org.bson.types.ObjectId
 
 import java.util.concurrent.CountDownLatch
 
 import static com.mongodb.ClusterFixture.getCredentialWithCache
 import static com.mongodb.ClusterFixture.getPrimary
 import static com.mongodb.ClusterFixture.getSslSettings
-import static com.mongodb.connection.ConnectionFixture.getCredentialListWithCache
 
 class ServerMonitorSpecification extends OperationFunctionalSpecification {
     ServerDescription newDescription

@@ -67,9 +67,6 @@ final class ServerDescriptionChangeEventHelper {
         if (currentDescription.getType() != previousDescription.getType()) {
             return true;
         }
-        if (!currentDescription.getVersion().equals(previousDescription.getVersion())) {
-            return true;
-        }
         if (currentDescription.getElectionId() != null ? !currentDescription.getElectionId().equals(previousDescription.getElectionId())
                 : previousDescription.getElectionId() != null) {
             return true;
