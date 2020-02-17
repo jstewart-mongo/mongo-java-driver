@@ -32,6 +32,8 @@ import com.mongodb.event.ServerListener;
 import java.util.Collections;
 import java.util.List;
 
+import static com.mongodb.internal.event.EventListenerHelper.NO_OP_SERVER_LISTENER;
+
 public class DefaultClusterableServerFactory implements ClusterableServerFactory {
     private final ClusterId clusterId;
     private final ClusterSettings clusterSettings;
@@ -80,7 +82,7 @@ public class DefaultClusterableServerFactory implements ClusterableServerFactory
                             applicationName, mongoDriverInformation, Collections.<MongoCompressor>emptyList(), null), connectionPool);
 
         return new DefaultServer(new ServerId(clusterId, serverAddress), clusterSettings.getMode(), connectionPool,
-                new DefaultConnectionFactory(), serverMonitorFactory, serverListener, commandListener, clusterClock);
+                new DefaultConnectionFactory(), serverMonitorFactory, NO_OP_SERVER_LISTENER, serverListener, commandListener, clusterClock);
     }
 
     @Override

@@ -51,7 +51,7 @@ public class DefaultTestClusterableServerFactory implements ClusterableServerFac
         serverAddressToServerMonitorFactoryMap.put(serverAddress, serverMonitorFactory);
 
         return new DefaultServer(new ServerId(clusterId, serverAddress), clusterConnectionMode, new TestConnectionPool(),
-                new TestConnectionFactory(), serverMonitorFactory,
+                new TestConnectionFactory(), serverMonitorFactory, serverListenerFactory.createApplicationListener(serverAddress),
                 createServerListener(ServerSettings.builder().addServerListener(serverListener).build(),
                         serverListenerFactory.create(serverAddress)), null, clusterClock);
     }

@@ -43,6 +43,7 @@ import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerConnectionState.CONNECTING;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 import static com.mongodb.internal.operation.ServerVersionHelper.FOUR_DOT_TWO_WIRE_VERSION;
 import static java.util.Arrays.asList;
 
@@ -55,6 +56,7 @@ class DefaultServer implements ClusterableServer {
     private final ConnectionFactory connectionFactory;
     private final ServerMonitor serverMonitor;
     private final ChangeListener<ServerDescription> serverStateListener;
+    private final ServerListener applicationListener;
     private final ServerListener serverListener;
     private final CommandListener commandListener;
     private final ClusterClock clusterClock;
@@ -63,7 +65,9 @@ class DefaultServer implements ClusterableServer {
 
     DefaultServer(final ServerId serverId, final ClusterConnectionMode clusterConnectionMode, final ConnectionPool connectionPool,
                   final ConnectionFactory connectionFactory, final ServerMonitorFactory serverMonitorFactory,
-                  final ServerListener serverListener, final CommandListener commandListener, final ClusterClock clusterClock) {
+                  final ServerListener applicationListener, final ServerListener serverListener, final CommandListener commandListener,
+                  final ClusterClock clusterClock) {
+        this.applicationListener = notNull("applicationListener", applicationListener);
         this.serverListener = notNull("serverListener", serverListener);
         this.commandListener = commandListener;
         this.clusterClock = notNull("clusterClock", clusterClock);
@@ -260,6 +264,9 @@ class DefaultServer implements ClusterableServer {
         public void stateChanged(final ChangeEvent<ServerDescription> event) {
             ServerDescription oldDescription = description;
             description = event.getNewValue();
+            if (shouldPublishChangeEvent(description, oldDescription)) {
+                applicationListener.serverDescriptionChanged(new ServerDescriptionChangedEvent(serverId, description, oldDescription));
+            }
             serverListener.serverDescriptionChanged(new ServerDescriptionChangedEvent(serverId, description, oldDescription));
         }
     }

@@ -22,7 +22,6 @@ import com.mongodb.Tag
 import com.mongodb.TagSet
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerType
-import com.mongodb.connection.ServerVersion
 import org.bson.types.ObjectId
 
 import static com.mongodb.connection.ServerConnectionState.CONNECTED
@@ -109,12 +108,6 @@ class ServerDescriptionChangeEventHelperSpecification extends OperationFunctiona
         shouldPublishChangeEvent(description, otherDescription)
 
         when:
-        otherDescription = createBuilder().version(new ServerVersion(asList(2, 6, 1))).build();
-
-        then:
-        shouldPublishChangeEvent(description, otherDescription)
-
-        when:
         otherDescription = createBuilder().electionId(new ObjectId()).build();
 
         then:
@@ -145,7 +138,6 @@ class ServerDescriptionChangeEventHelperSpecification extends OperationFunctiona
                 .hosts(new HashSet<String>(asList('localhost:27017', 'localhost:27018')))
                 .passives(new HashSet<String>(asList('localhost:27019')))
                 .arbiters(new HashSet<String>(asList('localhost:27020')))
-                .version(new ServerVersion(asList(3, 4, 1)))
                 .electionId(new ObjectId('abcdabcdabcdabcdabcdabcd'))
                 .setVersion(2)
     }

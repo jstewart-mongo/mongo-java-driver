@@ -26,7 +26,6 @@ import java.util.List;
 
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 
 class TestServerListener implements ServerListener {
     private ServerOpeningEvent serverOpeningEvent;
@@ -48,9 +47,7 @@ class TestServerListener implements ServerListener {
     @Override
     public void serverDescriptionChanged(final ServerDescriptionChangedEvent event) {
         notNull("event", event);
-        if (shouldPublishChangeEvent(event.getNewDescription(), event.getPreviousDescription())) {
-            serverDescriptionChangedEvents.add(event);
-        }
+        serverDescriptionChangedEvents.add(event);
     }
 
     public ServerOpeningEvent getServerOpeningEvent() {

@@ -45,7 +45,16 @@ public class ServerDiscoveryAndMonitoringTest extends AbstractServerDiscoveryAnd
 
     public ServerDiscoveryAndMonitoringTest(final String description, final BsonDocument definition) {
         super(definition);
-        init(serverAddress -> NO_OP_SERVER_LISTENER, NO_OP_CLUSTER_LISTENER);
+        init(new ServerListenerFactory() {
+            @Override
+            public ServerListener create(final ServerAddress serverAddress) {
+                return NO_OP_SERVER_LISTENER;
+            }
+            @Override
+            public ServerListener createApplicationListener(final ServerAddress serverAddress) {
+                return NO_OP_SERVER_LISTENER;
+            }
+        }, NO_OP_CLUSTER_LISTENER);
     }
 
     @Test

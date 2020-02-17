@@ -127,7 +127,7 @@ public class ServerDiscoveryAndMonitoringMonitoringTest extends AbstractServerDi
             } else if (eventDocument.containsKey("server_description_changed_event")) {
                 BsonDocument serverDescriptionChangedEventDocument = eventDocument.getDocument("server_description_changed_event");
                 ServerAddress serverAddress = new ServerAddress(serverDescriptionChangedEventDocument.getString("address").getValue());
-                TestServerListener serverListener = serverListenerFactory.getListener(serverAddress);
+                TestServerListener serverListener = serverListenerFactory.getApplicationListener(serverAddress);
                 assertNotNull("serverListener", serverListener);
                 assertEquals("serverDescriptionChangedEvents size", 1, serverListener.getServerDescriptionChangedEvents().size());
                 ServerDescriptionChangedEvent event = serverListener.getServerDescriptionChangedEvents().get(0);
@@ -217,6 +217,8 @@ public class ServerDiscoveryAndMonitoringMonitoringTest extends AbstractServerDi
     private static class TestServerListenerFactory implements ServerListenerFactory {
         private final Map<ServerAddress, TestServerListener> serverAddressServerListenerMap =
                 new HashMap<ServerAddress, TestServerListener>();
+        private final Map<ServerAddress, TestServerListener> serverAddressApplicationListenerMap =
+                new HashMap<ServerAddress, TestServerListener>();
 
         @Override
         public ServerListener create(final ServerAddress serverAddress) {
@@ -225,8 +227,19 @@ public class ServerDiscoveryAndMonitoringMonitoringTest extends AbstractServerDi
             return serverListener;
         }
 
+        @Override
+        public ServerListener createApplicationListener(final ServerAddress serverAddress) {
+            TestServerListener applicationListener = new TestServerListener();
+            serverAddressApplicationListenerMap.put(serverAddress, applicationListener);
+            return applicationListener;
+        }
+
         TestServerListener getListener(final ServerAddress serverAddress) {
             return serverAddressServerListenerMap.get(serverAddress);
+        }
+
+        TestServerListener getApplicationListener(final ServerAddress serverAddress) {
+            return serverAddressApplicationListenerMap.get(serverAddress);
         }
     }
 }
