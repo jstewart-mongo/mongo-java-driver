@@ -375,6 +375,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      *
      * @return oplogReplay
      * @mongodb.driver.manual ../meta-driver/latest/legacy/mongodb-wire-protocol/#op-query OP_QUERY
+     * @deprecated oplogReplay has been deprecated in MongoDB 4.4.
      */
     public boolean isOplogReplay() {
         return oplogReplay;
@@ -386,6 +387,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
      * @param oplogReplay the oplogReplay value
      * @return this
      * @mongodb.driver.manual ../meta-driver/latest/legacy/mongodb-wire-protocol/#op-query OP_QUERY
+     * @deprecated oplogReplay has been deprecated in MongoDB 4.4.
      */
     public FindOperation<T> oplogReplay(final boolean oplogReplay) {
         this.oplogReplay = oplogReplay;

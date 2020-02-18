@@ -117,6 +117,7 @@ public interface AsyncFindIterable<T> extends AsyncMongoIterable<T> {
      *
      * @param oplogReplay if oplog replay is enabled
      * @return this
+     * @deprecated oplogReplay has been deprecated in MongoDB 4.4.
      */
     AsyncFindIterable<T> oplogReplay(boolean oplogReplay);
 
