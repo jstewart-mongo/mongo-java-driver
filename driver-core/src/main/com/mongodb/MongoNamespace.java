@@ -22,6 +22,7 @@ import org.bson.codecs.pojo.annotations.BsonIgnore;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.mongodb.assertions.Assertions.isTrueArgument;
