@@ -143,29 +143,25 @@ final class OperationHelper {
         }
     }
 
-    static void validateArrayFiltersAndWriteConcern(final ConnectionDescription connectionDescription,
-                                                    final List<BsonDocument> arrayFilters, final WriteConcern writeConcern) {
-        if (arrayFilters != null) {
-            if (serverIsLessThanVersionThreeDotSix(connectionDescription)) {
-                throw new IllegalArgumentException(format("Array filters not supported by wire version: %s",
-                        connectionDescription.getMaxWireVersion()));
-            } else if (!writeConcern.isAcknowledged()) {
-                throw new MongoClientException("Specifying array filters with an unacknowledged WriteConcern is not supported");
-            }
+    private static void validateArrayFilters(final ConnectionDescription connectionDescription,
+                                             final List<BsonDocument> arrayFilters, final WriteConcern writeConcern) {
+        if (serverIsLessThanVersionThreeDotSix(connectionDescription)) {
+            throw new IllegalArgumentException(format("Array filters not supported by wire version: %s",
+                    connectionDescription.getMaxWireVersion()));
+        } else if (!writeConcern.isAcknowledged()) {
+            throw new MongoClientException("Specifying array filters with an unacknowledged WriteConcern is not supported");
         }
     }
 
-    static void validateHintAndWriteConcern(final ConnectionDescription connectionDescription, final Bson hint, final String hintString,
-                                            final WriteConcern writeConcern) {
-        if (hint != null || hintString != null) {
-            if (serverIsLessThanVersionThreeDotFour(connectionDescription)) {
-                throw new IllegalArgumentException(format("Hint not supported by wire version: %s",
-                        connectionDescription.getMaxWireVersion()));
-            } else if (!writeConcern.isAcknowledged() && serverIsLessThanVersionFourDotTwo(connectionDescription)) {
-                throw new MongoClientException(
-                        format("Specifying hints with an unacknowledged WriteConcern is not supported by wire version: %s",
-                                connectionDescription.getMaxWireVersion()));
-            }
+    private static void validateHint(final ConnectionDescription connectionDescription, final Bson hint, final String hintString,
+                                     final WriteConcern writeConcern) {
+        if (serverIsLessThanVersionThreeDotFour(connectionDescription)) {
+            throw new IllegalArgumentException(format("Hint not supported by wire version: %s",
+                    connectionDescription.getMaxWireVersion()));
+        } else if (!writeConcern.isAcknowledged() && serverIsLessThanVersionFourDotTwo(connectionDescription)) {
+            throw new MongoClientException(
+                    format("Specifying hints with an unacknowledged WriteConcern is not supported by wire version: %s",
+                            connectionDescription.getMaxWireVersion()));
         }
     }
 
@@ -207,32 +203,32 @@ final class OperationHelper {
 
     static void validateUpdateRequestArrayFilters(final ConnectionDescription connectionDescription,
                                                   final List<? extends WriteRequest> requests, final WriteConcern writeConcern) {
-        List<BsonDocument> arrayFilters = null;
         for (WriteRequest request : requests) {
+            List<BsonDocument> arrayFilters = null;
             if (request instanceof UpdateRequest) {
                 arrayFilters = ((UpdateRequest) request).getArrayFilters();
             }
             if (arrayFilters != null) {
+                validateArrayFilters(connectionDescription, arrayFilters, writeConcern);
                 break;
             }
         }
-        validateArrayFiltersAndWriteConcern(connectionDescription, arrayFilters, writeConcern);
     }
 
     static void validateWriteRequestHints(final ConnectionDescription connectionDescription,
                                           final List<? extends WriteRequest> requests, final WriteConcern writeConcern) {
-        Bson hint = null;
-        String hintString = null;
         for (WriteRequest request : requests) {
+            Bson hint = null;
+            String hintString = null;
             if (request instanceof UpdateRequest) {
                 hint = ((UpdateRequest) request).getHint();
                 hintString = ((UpdateRequest) request).getHintString();
             }
             if (hint != null || hintString != null) {
+                validateHint(connectionDescription, hint, hintString, writeConcern);
                 break;
             }
         }
-        validateHintAndWriteConcern(connectionDescription, hint, hintString, writeConcern);
     }
 
     static void validateWriteRequests(final ConnectionDescription connectionDescription, final Boolean bypassDocumentValidation,
