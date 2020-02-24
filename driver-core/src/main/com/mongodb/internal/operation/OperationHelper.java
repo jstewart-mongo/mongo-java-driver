@@ -143,8 +143,7 @@ final class OperationHelper {
         }
     }
 
-    private static void validateArrayFilters(final ConnectionDescription connectionDescription,
-                                             final List<BsonDocument> arrayFilters, final WriteConcern writeConcern) {
+    private static void validateArrayFilters(final ConnectionDescription connectionDescription, final WriteConcern writeConcern) {
         if (serverIsLessThanVersionThreeDotSix(connectionDescription)) {
             throw new IllegalArgumentException(format("Array filters not supported by wire version: %s",
                     connectionDescription.getMaxWireVersion()));
@@ -153,8 +152,7 @@ final class OperationHelper {
         }
     }
 
-    private static void validateHint(final ConnectionDescription connectionDescription, final Bson hint, final String hintString,
-                                     final WriteConcern writeConcern) {
+    private static void validateHint(final ConnectionDescription connectionDescription, final WriteConcern writeConcern) {
         if (serverIsLessThanVersionThreeDotFour(connectionDescription)) {
             throw new IllegalArgumentException(format("Hint not supported by wire version: %s",
                     connectionDescription.getMaxWireVersion()));
@@ -209,7 +207,7 @@ final class OperationHelper {
                 arrayFilters = ((UpdateRequest) request).getArrayFilters();
             }
             if (arrayFilters != null) {
-                validateArrayFilters(connectionDescription, arrayFilters, writeConcern);
+                validateArrayFilters(connectionDescription, writeConcern);
                 break;
             }
         }
@@ -225,7 +223,7 @@ final class OperationHelper {
                 hintString = ((UpdateRequest) request).getHintString();
             }
             if (hint != null || hintString != null) {
-                validateHint(connectionDescription, hint, hintString, writeConcern);
+                validateHint(connectionDescription, writeConcern);
                 break;
             }
         }
