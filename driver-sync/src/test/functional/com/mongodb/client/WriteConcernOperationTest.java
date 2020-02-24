@@ -22,7 +22,7 @@ import org.bson.BsonDocument;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-// See https://github.com/mongodb/specifications/tree/master/source/transactions/tests
+// See https://github.com/mongodb/specifications/tree/master/source/read-write-concern/tests/operation
 @RunWith(Parameterized.class)
 public class WriteConcernOperationTest extends AbstractWriteConcernOperationTest {
     public WriteConcernOperationTest(final String filename, final String description, final String databaseName,
