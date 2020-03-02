@@ -18,6 +18,7 @@ package com.mongodb.connection;
 
 import com.mongodb.ServerAddress;
 import com.mongodb.annotations.Immutable;
+import org.bson.BsonArray;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +41,7 @@ public class ConnectionDescription {
     private final int maxDocumentSize;
     private final int maxMessageSize;
     private final List<String> compressors;
+    private BsonArray saslSupportedMechanisms;
 
     private static final int DEFAULT_MAX_MESSAGE_SIZE = 0x2000000;   // 32MB
     private static final int DEFAULT_MAX_WRITE_BATCH_SIZE = 512;
@@ -50,8 +52,18 @@ public class ConnectionDescription {
      * @param serverId   the server address
      */
     public ConnectionDescription(final ServerId serverId) {
-        this(new ConnectionId(serverId), 0, ServerType.UNKNOWN, DEFAULT_MAX_WRITE_BATCH_SIZE,
-             getDefaultMaxDocumentSize(), DEFAULT_MAX_MESSAGE_SIZE, Collections.<String>emptyList());
+        this(serverId, 0);
+    }
+
+    /**
+     * Construct a defaulted connection description instance.
+     *
+     * @param serverId   the server address
+     * @param maxWireVersion the max wire version
+     */
+    public ConnectionDescription(final ServerId serverId, final int maxWireVersion) {
+        this(new ConnectionId(serverId), maxWireVersion, ServerType.UNKNOWN, DEFAULT_MAX_WRITE_BATCH_SIZE,
+                getDefaultMaxDocumentSize(), DEFAULT_MAX_MESSAGE_SIZE, Collections.<String>emptyList());
     }
 
     /**
@@ -162,6 +174,24 @@ public class ConnectionDescription {
      */
     public List<String> getCompressors() {
         return compressors;
+    }
+
+    /**
+     * Get the supported SASL mechanisms.
+     *
+     * @return the supported SASL mechanisms.
+     */
+    public BsonArray getSaslSupportedMechanisms() {
+        return saslSupportedMechanisms;
+    }
+
+    /**
+     * Set the supported SASL mechanisms.
+     *
+     * @param saslSupportedMechanisms the supported SASL mechanisms
+     */
+    public void setSaslSupportedMechanisms(final BsonArray saslSupportedMechanisms) {
+        this.saslSupportedMechanisms = saslSupportedMechanisms;
     }
 
     /**

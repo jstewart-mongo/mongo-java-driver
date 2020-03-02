@@ -23,6 +23,7 @@ import com.mongodb.async.FutureResultCallback;
 import com.mongodb.connection.ClusterId;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerId;
+import org.bson.BsonDocument;
 import org.bson.io.BsonInput;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,9 +31,11 @@ import org.junit.Test;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class X509AuthenticatorUnitTest {
     private TestInternalConnection connection;
@@ -102,6 +105,18 @@ public class X509AuthenticatorUnitTest {
         futureCallback.get();
 
         validateMessages();
+    }
+
+    @Test
+    public void testSpeculativeAuthentication() {
+        assumeTrue(serverVersionAtLeast(4, 3));
+
+        String speculativeAuthenticateResponse = "{\"dbname\": \"$external\", "
+                + "\"user\": \"CN=client,OU=kerneluser,O=10Gen,L=New York City,ST=New York,C=US\"}";
+        subject.setSpeculativeAuthenticateResponse(BsonDocument.parse(speculativeAuthenticateResponse));
+        subject.authenticate(connection, connectionDescription);
+
+        assertEquals(connection.getSent().size(), 0);
     }
 
     private void enqueueSuccessfulAuthenticationReply() {

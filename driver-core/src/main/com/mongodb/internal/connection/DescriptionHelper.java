@@ -66,6 +66,9 @@ public final class DescriptionHelper {
                     connectionDescription.getConnectionId().withServerValue(isMasterResult.getNumber("connectionId").intValue());
             connectionDescription = connectionDescription.withConnectionId(newConnectionId);
         }
+        if (isMasterResult.containsKey("saslSupportedMechs")) {
+            connectionDescription.setSaslSupportedMechanisms(isMasterResult.getArray("saslSupportedMechs"));
+        }
         return connectionDescription;
     }
 

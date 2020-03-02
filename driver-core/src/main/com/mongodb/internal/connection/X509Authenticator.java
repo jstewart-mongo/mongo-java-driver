@@ -29,13 +29,18 @@ import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.CommandHelper.executeCommandAsync;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsLessThanVersionThreeDotFour;
 
-class X509Authenticator extends Authenticator {
+class X509Authenticator extends SpeculativeAuthenticator {
+    private BsonDocument speculativeAuthenticateResponse;
+
     X509Authenticator(final MongoCredentialWithCache credential) {
         super(credential);
     }
 
     @Override
     void authenticate(final InternalConnection connection, final ConnectionDescription connectionDescription) {
+        if (this.speculativeAuthenticateResponse != null) {
+            return;
+        }
         try {
             validateUserName(connectionDescription);
             BsonDocument authCommand = getAuthCommand(getMongoCredential().getUserName());
@@ -48,22 +53,35 @@ class X509Authenticator extends Authenticator {
     @Override
     void authenticateAsync(final InternalConnection connection, final ConnectionDescription connectionDescription,
                            final SingleResultCallback<Void> callback) {
+        if (this.speculativeAuthenticateResponse != null) {
+            return;
+        }
         try {
             validateUserName(connectionDescription);
             executeCommandAsync(getMongoCredential().getSource(), getAuthCommand(getMongoCredential().getUserName()), connection,
-                                new SingleResultCallback<BsonDocument>() {
-                                    @Override
-                                    public void onResult(final BsonDocument nonceResult, final Throwable t) {
-                                        if (t != null) {
-                                            callback.onResult(null, translateThrowable(t));
-                                        } else {
-                                            callback.onResult(null, null);
-                                        }
-                                    }
-                                });
+                    new SingleResultCallback<BsonDocument>() {
+                        @Override
+                        public void onResult(final BsonDocument nonceResult, final Throwable t) {
+                            if (t != null) {
+                                callback.onResult(null, translateThrowable(t));
+                            } else {
+                                callback.onResult(null, null);
+                            }
+                        }
+                    });
         } catch (Throwable t) {
             callback.onResult(null, t);
         }
+    }
+
+    @Override
+    public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
+        return getAuthCommand(getMongoCredential().getUserName()).append("db", new BsonString("$external"));
+    }
+
+    @Override
+    public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
+        this.speculativeAuthenticateResponse = response;
     }
 
     private BsonDocument getAuthCommand(final String userName) {

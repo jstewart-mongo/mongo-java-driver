@@ -24,12 +24,14 @@ import com.mongodb.connection.ConnectionDescription
 import com.mongodb.connection.ServerId
 import org.bson.BsonDocument
 import org.bson.internal.Base64
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 import javax.security.sasl.SaslException
 import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 
+import static com.mongodb.ClusterFixture.serverVersionAtLeast
 import static com.mongodb.MongoCredential.createScramSha1Credential
 import static com.mongodb.MongoCredential.createScramSha256Credential
 import static org.junit.Assert.assertEquals
@@ -66,6 +68,31 @@ class ScramShaAuthenticatorSpecification extends Specification {
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
     }
 
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) })
+    def 'should speculatively authenticate with sha1'() {
+        given:
+        def user = 'user'
+        def password = 'pencil'
+        def preppedPassword = 'pencil'
+        def payloads = '''
+            C: c=biws,r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,p=v0X8v3Bz2T0CJGbJQyF0X+HI4Ts=
+            S: v=rmF9pqV8S7suAoZWja4dJRkFsKQ=
+        '''
+        def serverResponse = 'r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=4096'
+        def speculativeAuthenticateResponse =
+                BsonDocument.parse("{ conversationId: 1, payload: BinData(0, '${encode64(serverResponse)}'), done: false }")
+
+        when:
+        def credential = new MongoCredentialWithCache(createScramSha1Credential(user, 'database', password as char[]))
+        def authenticator = new ScramShaAuthenticator(credential, { 'fyko+d2lbbFgONRv9qkxdawL' }, { preppedPassword })
+
+        then:
+        validateSpeculativeAuthentication(payloads, authenticator, async, speculativeAuthenticateResponse)
+
+        where:
+        async << [true, false]
+    }
+
     def 'should successfully authenticate with sha256 as per RFC spec'() {
         given:
         def user = 'user'
@@ -89,6 +116,30 @@ class ScramShaAuthenticatorSpecification extends Specification {
         [async, emptyExchange] << [[true, false], [true, false]].combinations()
     }
 
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) })
+    def 'should speculatively authenticate with sha256'() {
+        given:
+        def user = 'user'
+        def password = 'pencil'
+        def preppedPassword = 'pencil'
+        def payloads = '''
+            C: c=biws,r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ=
+            S: v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4=
+        '''
+        def serverResponse = 'r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096'
+        def speculativeAuthenticateResponse =
+                BsonDocument.parse("{ conversationId: 1, payload: BinData(0, '${encode64(serverResponse)}'), done: false }")
+
+        when:
+        def credential = new MongoCredentialWithCache(createScramSha256Credential(user, 'database', password as char[]))
+        def authenticator = new ScramShaAuthenticator(credential, { 'rOprNGfwEbeRWgbNEkqO' }, { preppedPassword })
+
+        then:
+        validateSpeculativeAuthentication(payloads, authenticator, async, speculativeAuthenticateResponse)
+
+        where:
+        async << [true, false]
+    }
 
     def 'should successfully authenticate with SHA-1 ASCII'() {
         given:
@@ -422,13 +473,14 @@ class ScramShaAuthenticatorSpecification extends Specification {
         connection
     }
 
-    def validateClientMessages(TestInternalConnection connection, List<String> clientMessages, String mechanism) {
+    def validateClientMessages(TestInternalConnection connection, List<String> clientMessages, String mechanism,
+                               boolean speculativeAuthenticate = false) {
         def sent = connection.getSent().collect { MessageHelper.decodeCommand( it ) }
         assert(clientMessages.size() == sent.size())
         sent.indices.each {
             def sentMessage = sent.get(it)
-            def messageStart = it == 0 ? "saslStart: 1, mechanism:'$mechanism', options: {skipEmptyExchange: true}"
-                    : 'saslContinue: 1, conversationId: 1'
+            def messageStart = speculativeAuthenticate || it != 0 ? 'saslContinue: 1, conversationId: 1'
+                    : "saslStart: 1, mechanism:'$mechanism', options: {skipEmptyExchange: true}"
             def expectedMessage = BsonDocument.parse("{$messageStart, payload: BinData(0, '${encode64(clientMessages.get(it))}')}")
             assertEquals(expectedMessage, sentMessage)
         }
@@ -440,6 +492,17 @@ class ScramShaAuthenticatorSpecification extends Specification {
         def connection = createConnection(serverResponses, emptyExchange ? -1 : 1)
         authenticate(connection, authenticator, async)
         validateClientMessages(connection, clientMessages, authenticator.getMechanismName())
+    }
+
+    def validateSpeculativeAuthentication(String payloads, ScramShaAuthenticator authenticator, boolean async,
+                                          BsonDocument speculativeAuthenticateResponse) {
+        def (clientMessages, serverResponses) = createMessages(payloads, false)
+        def connection = createConnection(serverResponses, 0)
+        authenticator.createSpeculativeAuthenticateCommand(connection)
+        authenticator.setSpeculativeAuthenticateResponse(speculativeAuthenticateResponse)
+
+        authenticate(connection, authenticator, async)
+        validateClientMessages(connection, clientMessages, authenticator.getMechanismName(), true)
     }
 
     def authenticate(TestInternalConnection connection, ScramShaAuthenticator authenticator, boolean async) {
