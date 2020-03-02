@@ -26,6 +26,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
 
+import static com.mongodb.AuthenticationMechanism.MONGODB_X509;
 import static com.mongodb.AuthenticationMechanism.SCRAM_SHA_1;
 import static com.mongodb.AuthenticationMechanism.SCRAM_SHA_256;
 import static com.mongodb.assertions.Assertions.isTrueArgument;
@@ -51,8 +52,10 @@ class DefaultAuthenticator extends Authenticator {
                     .authenticate(connection, connectionDescription);
         } else {
             try {
-                BsonDocument isMasterResult = executeCommand("admin", createIsMasterCommand(), connection);
-                getAuthenticatorFromIsMasterResult(isMasterResult, connectionDescription)
+                Authenticator authenticator = getAuthenticatorForSpeculativeAuthentication();
+                BsonDocument isMasterResult = executeCommand("admin", createIsMasterCommand(authenticator, connection),
+                        connection);
+                getAuthenticatorFromIsMasterResult(isMasterResult, authenticator, connectionDescription)
                         .authenticate(connection, connectionDescription);
             } catch (Exception e) {
                 throw wrapException(e);
@@ -67,22 +70,28 @@ class DefaultAuthenticator extends Authenticator {
             getLegacyDefaultAuthenticator(connectionDescription)
                     .authenticateAsync(connection, connectionDescription, callback);
         } else {
-            executeCommandAsync("admin", createIsMasterCommand(), connection, new SingleResultCallback<BsonDocument>() {
-                @Override
-                public void onResult(final BsonDocument result, final Throwable t) {
-                    if (t != null) {
-                        callback.onResult(null, wrapException(t));
-                    } else {
-                        getAuthenticatorFromIsMasterResult(result, connectionDescription)
-                                .authenticateAsync(connection, connectionDescription, callback);
-                    }
-                }
-            });
+            final Authenticator authenticator = getAuthenticatorForSpeculativeAuthentication();
+            executeCommandAsync("admin", createIsMasterCommand(authenticator, connection), connection,
+                    new SingleResultCallback<BsonDocument>() {
+                        @Override
+                        public void onResult(final BsonDocument result, final Throwable t) {
+                            if (t != null) {
+                                callback.onResult(null, wrapException(t));
+                            } else {
+                                getAuthenticatorFromIsMasterResult(result, authenticator, connectionDescription)
+                                        .authenticateAsync(connection, connectionDescription, callback);
+                            }
+                        }
+                    });
         }
     }
 
-    Authenticator getAuthenticatorFromIsMasterResult(final BsonDocument isMasterResult, final ConnectionDescription connectionDescription) {
-        if (isMasterResult.containsKey("saslSupportedMechs")) {
+    Authenticator getAuthenticatorFromIsMasterResult(final BsonDocument isMasterResult, final Authenticator authenticator,
+                                                     final ConnectionDescription connectionDescription) {
+        if (authenticator != null && isMasterResult.containsKey("speculativeAuthenticate")) {
+            authenticator.setSpeculativeAuthenticateResponse(isMasterResult.getDocument("speculativeAuthenticate"));
+            return authenticator;
+        } else if (isMasterResult.containsKey("saslSupportedMechs")) {
             BsonArray saslSupportedMechs = isMasterResult.getArray("saslSupportedMechs");
             AuthenticationMechanism mechanism = saslSupportedMechs.contains(DEFAULT_MECHANISM_NAME) ? SCRAM_SHA_256 : SCRAM_SHA_1;
             return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
@@ -99,10 +108,29 @@ class DefaultAuthenticator extends Authenticator {
         }
     }
 
-    private BsonDocument createIsMasterCommand() {
+    private Authenticator getAuthenticatorForSpeculativeAuthentication() {
+        AuthenticationMechanism mechanism = getMongoCredential().getAuthenticationMechanism();
+
+        if (mechanism == null) {
+            return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_256));
+        } else if (mechanism.equals(SCRAM_SHA_1) || mechanism.equals(SCRAM_SHA_256)) {
+            return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
+        } else if (mechanism.equals(MONGODB_X509)) {
+            return new X509Authenticator(getMongoCredentialWithCache().withMechanism(mechanism));
+        }
+        return null;
+    }
+
+    private BsonDocument createIsMasterCommand(final Authenticator authenticator, final InternalConnection connection) {
         BsonDocument isMasterCommandDocument = new BsonDocument("ismaster", new BsonInt32(1));
         isMasterCommandDocument.append("saslSupportedMechs",
                 new BsonString(format("%s.%s", getMongoCredential().getSource(), getMongoCredential().getUserName())));
+        if (authenticator != null) {
+            BsonDocument speculativeAuthenticateDocument = authenticator.createSpeculativeAuthenticateCommand(connection);
+            if (speculativeAuthenticateDocument != null) {
+                isMasterCommandDocument.append("speculativeAuthenticate", speculativeAuthenticateDocument);
+            }
+        }
         return isMasterCommandDocument;
     }
 

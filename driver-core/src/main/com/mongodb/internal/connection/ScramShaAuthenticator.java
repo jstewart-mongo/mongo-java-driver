@@ -22,6 +22,7 @@ import com.mongodb.ServerAddress;
 import com.mongodb.internal.authentication.SaslPrep;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 import org.bson.internal.Base64;
 
 import javax.crypto.Mac;
@@ -44,6 +45,8 @@ import static java.lang.String.format;
 class ScramShaAuthenticator extends SaslAuthenticator {
     private final RandomStringGenerator randomStringGenerator;
     private final AuthenticationHashGenerator authenticationHashGenerator;
+    private SaslClient saslClient;
+    private BsonDocument speculativeAuthenticateResponse;
 
     private static final int MINIMUM_ITERATION_COUNT = 4096;
     private static final String GS2_HEADER = "n,,";
@@ -82,7 +85,31 @@ class ScramShaAuthenticator extends SaslAuthenticator {
 
     @Override
     protected SaslClient createSaslClient(final ServerAddress serverAddress) {
+        if (saslClient != null && this.speculativeAuthenticateResponse != null) {
+            return saslClient;
+        }
         return new ScramShaSaslClient(getMongoCredentialWithCache(), randomStringGenerator, authenticationHashGenerator);
+    }
+
+    @Override
+    protected BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
+        try {
+            saslClient = createSaslClient(connection.getDescription().getServerAddress());
+            return createSaslStartCommandDocument(saslClient.evaluateChallenge(new byte[0]))
+                    .append("db", new BsonString("admin"));
+        } catch (Exception e) {
+            throw wrapException(e);
+        }
+    }
+
+    @Override
+    protected BsonDocument getSpeculativeAuthenticateResponse() {
+        return this.speculativeAuthenticateResponse;
+    }
+
+    @Override
+    protected void setSpeculativeAuthenticateResponse(final BsonDocument response) {
+        this.speculativeAuthenticateResponse = response;
     }
 
     class ScramShaSaslClient implements SaslClient {

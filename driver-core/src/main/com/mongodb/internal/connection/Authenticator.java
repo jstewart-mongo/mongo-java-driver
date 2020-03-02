@@ -22,6 +22,7 @@ import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
+import org.bson.BsonDocument;
 
 public abstract class Authenticator {
     private final MongoCredentialWithCache credential;
@@ -67,6 +68,16 @@ public abstract class Authenticator {
         return mechanismProperty;
 
     }
+
+    protected BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
+        return null;
+    }
+
+    protected BsonDocument getSpeculativeAuthenticateResponse() {
+        return null;
+    }
+
+    protected void setSpeculativeAuthenticateResponse(final BsonDocument response) {}
 
     abstract void authenticate(InternalConnection connection, ConnectionDescription connectionDescription);
 
