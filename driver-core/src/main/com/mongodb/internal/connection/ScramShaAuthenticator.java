@@ -45,7 +45,7 @@ import static java.lang.String.format;
 class ScramShaAuthenticator extends SaslAuthenticator {
     private final RandomStringGenerator randomStringGenerator;
     private final AuthenticationHashGenerator authenticationHashGenerator;
-    private SaslClient saslClient;
+    private SaslClient speculativeSaslClient;
     private BsonDocument speculativeAuthenticateResponse;
 
     private static final int MINIMUM_ITERATION_COUNT = 4096;
@@ -85,30 +85,32 @@ class ScramShaAuthenticator extends SaslAuthenticator {
 
     @Override
     protected SaslClient createSaslClient(final ServerAddress serverAddress) {
-        if (saslClient != null && this.speculativeAuthenticateResponse != null) {
-            return saslClient;
+        if (speculativeSaslClient != null && this.speculativeAuthenticateResponse != null) {
+            return speculativeSaslClient;
         }
         return new ScramShaSaslClient(getMongoCredentialWithCache(), randomStringGenerator, authenticationHashGenerator);
     }
 
     @Override
-    protected BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
+    public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
         try {
-            saslClient = createSaslClient(connection.getDescription().getServerAddress());
-            return createSaslStartCommandDocument(saslClient.evaluateChallenge(new byte[0]))
+            speculativeSaslClient = createSaslClient(connection.getDescription().getServerAddress());
+            BsonDocument startDocument = createSaslStartCommandDocument(speculativeSaslClient.evaluateChallenge(new byte[0]))
                     .append("db", new BsonString("admin"));
+            appendSaslStartOptions(startDocument);
+            return startDocument;
         } catch (Exception e) {
             throw wrapException(e);
         }
     }
 
     @Override
-    protected BsonDocument getSpeculativeAuthenticateResponse() {
+    public BsonDocument getSpeculativeAuthenticateResponse() {
         return this.speculativeAuthenticateResponse;
     }
 
     @Override
-    protected void setSpeculativeAuthenticateResponse(final BsonDocument response) {
+    public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
         this.speculativeAuthenticateResponse = response;
     }
 

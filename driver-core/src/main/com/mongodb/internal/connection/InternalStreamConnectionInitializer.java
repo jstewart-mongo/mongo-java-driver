@@ -185,7 +185,7 @@ public class InternalStreamConnectionInitializer implements InternalConnectionIn
     }
 
     private void setAuthenticator(final BsonDocument isMasterResult, final ConnectionDescription connectionDescription) {
-        if (authenticator != null && isMasterResult.containsKey("speculativeAuthenticate")) {
+        if (isMasterResult.containsKey("speculativeAuthenticate")) {
             authenticator.setSpeculativeAuthenticateResponse(isMasterResult.getDocument("speculativeAuthenticate"));
         } else if (checkSaslSupportedMechs) {
             authenticator = ((DefaultAuthenticator) authenticator).getAuthenticatorFromIsMasterResult(isMasterResult, null,

@@ -114,13 +114,14 @@ abstract class SaslAuthenticator extends Authenticator {
     }
 
     private BsonDocument getNextSaslResponse(final SaslClient saslClient, final InternalConnection connection) {
-        BsonDocument res = getSpeculativeAuthenticateResponse();
+        BsonDocument response = getSpeculativeAuthenticateResponse();
+        if (response != null) {
+            return response;
+        }
+
         try {
-            if (res == null) {
-                byte[] response = (saslClient.hasInitialResponse() ? saslClient.evaluateChallenge(new byte[0]) : null);
-                return sendSaslStart(response, connection);
-            }
-            return res;
+            byte[] serverResponse = (saslClient.hasInitialResponse() ? saslClient.evaluateChallenge(new byte[0]) : null);
+            return sendSaslStart(serverResponse, connection);
         } catch (Exception e) {
             throw wrapException(e);
         }
@@ -128,9 +129,9 @@ abstract class SaslAuthenticator extends Authenticator {
 
     private void getNextSaslResponseAsync(final SaslClient saslClient, final InternalConnection connection,
                                           final SingleResultCallback<Void> callback) {
-        BsonDocument res = getSpeculativeAuthenticateResponse();
+        BsonDocument authenticateResponse = getSpeculativeAuthenticateResponse();
         try {
-            if (res == null) {
+            if (authenticateResponse == null) {
                 byte[] response = (saslClient.hasInitialResponse() ? saslClient.evaluateChallenge(new byte[0]) : null);
                 sendSaslStartAsync(response, connection, new SingleResultCallback<BsonDocument>() {
                     @Override
@@ -145,10 +146,10 @@ abstract class SaslAuthenticator extends Authenticator {
                     }
                 });
             } else {
-                if (res.getBoolean("done").getValue()) {
-                    verifySaslClientComplete(saslClient, res, callback);
+                if (authenticateResponse.getBoolean("done").getValue()) {
+                    verifySaslClientComplete(saslClient, authenticateResponse, callback);
                 } else {
-                    new Continuator(saslClient, res, connection, callback).start();
+                    new Continuator(saslClient, authenticateResponse, connection, callback).start();
                 }
             }
         } catch (Exception e) {

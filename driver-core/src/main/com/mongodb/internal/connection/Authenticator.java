@@ -69,15 +69,15 @@ public abstract class Authenticator {
 
     }
 
-    protected BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
+    public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
         return null;
     }
 
-    protected BsonDocument getSpeculativeAuthenticateResponse() {
+    public BsonDocument getSpeculativeAuthenticateResponse() {
         return null;
     }
 
-    protected void setSpeculativeAuthenticateResponse(final BsonDocument response) {}
+    public void setSpeculativeAuthenticateResponse(final BsonDocument response) {}
 
     abstract void authenticate(InternalConnection connection, ConnectionDescription connectionDescription);
 
