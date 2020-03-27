@@ -41,7 +41,7 @@ public class ConnectionDescription {
     private final int maxDocumentSize;
     private final int maxMessageSize;
     private final List<String> compressors;
-    private BsonArray saslSupportedMechanisms;
+    private final BsonArray saslSupportedMechanisms;
 
     private static final int DEFAULT_MAX_MESSAGE_SIZE = 0x2000000;   // 32MB
     private static final int DEFAULT_MAX_WRITE_BATCH_SIZE = 512;
@@ -52,18 +52,8 @@ public class ConnectionDescription {
      * @param serverId   the server address
      */
     public ConnectionDescription(final ServerId serverId) {
-        this(serverId, 0);
-    }
-
-    /**
-     * Construct a defaulted connection description instance.
-     *
-     * @param serverId   the server address
-     * @param maxWireVersion the max wire version
-     */
-    public ConnectionDescription(final ServerId serverId, final int maxWireVersion) {
-        this(new ConnectionId(serverId), maxWireVersion, ServerType.UNKNOWN, DEFAULT_MAX_WRITE_BATCH_SIZE,
-                getDefaultMaxDocumentSize(), DEFAULT_MAX_MESSAGE_SIZE, Collections.<String>emptyList());
+        this(new ConnectionId(serverId), 0, ServerType.UNKNOWN, DEFAULT_MAX_WRITE_BATCH_SIZE,
+             getDefaultMaxDocumentSize(), DEFAULT_MAX_MESSAGE_SIZE, Collections.<String>emptyList());
     }
 
     /**
@@ -81,6 +71,25 @@ public class ConnectionDescription {
     public ConnectionDescription(final ConnectionId connectionId, final int maxWireVersion,
                                  final ServerType serverType, final int maxBatchCount, final int maxDocumentSize,
                                  final int maxMessageSize, final List<String> compressors) {
+        this(connectionId, maxWireVersion, serverType, maxBatchCount, maxDocumentSize, maxMessageSize, compressors, null);
+    }
+
+    /**
+     * Construct an instance.
+     *
+     * @param connectionId    the connection id
+     * @param maxWireVersion  the max wire version
+     * @param serverType      the server type
+     * @param maxBatchCount   the max batch count
+     * @param maxDocumentSize the max document size in bytes
+     * @param maxMessageSize  the max message size in bytes
+     * @param compressors     the available compressors on the connection
+     * @param saslSupportedMechanisms the supported SASL mechanisms
+     * @since 4.1
+     */
+    public ConnectionDescription(final ConnectionId connectionId, final int maxWireVersion,
+                                 final ServerType serverType, final int maxBatchCount, final int maxDocumentSize,
+                                 final int maxMessageSize, final List<String> compressors, final BsonArray saslSupportedMechanisms) {
         this.connectionId = connectionId;
         this.serverType = serverType;
         this.maxBatchCount = maxBatchCount;
@@ -88,6 +97,7 @@ public class ConnectionDescription {
         this.maxMessageSize = maxMessageSize;
         this.maxWireVersion = maxWireVersion;
         this.compressors = notNull("compressors", Collections.unmodifiableList(new ArrayList<String>(compressors)));
+        this.saslSupportedMechanisms = saslSupportedMechanisms;
     }
 
     /**
@@ -101,6 +111,19 @@ public class ConnectionDescription {
         notNull("connectionId", connectionId);
         return new ConnectionDescription(connectionId, maxWireVersion, serverType, maxBatchCount, maxDocumentSize, maxMessageSize,
                 compressors);
+    }
+
+    /**
+     * Creates a new connection description with the supported SASL mechanisms
+     *
+     * @param saslSupportedMechanisms the supported SASL mechanisms
+     * @return the new connection description
+     * @since 4.1
+     */
+    public ConnectionDescription withSaslSupportedMechanisms(final BsonArray saslSupportedMechanisms) {
+        notNull("connectionId", connectionId);
+        return new ConnectionDescription(connectionId, maxWireVersion, serverType, maxBatchCount, maxDocumentSize, maxMessageSize,
+                compressors, saslSupportedMechanisms);
     }
 
     /**
@@ -180,18 +203,10 @@ public class ConnectionDescription {
      * Get the supported SASL mechanisms.
      *
      * @return the supported SASL mechanisms.
+     * @since 4.1
      */
     public BsonArray getSaslSupportedMechanisms() {
         return saslSupportedMechanisms;
-    }
-
-    /**
-     * Set the supported SASL mechanisms.
-     *
-     * @param saslSupportedMechanisms the supported SASL mechanisms
-     */
-    public void setSaslSupportedMechanisms(final BsonArray saslSupportedMechanisms) {
-        this.saslSupportedMechanisms = saslSupportedMechanisms;
     }
 
     /**

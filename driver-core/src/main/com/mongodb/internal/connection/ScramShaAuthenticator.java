@@ -106,14 +106,15 @@ class ScramShaAuthenticator extends SaslAuthenticator {
 
     @Override
     public BsonDocument getSpeculativeAuthenticateResponse() {
-        return this.speculativeAuthenticateResponse;
+        return speculativeAuthenticateResponse;
     }
 
     @Override
     public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
-        this.speculativeAuthenticateResponse = response;
         if (response == null) {
             speculativeSaslClient = null;
+        } else {
+            speculativeAuthenticateResponse = response;
         }
     }
 

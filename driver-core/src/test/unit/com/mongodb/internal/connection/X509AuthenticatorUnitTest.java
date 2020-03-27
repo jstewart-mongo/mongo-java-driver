@@ -31,11 +31,9 @@ import org.junit.Test;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 
 public class X509AuthenticatorUnitTest {
     private TestInternalConnection connection;
@@ -109,14 +107,16 @@ public class X509AuthenticatorUnitTest {
 
     @Test
     public void testSpeculativeAuthentication() {
-        assumeTrue(serverVersionAtLeast(4, 3));
-
         String speculativeAuthenticateResponse = "{\"dbname\": \"$external\", "
                 + "\"user\": \"CN=client,OU=kerneluser,O=10Gen,L=New York City,ST=New York,C=US\"}";
+        BsonDocument expectedSpeculativeAuthenticateCommand = BsonDocument.parse("{authenticate: 1, "
+                + "user: \"CN=client,OU=kerneluser,O=10Gen,L=New York City,ST=New York,C=US\", "
+                + "mechanism: \"MONGODB-X509\", db: \"$external\"}");
         subject.setSpeculativeAuthenticateResponse(BsonDocument.parse(speculativeAuthenticateResponse));
         subject.authenticate(connection, connectionDescription);
 
         assertEquals(connection.getSent().size(), 0);
+        assertEquals(expectedSpeculativeAuthenticateCommand, subject.createSpeculativeAuthenticateCommand(connection));
     }
 
     private void enqueueSuccessfulAuthenticationReply() {

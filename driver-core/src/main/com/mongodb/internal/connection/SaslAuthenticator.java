@@ -37,7 +37,7 @@ import static com.mongodb.MongoCredential.JAVA_SUBJECT_KEY;
 import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.CommandHelper.executeCommandAsync;
 
-abstract class SaslAuthenticator extends SpeculativeAuthenticator {
+abstract class SaslAuthenticator extends Authenticator implements SpeculativeAuthenticator {
     SaslAuthenticator(final MongoCredentialWithCache credential) {
         super(credential);
     }

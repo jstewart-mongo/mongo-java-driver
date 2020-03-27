@@ -29,7 +29,7 @@ import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.CommandHelper.executeCommandAsync;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsLessThanVersionThreeDotFour;
 
-class X509Authenticator extends SpeculativeAuthenticator {
+class X509Authenticator extends Authenticator implements SpeculativeAuthenticator {
     private BsonDocument speculativeAuthenticateResponse;
 
     X509Authenticator(final MongoCredentialWithCache credential) {
@@ -53,24 +53,25 @@ class X509Authenticator extends SpeculativeAuthenticator {
     @Override
     void authenticateAsync(final InternalConnection connection, final ConnectionDescription connectionDescription,
                            final SingleResultCallback<Void> callback) {
-        if (this.speculativeAuthenticateResponse != null) {
-            return;
-        }
-        try {
-            validateUserName(connectionDescription);
-            executeCommandAsync(getMongoCredential().getSource(), getAuthCommand(getMongoCredential().getUserName()), connection,
-                    new SingleResultCallback<BsonDocument>() {
-                        @Override
-                        public void onResult(final BsonDocument nonceResult, final Throwable t) {
-                            if (t != null) {
-                                callback.onResult(null, translateThrowable(t));
-                            } else {
-                                callback.onResult(null, null);
+        if (speculativeAuthenticateResponse != null) {
+            callback.onResult(null, null);
+        } else {
+            try {
+                validateUserName(connectionDescription);
+                executeCommandAsync(getMongoCredential().getSource(), getAuthCommand(getMongoCredential().getUserName()), connection,
+                        new SingleResultCallback<BsonDocument>() {
+                            @Override
+                            public void onResult(final BsonDocument nonceResult, final Throwable t) {
+                                if (t != null) {
+                                    callback.onResult(null, translateThrowable(t));
+                                } else {
+                                    callback.onResult(null, null);
+                                }
                             }
-                        }
-                    });
-        } catch (Throwable t) {
-            callback.onResult(null, t);
+                        });
+            } catch (Throwable t) {
+                callback.onResult(null, t);
+            }
         }
     }
 
@@ -82,6 +83,11 @@ class X509Authenticator extends SpeculativeAuthenticator {
     @Override
     public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
         this.speculativeAuthenticateResponse = response;
+    }
+
+    @Override
+    public BsonDocument getSpeculativeAuthenticateResponse() {
+        return speculativeAuthenticateResponse;
     }
 
     private BsonDocument getAuthCommand(final String userName) {

@@ -18,19 +18,15 @@ package com.mongodb.internal.connection;
 
 import org.bson.BsonDocument;
 
-public abstract class SpeculativeAuthenticator extends Authenticator {
+interface SpeculativeAuthenticator {
 
-    SpeculativeAuthenticator(final MongoCredentialWithCache credential) {
-        super(credential);
-    }
-
-    public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
+    default BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
         return null;
     }
 
-    public BsonDocument getSpeculativeAuthenticateResponse() {
+    default BsonDocument getSpeculativeAuthenticateResponse() {
         return null;
     }
 
-    public void setSpeculativeAuthenticateResponse(final BsonDocument response) {}
+    default void setSpeculativeAuthenticateResponse(final BsonDocument response) {}
 }

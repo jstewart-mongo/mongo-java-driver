@@ -33,10 +33,10 @@ import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeast
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsLessThanVersionFourDotZero;
 import static java.lang.String.format;
 
-class DefaultAuthenticator extends SpeculativeAuthenticator {
+class DefaultAuthenticator extends Authenticator implements SpeculativeAuthenticator {
     static final int USER_NOT_FOUND_CODE = 11;
     private static final BsonString DEFAULT_MECHANISM_NAME = new BsonString(SCRAM_SHA_256.getMechanismName());
-    private SpeculativeAuthenticator speculativeAuthenticator;
+    private Authenticator speculativeAuthenticator;
 
     DefaultAuthenticator(final MongoCredentialWithCache credential) {
         super(credential);
@@ -73,20 +73,21 @@ class DefaultAuthenticator extends SpeculativeAuthenticator {
     @Override
     public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
         speculativeAuthenticator = getAuthenticatorForIsMaster();
-        return speculativeAuthenticator != null ? speculativeAuthenticator.createSpeculativeAuthenticateCommand(connection) : null;
+        return speculativeAuthenticator != null
+                ? ((SpeculativeAuthenticator) speculativeAuthenticator).createSpeculativeAuthenticateCommand(connection) : null;
     }
 
     @Override
     public BsonDocument getSpeculativeAuthenticateResponse() {
         if (speculativeAuthenticator != null) {
-            return speculativeAuthenticator.getSpeculativeAuthenticateResponse();
+            return ((SpeculativeAuthenticator) speculativeAuthenticator).getSpeculativeAuthenticateResponse();
         }
         return null;
     }
 
     @Override
     public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
-        speculativeAuthenticator.setSpeculativeAuthenticateResponse(response);
+        ((SpeculativeAuthenticator) speculativeAuthenticator).setSpeculativeAuthenticateResponse(response);
     }
 
     private Authenticator getLegacyDefaultAuthenticator(final ConnectionDescription connectionDescription) {
@@ -97,7 +98,7 @@ class DefaultAuthenticator extends SpeculativeAuthenticator {
         }
     }
 
-    protected SpeculativeAuthenticator getAuthenticatorForIsMaster() {
+    protected Authenticator getAuthenticatorForIsMaster() {
         AuthenticationMechanism mechanism = getMongoCredential().getAuthenticationMechanism();
 
         if (mechanism == null) {
