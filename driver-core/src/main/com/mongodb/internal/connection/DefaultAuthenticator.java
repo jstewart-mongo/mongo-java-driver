@@ -25,7 +25,6 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 
-import static com.mongodb.AuthenticationMechanism.MONGODB_X509;
 import static com.mongodb.AuthenticationMechanism.SCRAM_SHA_1;
 import static com.mongodb.AuthenticationMechanism.SCRAM_SHA_256;
 import static com.mongodb.assertions.Assertions.isTrueArgument;
@@ -36,7 +35,7 @@ import static java.lang.String.format;
 class DefaultAuthenticator extends Authenticator implements SpeculativeAuthenticator {
     static final int USER_NOT_FOUND_CODE = 11;
     private static final BsonString DEFAULT_MECHANISM_NAME = new BsonString(SCRAM_SHA_256.getMechanismName());
-    private Authenticator speculativeAuthenticator;
+    private Authenticator updateAuthenticator;
 
     DefaultAuthenticator(final MongoCredentialWithCache credential) {
         super(credential);
@@ -50,8 +49,8 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
                     .authenticate(connection, connectionDescription);
         } else {
             try {
-                setSpeculativeAuthenticator(connectionDescription);
-                speculativeAuthenticator.authenticate(connection, connectionDescription);
+                setUpdateAuthenticator(connectionDescription);
+                updateAuthenticator.authenticate(connection, connectionDescription);
             } catch (Exception e) {
                 throw wrapException(e);
             }
@@ -65,29 +64,28 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
             getLegacyDefaultAuthenticator(connectionDescription)
                     .authenticateAsync(connection, connectionDescription, callback);
         } else {
-            setSpeculativeAuthenticator(connectionDescription);
-            speculativeAuthenticator.authenticateAsync(connection, connectionDescription, callback);
+            setUpdateAuthenticator(connectionDescription);
+            updateAuthenticator.authenticateAsync(connection, connectionDescription, callback);
         }
     }
 
     @Override
     public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
-        speculativeAuthenticator = getAuthenticatorForIsMaster();
-        return speculativeAuthenticator != null
-                ? ((SpeculativeAuthenticator) speculativeAuthenticator).createSpeculativeAuthenticateCommand(connection) : null;
+        updateAuthenticator = getAuthenticatorForIsMaster();
+        return ((SpeculativeAuthenticator) updateAuthenticator).createSpeculativeAuthenticateCommand(connection);
     }
 
     @Override
     public BsonDocument getSpeculativeAuthenticateResponse() {
-        if (speculativeAuthenticator != null) {
-            return ((SpeculativeAuthenticator) speculativeAuthenticator).getSpeculativeAuthenticateResponse();
+        if (updateAuthenticator != null) {
+            return ((SpeculativeAuthenticator) updateAuthenticator).getSpeculativeAuthenticateResponse();
         }
         return null;
     }
 
     @Override
     public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
-        ((SpeculativeAuthenticator) speculativeAuthenticator).setSpeculativeAuthenticateResponse(response);
+        ((SpeculativeAuthenticator) updateAuthenticator).setSpeculativeAuthenticateResponse(response);
     }
 
     private Authenticator getLegacyDefaultAuthenticator(final ConnectionDescription connectionDescription) {
@@ -98,26 +96,21 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
         }
     }
 
-    protected Authenticator getAuthenticatorForIsMaster() {
-        AuthenticationMechanism mechanism = getMongoCredential().getAuthenticationMechanism();
-
-        if (mechanism == null) {
-            return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_256));
-        } else if (mechanism.equals(SCRAM_SHA_1) || mechanism.equals(SCRAM_SHA_256)) {
-            return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
-        } else if (mechanism.equals(MONGODB_X509)) {
-            return new X509Authenticator(getMongoCredentialWithCache().withMechanism(mechanism));
-        }
-        return null;
+    Authenticator getAuthenticatorForIsMaster() {
+        return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_256));
     }
 
-    private void setSpeculativeAuthenticator(final ConnectionDescription connectionDescription) {
-        BsonArray saslSupportedMechanisms = connectionDescription.getSaslSupportedMechanisms();
-        AuthenticationMechanism mechanism = saslSupportedMechanisms == null || saslSupportedMechanisms.contains(DEFAULT_MECHANISM_NAME)
-                ? SCRAM_SHA_256 : SCRAM_SHA_1;
+    private void setUpdateAuthenticator(final ConnectionDescription connectionDescription) {
+        if (updateAuthenticator != null && ((SpeculativeAuthenticator) updateAuthenticator).getSpeculativeAuthenticateResponse() != null) {
+            return;
+        }
 
-        if (speculativeAuthenticator == null || speculativeAuthenticator.getMongoCredential().getAuthenticationMechanism() != mechanism) {
-            speculativeAuthenticator = new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
+        if (connectionDescription.getSaslSupportedMechanisms() != null)  {
+            BsonArray saslSupportedMechs = connectionDescription.getSaslSupportedMechanisms();
+            AuthenticationMechanism mechanism = saslSupportedMechs.contains(DEFAULT_MECHANISM_NAME) ? SCRAM_SHA_256 : SCRAM_SHA_1;
+            updateAuthenticator = new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
+        } else {
+            updateAuthenticator = getLegacyDefaultAuthenticator(connectionDescription);
         }
     }
 

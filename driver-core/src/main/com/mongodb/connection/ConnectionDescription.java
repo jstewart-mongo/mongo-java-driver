@@ -110,19 +110,6 @@ public class ConnectionDescription {
     public ConnectionDescription withConnectionId(final ConnectionId connectionId) {
         notNull("connectionId", connectionId);
         return new ConnectionDescription(connectionId, maxWireVersion, serverType, maxBatchCount, maxDocumentSize, maxMessageSize,
-                compressors);
-    }
-
-    /**
-     * Creates a new connection description with the supported SASL mechanisms
-     *
-     * @param saslSupportedMechanisms the supported SASL mechanisms
-     * @return the new connection description
-     * @since 4.1
-     */
-    public ConnectionDescription withSaslSupportedMechanisms(final BsonArray saslSupportedMechanisms) {
-        notNull("connectionId", connectionId);
-        return new ConnectionDescription(connectionId, maxWireVersion, serverType, maxBatchCount, maxDocumentSize, maxMessageSize,
                 compressors, saslSupportedMechanisms);
     }
 

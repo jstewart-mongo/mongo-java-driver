@@ -60,14 +60,12 @@ public final class DescriptionHelper {
                                                              final BsonDocument isMasterResult) {
         ConnectionDescription connectionDescription = new ConnectionDescription(connectionId,
                 getMaxWireVersion(isMasterResult), getServerType(isMasterResult), getMaxWriteBatchSize(isMasterResult),
-                getMaxBsonObjectSize(isMasterResult), getMaxMessageSizeBytes(isMasterResult), getCompressors(isMasterResult));
+                getMaxBsonObjectSize(isMasterResult), getMaxMessageSizeBytes(isMasterResult), getCompressors(isMasterResult),
+                isMasterResult.getArray("saslSupportedMechs", null));
         if (isMasterResult.containsKey("connectionId")) {
             ConnectionId newConnectionId =
                     connectionDescription.getConnectionId().withServerValue(isMasterResult.getNumber("connectionId").intValue());
             connectionDescription = connectionDescription.withConnectionId(newConnectionId);
-        }
-        if (isMasterResult.containsKey("saslSupportedMechs")) {
-            connectionDescription = connectionDescription.withSaslSupportedMechanisms(isMasterResult.getArray("saslSupportedMechs"));
         }
         return connectionDescription;
     }

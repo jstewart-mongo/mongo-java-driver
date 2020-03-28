@@ -44,7 +44,6 @@ import static com.mongodb.MongoCredential.createScramSha256Credential
 import static com.mongodb.internal.connection.ClientMetadataHelperSpecification.createExpectedClientMetadataDocument
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply
 import static com.mongodb.internal.connection.MessageHelper.decodeCommand
-import static org.junit.Assert.assertEquals
 
 class InternalStreamConnectionInitializerSpecification extends Specification {
 
@@ -279,7 +278,8 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
         }
         1 * ((SpeculativeAuthenticator) scramShaAuthenticator).createSpeculativeAuthenticateCommand(_)
         ((SpeculativeAuthenticator) scramShaAuthenticator).getSpeculativeAuthenticateResponse() == speculativeAuthenticateResponse
-        validateIsMasterCommand(firstClientChallenge, 'SCRAM-SHA-256', true)
+        def expectedIsMasterCommand = createIsMasterCommand(firstClientChallenge, 'SCRAM-SHA-256', true)
+        expectedIsMasterCommand == decodeCommand(internalConnection.getSent()[0])
 
         where:
         async << [false, false]
@@ -308,7 +308,8 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
         }
         1 * ((SpeculativeAuthenticator) authenticator).createSpeculativeAuthenticateCommand(_)
         ((SpeculativeAuthenticator) authenticator).getSpeculativeAuthenticateResponse() == speculativeAuthenticateResponse
-        validateIsMasterCommand(firstClientChallenge, 'SCRAM-SHA-256', false)
+        def expectedIsMasterCommand = createIsMasterCommand(firstClientChallenge, 'SCRAM-SHA-256', false)
+        expectedIsMasterCommand == decodeCommand(internalConnection.getSent()[0])
 
         where:
         async << [true, false]
@@ -337,7 +338,8 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
         }
         1 * ((SpeculativeAuthenticator) authenticator).createSpeculativeAuthenticateCommand(_)
         ((SpeculativeAuthenticator) authenticator).getSpeculativeAuthenticateResponse() == speculativeAuthenticateResponse
-        validateIsMasterCommand(firstClientChallenge, 'SCRAM-SHA-1', false)
+        def expectedIsMasterCommand = createIsMasterCommand(firstClientChallenge, 'SCRAM-SHA-1', false)
+        expectedIsMasterCommand == decodeCommand(internalConnection.getSent()[0])
 
         where:
         async << [true, false]
@@ -364,7 +366,8 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
         }
         1 * ((SpeculativeAuthenticator) authenticator).createSpeculativeAuthenticateCommand(_)
         ((SpeculativeAuthenticator) authenticator).getSpeculativeAuthenticateResponse() == speculativeAuthenticateResponse
-        validateIsMasterCommand('', 'MONGODB-X509', false)
+        def expectedIsMasterCommand = createIsMasterCommand('', 'MONGODB-X509', false)
+        expectedIsMasterCommand == decodeCommand(internalConnection.getSent()[0])
 
         where:
         async << [true, false]
@@ -384,7 +387,7 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
         ((SpeculativeAuthenticator) authenticator).getSpeculativeAuthenticateResponse() == null
         ((SpeculativeAuthenticator) authenticator)
                 .createSpeculativeAuthenticateCommand(internalConnection) == null
-        assertEquals(BsonDocument.parse('{ismaster: 1}'), decodeCommand(internalConnection.getSent()[0]))
+        BsonDocument.parse('{ismaster: 1}') == decodeCommand(internalConnection.getSent()[0])
 
         where:
         async << [true, false]
@@ -474,8 +477,8 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
         Base64.encode(string.getBytes(Charset.forName('UTF-8')))
     }
 
-    def validateIsMasterCommand(final String firstClientChallenge, final String mechanism,
-                                final boolean hasSaslSupportedMechs) {
+    def createIsMasterCommand(final String firstClientChallenge, final String mechanism,
+                              final boolean hasSaslSupportedMechs) {
         String isMaster = '{ismaster: 1, ' +
                 (hasSaslSupportedMechs ? 'saslSupportedMechs: "database.user", ' : '') +
                 (mechanism == 'MONGODB-X509' ?
@@ -485,7 +488,6 @@ class InternalStreamConnectionInitializerSpecification extends Specification {
                                 "mechanism: '${mechanism}', payload: BinData(0, '${encode64(firstClientChallenge)}'), " +
                                 'db: "admin", options: { skipEmptyExchange: true } } }')
 
-        assertEquals(BsonDocument.parse(isMaster), decodeCommand(internalConnection.getSent()[0]))
-        true
+        BsonDocument.parse(isMaster)
     }
 }
