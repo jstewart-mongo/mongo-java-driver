@@ -35,7 +35,7 @@ import static java.lang.String.format;
 class DefaultAuthenticator extends Authenticator implements SpeculativeAuthenticator {
     static final int USER_NOT_FOUND_CODE = 11;
     private static final BsonString DEFAULT_MECHANISM_NAME = new BsonString(SCRAM_SHA_256.getMechanismName());
-    private Authenticator updateAuthenticator;
+    private Authenticator delegate;
 
     DefaultAuthenticator(final MongoCredentialWithCache credential) {
         super(credential);
@@ -49,8 +49,8 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
                     .authenticate(connection, connectionDescription);
         } else {
             try {
-                setUpdateAuthenticator(connectionDescription);
-                updateAuthenticator.authenticate(connection, connectionDescription);
+                setDelegate(connectionDescription);
+                delegate.authenticate(connection, connectionDescription);
             } catch (Exception e) {
                 throw wrapException(e);
             }
@@ -64,28 +64,28 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
             getLegacyDefaultAuthenticator(connectionDescription)
                     .authenticateAsync(connection, connectionDescription, callback);
         } else {
-            setUpdateAuthenticator(connectionDescription);
-            updateAuthenticator.authenticateAsync(connection, connectionDescription, callback);
+            setDelegate(connectionDescription);
+            delegate.authenticateAsync(connection, connectionDescription, callback);
         }
     }
 
     @Override
     public BsonDocument createSpeculativeAuthenticateCommand(final InternalConnection connection) {
-        updateAuthenticator = getAuthenticatorForIsMaster();
-        return ((SpeculativeAuthenticator) updateAuthenticator).createSpeculativeAuthenticateCommand(connection);
+        delegate = getAuthenticatorForIsMaster();
+        return ((SpeculativeAuthenticator) delegate).createSpeculativeAuthenticateCommand(connection);
     }
 
     @Override
     public BsonDocument getSpeculativeAuthenticateResponse() {
-        if (updateAuthenticator != null) {
-            return ((SpeculativeAuthenticator) updateAuthenticator).getSpeculativeAuthenticateResponse();
+        if (delegate != null) {
+            return ((SpeculativeAuthenticator) delegate).getSpeculativeAuthenticateResponse();
         }
         return null;
     }
 
     @Override
     public void setSpeculativeAuthenticateResponse(final BsonDocument response) {
-        ((SpeculativeAuthenticator) updateAuthenticator).setSpeculativeAuthenticateResponse(response);
+        ((SpeculativeAuthenticator) delegate).setSpeculativeAuthenticateResponse(response);
     }
 
     private Authenticator getLegacyDefaultAuthenticator(final ConnectionDescription connectionDescription) {
@@ -100,17 +100,17 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
         return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_256));
     }
 
-    private void setUpdateAuthenticator(final ConnectionDescription connectionDescription) {
-        if (updateAuthenticator != null && ((SpeculativeAuthenticator) updateAuthenticator).getSpeculativeAuthenticateResponse() != null) {
+    private void setDelegate(final ConnectionDescription connectionDescription) {
+        if (delegate != null && ((SpeculativeAuthenticator) delegate).getSpeculativeAuthenticateResponse() != null) {
             return;
         }
 
         if (connectionDescription.getSaslSupportedMechanisms() != null)  {
             BsonArray saslSupportedMechs = connectionDescription.getSaslSupportedMechanisms();
             AuthenticationMechanism mechanism = saslSupportedMechs.contains(DEFAULT_MECHANISM_NAME) ? SCRAM_SHA_256 : SCRAM_SHA_1;
-            updateAuthenticator = new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
+            delegate = new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
         } else {
-            updateAuthenticator = getLegacyDefaultAuthenticator(connectionDescription);
+            delegate = getLegacyDefaultAuthenticator(connectionDescription);
         }
     }
 
