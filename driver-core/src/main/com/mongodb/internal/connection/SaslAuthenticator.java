@@ -128,11 +128,11 @@ abstract class SaslAuthenticator extends Authenticator implements SpeculativeAut
 
     private void getNextSaslResponseAsync(final SaslClient saslClient, final InternalConnection connection,
                                           final SingleResultCallback<Void> callback) {
-        BsonDocument authenticateResponse = getSpeculativeAuthenticateResponse();
+        BsonDocument response = getSpeculativeAuthenticateResponse();
         try {
-            if (authenticateResponse == null) {
-                byte[] response = (saslClient.hasInitialResponse() ? saslClient.evaluateChallenge(new byte[0]) : null);
-                sendSaslStartAsync(response, connection, new SingleResultCallback<BsonDocument>() {
+            if (response == null) {
+                byte[] serverResponse = (saslClient.hasInitialResponse() ? saslClient.evaluateChallenge(new byte[0]) : null);
+                sendSaslStartAsync(serverResponse, connection, new SingleResultCallback<BsonDocument>() {
                     @Override
                     public void onResult(final BsonDocument result, final Throwable t) {
                         if (t != null) {
@@ -144,15 +144,13 @@ abstract class SaslAuthenticator extends Authenticator implements SpeculativeAut
                         }
                     }
                 });
+            } else if (response.getBoolean("done").getValue()) {
+                verifySaslClientComplete(saslClient, response, callback);
             } else {
-                if (authenticateResponse.getBoolean("done").getValue()) {
-                    verifySaslClientComplete(saslClient, authenticateResponse, callback);
-                } else {
-                    new Continuator(saslClient, authenticateResponse, connection, callback).start();
-                }
+                new Continuator(saslClient, response, connection, callback).start();
             }
         } catch (Exception e) {
-            throw wrapException(e);
+            callback.onResult(null, wrapException(e));
         }
     }
 
