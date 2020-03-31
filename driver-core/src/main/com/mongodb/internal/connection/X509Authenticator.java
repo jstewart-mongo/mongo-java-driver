@@ -19,17 +19,21 @@ package com.mongodb.internal.connection;
 import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoSecurityException;
+import com.mongodb.diagnostics.logging.Logger;
+import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.connection.ConnectionDescription;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
 
+import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.CommandHelper.executeCommandAsync;
 import static com.mongodb.internal.operation.ServerVersionHelper.serverIsLessThanVersionThreeDotFour;
 
 class X509Authenticator extends Authenticator implements SpeculativeAuthenticator {
+    public static final Logger LOGGER = Loggers.getLogger("authenticator");
     private BsonDocument speculativeAuthenticateResponse;
 
     X509Authenticator(final MongoCredentialWithCache credential) {
@@ -56,6 +60,7 @@ class X509Authenticator extends Authenticator implements SpeculativeAuthenticato
         if (speculativeAuthenticateResponse != null) {
             callback.onResult(null, null);
         } else {
+            SingleResultCallback<Void> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
             try {
                 validateUserName(connectionDescription);
                 executeCommandAsync(getMongoCredential().getSource(), getAuthCommand(getMongoCredential().getUserName()), connection,
@@ -63,14 +68,14 @@ class X509Authenticator extends Authenticator implements SpeculativeAuthenticato
                             @Override
                             public void onResult(final BsonDocument nonceResult, final Throwable t) {
                                 if (t != null) {
-                                    callback.onResult(null, translateThrowable(t));
+                                    errHandlingCallback.onResult(null, translateThrowable(t));
                                 } else {
-                                    callback.onResult(null, null);
+                                    errHandlingCallback.onResult(null, null);
                                 }
                             }
                         });
             } catch (Throwable t) {
-                callback.onResult(null, t);
+                errHandlingCallback.onResult(null, t);
             }
         }
     }

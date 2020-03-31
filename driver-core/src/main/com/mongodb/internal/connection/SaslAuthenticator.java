@@ -20,6 +20,8 @@ import com.mongodb.MongoException;
 import com.mongodb.MongoInterruptedException;
 import com.mongodb.MongoSecurityException;
 import com.mongodb.ServerAddress;
+import com.mongodb.diagnostics.logging.Logger;
+import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.lang.Nullable;
 import com.mongodb.connection.ConnectionDescription;
@@ -34,10 +36,13 @@ import javax.security.sasl.SaslException;
 import java.security.PrivilegedAction;
 
 import static com.mongodb.MongoCredential.JAVA_SUBJECT_KEY;
+import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.CommandHelper.executeCommandAsync;
 
 abstract class SaslAuthenticator extends Authenticator implements SpeculativeAuthenticator {
+    public static final Logger LOGGER = Loggers.getLogger("authenticator");
+
     SaslAuthenticator(final MongoCredentialWithCache credential) {
         super(credential);
     }
@@ -129,6 +134,7 @@ abstract class SaslAuthenticator extends Authenticator implements SpeculativeAut
     private void getNextSaslResponseAsync(final SaslClient saslClient, final InternalConnection connection,
                                           final SingleResultCallback<Void> callback) {
         BsonDocument response = getSpeculativeAuthenticateResponse();
+        SingleResultCallback<Void> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
         try {
             if (response == null) {
                 byte[] serverResponse = (saslClient.hasInitialResponse() ? saslClient.evaluateChallenge(new byte[0]) : null);
@@ -136,18 +142,18 @@ abstract class SaslAuthenticator extends Authenticator implements SpeculativeAut
                     @Override
                     public void onResult(final BsonDocument result, final Throwable t) {
                         if (t != null) {
-                            callback.onResult(null, wrapException(t));
+                            errHandlingCallback.onResult(null, wrapException(t));
                         } else if (result.getBoolean("done").getValue()) {
-                            verifySaslClientComplete(saslClient, result, callback);
+                            verifySaslClientComplete(saslClient, result, errHandlingCallback);
                         } else {
-                            new Continuator(saslClient, result, connection, callback).start();
+                            new Continuator(saslClient, result, connection, errHandlingCallback).start();
                         }
                     }
                 });
             } else if (response.getBoolean("done").getValue()) {
-                verifySaslClientComplete(saslClient, response, callback);
+                verifySaslClientComplete(saslClient, response, errHandlingCallback);
             } else {
-                new Continuator(saslClient, response, connection, callback).start();
+                new Continuator(saslClient, response, connection, errHandlingCallback).start();
             }
         } catch (Exception e) {
             callback.onResult(null, wrapException(e));
