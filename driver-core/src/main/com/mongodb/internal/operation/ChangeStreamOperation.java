@@ -325,8 +325,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                         (AggregateResponseBatchCursor<RawBsonDocument>) wrapped.execute(binding);
                 return new ChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
                         setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(),
-                                source.getServerDescription().getMaxWireVersion(), cursor.isFirstBatchEmpty()),
-                        source.getServerDescription().getMaxWireVersion());
+                                cursor.getMaxWireVersion(), cursor.isFirstBatchEmpty()), cursor.getMaxWireVersion());
             }
         });
     }
@@ -349,8 +348,7 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
                             } else {
                                 callback.onResult(new AsyncChangeStreamBatchCursor<T>(ChangeStreamOperation.this, cursor, binding,
                                         setChangeStreamOptions(cursor.getPostBatchResumeToken(), cursor.getOperationTime(),
-                                                source.getServerDescription().getMaxWireVersion(), cursor.isFirstBatchEmpty()),
-                                        source.getServerDescription().getMaxWireVersion()), null);
+                                                cursor.getMaxWireVersion(), cursor.isFirstBatchEmpty()), cursor.getMaxWireVersion()), null);
                             }
                             source.release();
                         }

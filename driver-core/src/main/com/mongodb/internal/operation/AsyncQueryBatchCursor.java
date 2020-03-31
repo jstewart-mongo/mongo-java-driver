@@ -71,6 +71,7 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private volatile BsonDocument postBatchResumeToken;
     private volatile BsonTimestamp operationTime;
     private volatile boolean firstBatchEmpty;
+    private volatile int maxWireVersion = 0;
 
     /* protected by `this` */
     private boolean isOperationInProgress = false;
@@ -106,6 +107,9 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
             if (limitReached()) {
                 killCursor(connection);
             }
+        }
+        if (connection != null) {
+            this.maxWireVersion = connection.getDescription().getMaxWireVersion();
         }
     }
 
@@ -174,6 +178,11 @@ class AsyncQueryBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     @Override
     public boolean isFirstBatchEmpty() {
         return firstBatchEmpty;
+    }
+
+    @Override
+    public int getMaxWireVersion() {
+        return maxWireVersion;
     }
 
     private void next(final SingleResultCallback<List<T>> callback, final boolean tryNext) {

@@ -44,7 +44,6 @@ import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.internal.async.client.Fixture.getDefaultDatabaseName;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -102,7 +101,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         AsyncBatchCursor<ChangeStreamDocument<Document>> cursor = createChangeStreamCursor();
 
         insertOneDocument();
-        setFailPoint("getMore", 10107, true);
+        setFailPoint(new FailPoint("getMore", 10107));
         try {
             assertNotNull(getNextBatch(cursor));
         } finally {
@@ -131,29 +130,6 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         assertTrue(exceptionFound);
     }
 
-    //
-    // ChangeStream will not attempt to resume after encountering error code 11601 (Interrupted), 136 (CappedPositionLost),
-    // or 237 (CursorKilled) while executing a getMore command.
-    //
-    @Test
-    public void testNoResumeErrors() {
-        assumeTrue(serverVersionAtLeast(4, 0));
-        AsyncBatchCursor<ChangeStreamDocument<Document>> cursor = createChangeStreamCursor();
-        insertOneDocument();
-
-        for (int errCode : asList(136, 237, 11601)) {
-            try {
-                setFailPoint("getMore", errCode, false);
-                getNextBatch(cursor);
-            } catch (MongoException e) {
-                assertEquals(errCode, e.getCode());
-            } finally {
-                disableFailPoint();
-            }
-        }
-        cursor.close();
-    }
-
     private void insertOneDocument() {
         FutureResultCallback<InsertOneResult> callback = new FutureResultCallback<>();
         collection.insertOne(Document.parse("{ x: 1 }"), callback);
@@ -178,15 +154,30 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         return futureResult(callback);
     }
 
-    private void setFailPoint(final String command, final int errCode, final boolean addResumableChangeStreamError) {
+    class FailPoint {
+        private String command;
+        private int    errCode;
+
+        FailPoint(final String command, final int errCode) {
+            this.command = command;
+            this.errCode = errCode;
+        }
+
+        public String getCommand() {
+            return command;
+        }
+
+        public int getErrCode() {
+            return errCode;
+        }
+    }
+
+    private void setFailPoint(final FailPoint failPoint) {
         failPointDocument = new BsonDocument("configureFailPoint", new BsonString("failCommand"))
                 .append("mode", new BsonDocument("times", new BsonInt32(1)))
-                .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(command))))
-                        .append("errorCode", new BsonInt32(errCode)));
-        if (addResumableChangeStreamError) {
-            failPointDocument.getDocument("data")
-                    .append("errorLabels", new BsonArray(asList(new BsonString("ResumableChangeStreamError"))));
-        }
+                .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(failPoint.getCommand()))))
+                        .append("errorCode", new BsonInt32(failPoint.getErrCode()))
+                        .append("errorLabels", new BsonArray(asList(new BsonString("ResumableChangeStreamError")))));
         collectionHelper.runAdminCommand(failPointDocument);
     }
 

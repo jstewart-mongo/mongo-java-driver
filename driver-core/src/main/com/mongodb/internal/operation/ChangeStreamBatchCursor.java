@@ -142,6 +142,11 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
         return wrapped.isFirstBatchEmpty();
     }
 
+    @Override
+    public int getMaxWireVersion() {
+        return maxWireVersion;
+    }
+
     private void cachePostBatchResumeToken(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
         if (queryBatchCursor.getPostBatchResumeToken() != null) {
             resumeToken = queryBatchCursor.getPostBatchResumeToken();
