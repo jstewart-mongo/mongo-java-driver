@@ -18,6 +18,7 @@ package com.mongodb.internal.bulk;
 
 import com.mongodb.client.model.Collation;
 import org.bson.BsonDocument;
+import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -30,6 +31,8 @@ public final class DeleteRequest extends WriteRequest {
     private final BsonDocument filter;
     private boolean isMulti = true;
     private Collation collation;
+    private Bson hint;
+    private String hintString;
 
     /**
      * Construct a new instance.
@@ -92,6 +95,50 @@ public final class DeleteRequest extends WriteRequest {
      */
     public DeleteRequest collation(final Collation collation) {
         this.collation = collation;
+        return this;
+    }
+
+    /**
+     * Returns the hint for which index to use. The default is not to set a hint.
+     *
+     * @return the hint
+     */
+    public Bson getHint() {
+        return hint;
+    }
+
+    /**
+     * Sets the hint for which index to use. A null value means no hint is set.
+     *
+     * @param hint the hint
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.4
+     */
+    public DeleteRequest hint(final Bson hint) {
+        this.hint = hint;
+        return this;
+    }
+
+    /**
+     * Gets the hint string to apply.
+     *
+     * @return the hint string, which should be the name of an existing index
+     */
+    public String getHintString() {
+        return hintString;
+    }
+
+    /**
+     * Sets the hint to apply.
+     *
+     * @param hint the name of the index which should be used for the operation
+     * @return this
+     * @since 4.1
+     * @mongodb.server.release 4.4
+     */
+    public DeleteRequest hintString(final String hint) {
+        this.hintString = hint;
         return this;
     }
 

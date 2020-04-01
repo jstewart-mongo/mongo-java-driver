@@ -16,6 +16,7 @@
 
 package com.mongodb.internal.operation;
 
+import com.mongodb.MongoClientException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.Collation;
@@ -23,11 +24,13 @@ import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import com.mongodb.internal.session.SessionContext;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.FieldNameValidator;
 import org.bson.codecs.Decoder;
+import org.bson.conversions.Bson;
 
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +39,7 @@ import static com.mongodb.internal.operation.CommandOperationHelper.CommandCreat
 import static com.mongodb.internal.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.internal.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.internal.operation.OperationHelper.validateCollation;
+import static com.mongodb.internal.operation.ServerVersionHelper.serverIsLessThanVersionFourDotTwo;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -51,6 +55,8 @@ public class FindAndDeleteOperation<T> extends BaseFindAndModifyOperation<T> {
     private BsonDocument sort;
     private long maxTimeMS;
     private Collation collation;
+    private Bson hint;
+    private String hintString;
 
     /**
      * Construct a new instance.
@@ -205,6 +211,52 @@ public class FindAndDeleteOperation<T> extends BaseFindAndModifyOperation<T> {
         return this;
     }
 
+    /**
+     * Returns the hint for which index to use. The default is not to set a hint.
+     *
+     * @return the hint
+     * @since 4.1
+     */
+    @Nullable
+    public Bson getHint() {
+        return hint;
+    }
+
+    /**
+     * Sets the hint for which index to use. A null value means no hint is set.
+     *
+     * @param hint the hint
+     * @return this
+     * @since 4.1
+     */
+    public FindAndDeleteOperation<T> hint(@Nullable final Bson hint) {
+        this.hint = hint;
+        return this;
+    }
+
+    /**
+     * Gets the hint string to apply.
+     *
+     * @return the hint string, which should be the name of an existing index
+     * @since 4.1
+     */
+    @Nullable
+    public String getHintString() {
+        return hintString;
+    }
+
+    /**
+     * Sets the hint to apply.
+     *
+     * @param hint the name of the index which should be used for the operation
+     * @return this
+     * @since 4.1
+     */
+    public FindAndDeleteOperation<T> hintString(@Nullable final String hint) {
+        this.hintString = hint;
+        return this;
+    }
+
     @Override
     protected String getDatabaseName() {
         return getNamespace().getDatabaseName();
@@ -232,6 +284,16 @@ public class FindAndDeleteOperation<T> extends BaseFindAndModifyOperation<T> {
         addWriteConcernToCommand(connectionDescription, commandDocument, sessionContext);
         if (collation != null) {
             commandDocument.put("collation", collation.asDocument());
+        }
+        if (hint != null || hintString != null) {
+            if (serverIsLessThanVersionFourDotTwo(connectionDescription)) {
+                throw new MongoClientException("Specifying a value for the hint option requires a minimum MongoDB version of 4.2");
+            }
+            if (hint != null) {
+                commandDocument.put("hint", hint.toBsonDocument(BsonDocument.class, null));
+            } else {
+                commandDocument.put("hint", new BsonString(hintString));
+            }
         }
         addTxnNumberToCommand(serverDescription, connectionDescription, commandDocument, sessionContext);
         return commandDocument;
