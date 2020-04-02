@@ -206,12 +206,16 @@ class SyncMongoDatabase implements MongoDatabase {
 
     @Override
     public void createCollection(final String collectionName, final CreateCollectionOptions createCollectionOptions) {
-        throw new UnsupportedOperationException();
+        SingleResultSubscriber<Void> subscriber = new SingleResultSubscriber<>();
+        wrapped.createCollection(collectionName).subscribe(subscriber);
+        subscriber.get();
     }
 
     @Override
     public void createCollection(final ClientSession clientSession, final String collectionName) {
-        throw new UnsupportedOperationException();
+        SingleResultSubscriber<Void> subscriber = new SingleResultSubscriber<>();
+        wrapped.createCollection(unwrap(clientSession), collectionName).subscribe(subscriber);
+        subscriber.get();
     }
 
     @Override
