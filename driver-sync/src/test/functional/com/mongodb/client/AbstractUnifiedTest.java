@@ -67,6 +67,7 @@ import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static com.mongodb.client.Fixture.getDefaultDatabaseName;
+import static com.mongodb.client.Fixture.getMongoClient;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -479,10 +480,7 @@ public abstract class AbstractUnifiedTest {
     }
 
     private boolean collectionExists(final String databaseName, final String collectionName) {
-        try (MongoClient client = MongoClients.create(MongoClientSettings.builder()
-                .applyConnectionString(connectionString).build())) {
-            return client.getDatabase(databaseName).listCollectionNames().into(new ArrayList<String>()).contains(collectionName);
-        }
+        return getMongoClient().getDatabase(databaseName).listCollectionNames().into(new ArrayList<String>()).contains(collectionName);
     }
 
     private void assertIndexExists(final BsonDocument operation, final boolean shouldExist) {
@@ -494,17 +492,9 @@ public abstract class AbstractUnifiedTest {
     }
 
     private boolean indexExists(final String databaseName, final String collectionName, final String indexName) {
-        try (MongoClient client = MongoClients.create(MongoClientSettings.builder()
-                .applyConnectionString(connectionString).build())) {
-            ArrayList<Document> indexes = client.getDatabase(databaseName).getCollection(collectionName).listIndexes()
-                    .into(new ArrayList<Document>());
-            for (Document index : indexes) {
-                if (index.get("name").toString().equals(indexName)) {
-                    return true;
-                }
-            }
-            return false;
-        }
+        ArrayList<Document> indexes = getMongoClient().getDatabase(databaseName).getCollection(collectionName).listIndexes()
+                .into(new ArrayList<Document>());
+        return indexes.stream().anyMatch(document -> document.get("name").equals(indexName));
     }
 
     private boolean assertExceptionState(final RuntimeException e, final BsonValue expectedResult, final String operationName) {

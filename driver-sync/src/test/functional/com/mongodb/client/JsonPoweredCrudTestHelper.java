@@ -79,7 +79,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -121,8 +120,12 @@ public class JsonPoweredCrudTestHelper {
         String methodName = createMethodName(operation.getString("name").getValue(),
                 operation.getString("object", new BsonString("")).getValue());
         try {
-            Method method = getClass().getDeclaredMethod(methodName, BsonDocument.class, BsonDocument.class, ClientSession.class);
-            return (BsonDocument) method.invoke(this, collectionOptions, arguments, clientSession);
+            if (methodName.equals("getDatabaseCreateCollectionResult") || methodName.equals("getDatabaseDropCollectionResult")) {
+                return (BsonDocument) getClass().getDeclaredMethod(methodName, BsonDocument.class, ClientSession.class)
+                        .invoke(this, arguments, clientSession);
+            }
+            return (BsonDocument) getClass().getDeclaredMethod(methodName, BsonDocument.class, BsonDocument.class, ClientSession.class)
+                    .invoke(this, collectionOptions, arguments, clientSession);
         } catch (NoSuchMethodException e) {
             throw new UnsupportedOperationException("No handler for operation " + methodName);
         } catch (InvocationTargetException e) {
@@ -387,8 +390,7 @@ public class JsonPoweredCrudTestHelper {
         return toResult("result", new BsonString(index));
     }
 
-    BsonDocument getDatabaseCreateCollectionResult(final BsonDocument collectionOptions, final BsonDocument arguments,
-                                                   @Nullable final ClientSession clientSession) {
+    BsonDocument getDatabaseCreateCollectionResult(final BsonDocument arguments, @Nullable final ClientSession clientSession) {
         String index;
         if (clientSession == null) {
             database.createCollection(arguments.getString("collection").getValue());
@@ -408,8 +410,7 @@ public class JsonPoweredCrudTestHelper {
         return new BsonDocument("ok", new BsonInt32(1));
     }
 
-    BsonDocument getDatabaseDropCollectionResult(final BsonDocument collectionOptions, final BsonDocument arguments,
-                                                 @Nullable final ClientSession clientSession) {
+    BsonDocument getDatabaseDropCollectionResult(final BsonDocument arguments, @Nullable final ClientSession clientSession) {
         if (clientSession == null) {
             database.getCollection(arguments.getString("collection").getValue()).drop();
         } else {
