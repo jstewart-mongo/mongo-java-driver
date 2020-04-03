@@ -20,8 +20,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.WriteConcern;
 import com.mongodb.internal.bulk.DeleteRequest;
 import com.mongodb.internal.bulk.WriteRequest;
-import com.mongodb.lang.Nullable;
-import org.bson.conversions.Bson;
 
 import java.util.List;
 
@@ -35,8 +33,6 @@ import static com.mongodb.assertions.Assertions.notNull;
  */
 public class DeleteOperation extends BaseWriteOperation {
     private final List<DeleteRequest> deleteRequests;
-    private Bson hint;
-    private String hintString;
 
     /**
      * Construct an instance.
@@ -75,52 +71,6 @@ public class DeleteOperation extends BaseWriteOperation {
      */
     public List<DeleteRequest> getDeleteRequests() {
         return deleteRequests;
-    }
-
-    /**
-     * Returns the hint for which index to use. The default is not to set a hint.
-     *
-     * @return the hint
-     * @since 4.1
-     */
-    @Nullable
-    public Bson getHint() {
-        return hint;
-    }
-
-    /**
-     * Sets the hint for which index to use. A null value means no hint is set.
-     *
-     * @param hint the hint
-     * @return this
-     * @since 4.1
-     */
-    public DeleteOperation hint(@Nullable final Bson hint) {
-        this.hint = hint;
-        return this;
-    }
-
-    /**
-     * Gets the hint string to apply.
-     *
-     * @return the hint string, which should be the name of an existing index
-     * @since 4.1
-     */
-    @Nullable
-    public String getHintString() {
-        return hintString;
-    }
-
-    /**
-     * Sets the hint to apply.
-     *
-     * @param hint the name of the index which should be used for the operation
-     * @return this
-     * @since 4.1
-     */
-    public DeleteOperation hintString(@Nullable final String hint) {
-        this.hintString = hint;
-        return this;
     }
 
     @Override
