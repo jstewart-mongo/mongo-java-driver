@@ -284,6 +284,7 @@ public final class CommandMonitoringTestHelper {
             if (pipelineDocument.asDocument().containsKey("$changeStream")) {
                 pipelineDocument.asDocument().getDocument("$changeStream").remove("fullDocument");
                 pipelineDocument.asDocument().getDocument("$changeStream").remove("startAtOperationTime");
+                pipelineDocument.asDocument().getDocument("$changeStream").remove("resumeAfter");
                 break;
             }
         }
