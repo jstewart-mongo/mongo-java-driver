@@ -282,6 +282,7 @@ public final class CommandMonitoringTestHelper {
         for (BsonValue pipelineDocument : pipeline) {
             if (pipelineDocument.asDocument().containsKey("$changeStream")) {
                 pipelineDocument.asDocument().getDocument("$changeStream").remove("resumeAfter");
+                pipelineDocument.asDocument().getDocument("$changeStream").remove("startAtOperationTime");
                 break;
             }
         }
