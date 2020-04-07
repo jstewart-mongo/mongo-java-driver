@@ -265,25 +265,12 @@ public final class CommandMonitoringTestHelper {
     // startAtOperationTime and resumeAfter fields from the actual pipeline value.
     private static void massagePipeline(final BsonDocument command, final BsonDocument expectedCommand) {
         if (expectedCommand.containsKey("pipeline") && command.containsKey("pipeline")) {
-            BsonArray pipeline = expectedCommand.getArray("pipeline");
-            for (BsonValue expectedPipelineDocument : pipeline) {
-                if (expectedPipelineDocument.asDocument().containsKey("$changeStream")) {
-                    BsonDocument changeStream = expectedPipelineDocument.asDocument().getDocument("$changeStream");
-                    if (changeStream.isEmpty()) {
-                        clearChangeStreamDocument(command);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void clearChangeStreamDocument(final BsonDocument command) {
-        BsonArray pipeline = command.getArray("pipeline");
-        for (BsonValue pipelineDocument : pipeline) {
-            if (pipelineDocument.asDocument().containsKey("$changeStream")) {
-                pipelineDocument.asDocument().getDocument("$changeStream").remove("resumeAfter");
-                pipelineDocument.asDocument().getDocument("$changeStream").remove("startAtOperationTime");
-                break;
+            BsonDocument expectedChangeStreamDocument = expectedCommand.getArray("pipeline").get(0).asDocument();
+            if (expectedChangeStreamDocument.containsKey("$changeStream")
+                    && expectedChangeStreamDocument.getDocument("$changeStream").isEmpty()) {
+                BsonDocument actualChangeStreamDocument = command.getArray("pipeline").get(0).asDocument().getDocument("$changeStream");
+                actualChangeStreamDocument.remove("resumeAfter");
+                actualChangeStreamDocument.remove("startAtOperationTime");
             }
         }
     }
