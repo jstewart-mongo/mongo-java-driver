@@ -66,7 +66,6 @@ import static com.mongodb.ClusterFixture.isStandalone;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
 import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
-import static com.mongodb.client.Fixture.getDefaultDatabaseName;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -100,11 +99,6 @@ public abstract class AbstractUnifiedTest {
     private MongoDatabase database;
 
     private static final long MIN_HEARTBEAT_FREQUENCY_MS = 50L;
-
-    public AbstractUnifiedTest(final String filename, final String description, final BsonArray data, final BsonDocument definition,
-                               final boolean skipTest) {
-        this(filename, description, getDefaultDatabaseName(), "test", data, definition, skipTest);
-    }
 
     public AbstractUnifiedTest(final String filename, final String description, final String databaseName, final String collectionName,
                                final BsonArray data, final BsonDocument definition, final boolean skipTest) {

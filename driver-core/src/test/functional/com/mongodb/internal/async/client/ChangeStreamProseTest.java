@@ -101,7 +101,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         AsyncBatchCursor<ChangeStreamDocument<Document>> cursor = createChangeStreamCursor();
 
         insertOneDocument();
-        setFailPoint(new FailPoint("getMore", 10107));
+        setFailPoint("getMore", 10107);
         try {
             assertNotNull(getNextBatch(cursor));
         } finally {
@@ -154,29 +154,11 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         return futureResult(callback);
     }
 
-    class FailPoint {
-        private String command;
-        private int    errCode;
-
-        FailPoint(final String command, final int errCode) {
-            this.command = command;
-            this.errCode = errCode;
-        }
-
-        public String getCommand() {
-            return command;
-        }
-
-        public int getErrCode() {
-            return errCode;
-        }
-    }
-
-    private void setFailPoint(final FailPoint failPoint) {
+    private void setFailPoint(final String command, final int errCode) {
         failPointDocument = new BsonDocument("configureFailPoint", new BsonString("failCommand"))
                 .append("mode", new BsonDocument("times", new BsonInt32(1)))
-                .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(failPoint.getCommand()))))
-                        .append("errorCode", new BsonInt32(failPoint.getErrCode()))
+                .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(command))))
+                        .append("errorCode", new BsonInt32(errCode))
                         .append("errorLabels", new BsonArray(asList(new BsonString("ResumableChangeStreamError")))));
         collectionHelper.runAdminCommand(failPointDocument);
     }

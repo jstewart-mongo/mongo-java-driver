@@ -150,7 +150,7 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         assumeTrue(serverVersionAtLeast(4, 0));
         MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
         collection.insertOne(Document.parse("{ x: 1 }"));
-        setFailPoint(new FailPoint("getMore", 10107));
+        setFailPoint("getMore", 10107);
         try {
             assertNotNull(cursor.next());
         } finally {
@@ -418,29 +418,11 @@ public class ChangeStreamProseTest extends DatabaseTestCase {
         }
     }
 
-    class FailPoint {
-        private String command;
-        private int    errCode;
-
-        FailPoint(final String command, final int errCode) {
-            this.command = command;
-            this.errCode = errCode;
-        }
-
-        public String getCommand() {
-            return command;
-        }
-
-        public int getErrCode() {
-            return errCode;
-        }
-    }
-
-    private void setFailPoint(final FailPoint failPoint) {
+    private void setFailPoint(final String command, final int errCode) {
         failPointDocument = new BsonDocument("configureFailPoint", new BsonString("failCommand"))
                 .append("mode", new BsonDocument("times", new BsonInt32(1)))
-                .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(failPoint.getCommand()))))
-                        .append("errorCode", new BsonInt32(failPoint.getErrCode()))
+                .append("data", new BsonDocument("failCommands", new BsonArray(asList(new BsonString(command))))
+                        .append("errorCode", new BsonInt32(errCode))
                         .append("errorLabels", new BsonArray(asList(new BsonString("ResumableChangeStreamError")))));
         getCollectionHelper().runAdminCommand(failPointDocument);
     }

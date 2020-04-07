@@ -406,7 +406,10 @@ public class ChangeStreamOperation<T> implements AsyncReadOperation<AsyncBatchCu
             @Override
             public BsonArray create(final ConnectionDescription description, final SessionContext sessionContext) {
                 List<BsonDocument> changeStreamPipeline = new ArrayList<BsonDocument>();
-                BsonDocument changeStream = new BsonDocument("fullDocument", new BsonString(fullDocument.getValue()));
+                BsonDocument changeStream = new BsonDocument();
+                if (fullDocument != FullDocument.DEFAULT) {
+                    changeStream.append("fullDocument", new BsonString(fullDocument.getValue()));
+                }
 
                 if (changeStreamLevel == ChangeStreamLevel.CLIENT) {
                     changeStream.append("allChangesForCluster", BsonBoolean.TRUE);

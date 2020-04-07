@@ -76,7 +76,8 @@ public final class CommandMonitoringTestHelper {
             String commandName = eventDescriptionDocument.getString("command_name", new BsonString("")).getValue();
             if (eventType.equals("command_started_event")) {
                 BsonDocument commandDocument = eventDescriptionDocument.getDocument("command");
-                String actualDatabaseName = databaseName;
+                String actualDatabaseName = eventDescriptionDocument.containsKey("database_name")
+                        ? eventDescriptionDocument.getString("database_name").getValue() : databaseName;
                 // If the spec test supplies a $db field in the command, then use that database.
                 if (commandDocument.containsKey("$db")) {
                     actualDatabaseName = commandDocument.getString("$db").getValue();
@@ -260,17 +261,15 @@ public final class CommandMonitoringTestHelper {
 
     }
 
-    // SPEC-1350 introduced a change that made the fullDocument field optional. In some change stream tests, the
-    // expected $changeStream document in a pipeline is an empty document whereas the Java driver adds
-    // FullDocument.DEFAULT by default to the $changeStream document. This method will remove the fullDocument
-    // field from the $changeStream document in the pipeline.
+    // If the expected pipeline contains a $changeStream key with an empty document value, remove the
+    // startAtOperationTime and resumeAfter fields from the actual pipeline value.
     private static void massagePipeline(final BsonDocument command, final BsonDocument expectedCommand) {
         if (expectedCommand.containsKey("pipeline") && command.containsKey("pipeline")) {
             BsonArray pipeline = expectedCommand.getArray("pipeline");
             for (BsonValue expectedPipelineDocument : pipeline) {
                 if (expectedPipelineDocument.asDocument().containsKey("$changeStream")) {
                     BsonDocument changeStream = expectedPipelineDocument.asDocument().getDocument("$changeStream");
-                    if (!changeStream.containsKey("fullDocument")) {
+                    if (changeStream.isEmpty()) {
                         clearChangeStreamDocument(command);
                     }
                 }
@@ -282,8 +281,6 @@ public final class CommandMonitoringTestHelper {
         BsonArray pipeline = command.getArray("pipeline");
         for (BsonValue pipelineDocument : pipeline) {
             if (pipelineDocument.asDocument().containsKey("$changeStream")) {
-                pipelineDocument.asDocument().getDocument("$changeStream").remove("fullDocument");
-                pipelineDocument.asDocument().getDocument("$changeStream").remove("startAtOperationTime");
                 pipelineDocument.asDocument().getDocument("$changeStream").remove("resumeAfter");
                 break;
             }
