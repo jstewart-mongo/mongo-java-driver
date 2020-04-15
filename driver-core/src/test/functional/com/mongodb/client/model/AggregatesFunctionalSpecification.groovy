@@ -22,6 +22,11 @@ import com.mongodb.OperationFunctionalSpecification
 import org.bson.BsonDocument
 import org.bson.BsonString
 import org.bson.Document
+import org.bson.codecs.BsonValueCodecProvider
+import org.bson.codecs.DocumentCodecProvider
+import org.bson.codecs.IterableCodecProvider
+import org.bson.codecs.ValueCodecProvider
+import org.bson.codecs.configuration.CodecRegistries
 import org.bson.conversions.Bson
 import spock.lang.IgnoreIf
 
@@ -36,6 +41,7 @@ import static com.mongodb.client.model.Accumulators.push
 import static com.mongodb.client.model.Accumulators.stdDevPop
 import static com.mongodb.client.model.Accumulators.stdDevSamp
 import static com.mongodb.client.model.Accumulators.sum
+import static com.mongodb.client.model.Aggregates.accumulator
 import static com.mongodb.client.model.Aggregates.addFields
 import static com.mongodb.client.model.Aggregates.bucket
 import static com.mongodb.client.model.Aggregates.bucketAuto
@@ -782,6 +788,46 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         then:
         results == [Document.parse('{_id: 1, count: 2}'),
                     Document.parse('{_id: 0, count: 1}')]
+
+        cleanup:
+        helper?.drop()
+    }
+
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) })
+    def '$accumulator'() {
+        given:
+        def helper = getCollectionHelper()
+        def registry = CodecRegistries.fromProviders(new BsonValueCodecProvider(),
+                new IterableCodecProvider(),
+                new ValueCodecProvider(),
+                new DocumentCodecProvider())
+
+        when:
+        helper.drop()
+        helper.insertDocuments(Document.parse('{_id: 8751, title: "The Banquet", author: "Dante", copies: 2}'),
+                Document.parse('{_id: 8752, title: "Divine Comedy", author: "Dante", copies: 1}'),
+                Document.parse('{_id: 8645, title: "Eclogues", author: "Dante", copies: 2}'),
+                Document.parse('{_id: 7000, title: "The Odyssey", author: "Homer", copies: 10}'),
+                Document.parse('{_id: 7020, title: "Iliad", author: "Homer", copies: 10}'))
+        def initFunction = 'function() { return { count : 0, sum : 0 } }';
+        def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
+        def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }';
+        def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
+        def accumulatorExpression = accumulator(asList(new Field('init', initFunction),
+                new Field('accumulate', accumulateFunction),
+                new Field('accumulateArgs', [ '$copies' ]),
+                new Field('merge', mergeFunction),
+                new Field('finalize', finalizeFunction),
+                new Field('lang', 'js'))).toBsonDocument(BsonDocument, registry)
+        def results = helper.aggregate([group('$author', asList(
+                new BsonField('minCopies', new Document('$min', '$copies')),
+                new BsonField('avgCopies', accumulatorExpression),
+                new BsonField('maxCopies', new Document('$max', '$copies'))))])
+
+        then:
+        results.size() == 2
+        results.contains(Document.parse('{_id: "Dante", minCopies: 1, avgCopies: 1.6666666666666667, maxCopies : 2}'))
+        results.contains(Document.parse('{_id: "Homer", minCopies: 10, avgCopies: 10.0, maxCopies : 10}'))
 
         cleanup:
         helper?.drop()
