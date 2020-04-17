@@ -39,6 +39,7 @@ import static com.mongodb.internal.connection.ClusterDescriptionHelper.getAnyPri
 import static com.mongodb.internal.connection.ClusterDescriptionHelper.getPrimaries;
 import static com.mongodb.internal.connection.ClusterDescriptionHelper.getSecondaries;
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -52,17 +53,20 @@ public abstract class TaggableReadPreference extends ReadPreference {
 
     private final List<TagSet> tagSetList = new ArrayList<TagSet>();
     private final Long maxStalenessMS;
+    private boolean hedgedReads;
 
     TaggableReadPreference() {
         this.maxStalenessMS = null;
     }
 
-    TaggableReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+    TaggableReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit,
+                           final boolean hedgedReads) {
         notNull("tagSetList", tagSetList);
         isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
         this.maxStalenessMS = maxStaleness == null ? null : MILLISECONDS.convert(maxStaleness, timeUnit);
 
         this.tagSetList.addAll(tagSetList);
+        this.hedgedReads = hedgedReads;
     }
 
     @Override
@@ -118,12 +122,27 @@ public abstract class TaggableReadPreference extends ReadPreference {
         return timeUnit.convert(maxStalenessMS, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Gets whether hedged reads are enabled in the server.
+     * <p>
+     * A hedged read is a server mode in which the same query is dispatched in parallel to multiple replica set members.
+     * </p>
+     * @return true if hedged reads are enabled in the server
+     * @mongodb.server.release 4.4
+     * @since 4.1
+     */
+    @Nullable
+    public boolean getHedgedReads() {
+        return hedgedReads;
+    }
+
     @Override
     public String toString() {
         return "ReadPreference{"
                        + "name=" + getName()
                        + (tagSetList.isEmpty() ? "" : ", tagSetList=" + tagSetList)
                        + (maxStalenessMS == null ? "" : ", maxStalenessMS=" + maxStalenessMS)
+                       + ", hedgedReads=" + hedgedReads
                        + '}';
     }
 
@@ -144,6 +163,9 @@ public abstract class TaggableReadPreference extends ReadPreference {
         if (!tagSetList.equals(that.tagSetList)) {
             return false;
         }
+        if (hedgedReads != that.hedgedReads) {
+            return false;
+        }
 
         return true;
     }
@@ -153,6 +175,7 @@ public abstract class TaggableReadPreference extends ReadPreference {
         int result = tagSetList.hashCode();
         result = 31 * result + getName().hashCode();
         result = 31 * result + (maxStalenessMS != null ? maxStalenessMS.hashCode() : 0);
+        result = 31 * result + (hedgedReads ? 1 : 0);
         return result;
     }
 
@@ -286,7 +309,34 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         SecondaryReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit) {
-            super(tagSetList, maxStaleness, timeUnit);
+            this(tagSetList, maxStaleness, timeUnit, false);
+        }
+
+        SecondaryReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit,
+                                final boolean hedgedReads) {
+            super(tagSetList, maxStaleness, timeUnit, hedgedReads);
+        }
+
+        @Override
+        public SecondaryReadPreference withTagSet(final TagSet tagSet) {
+            return withTagSetList(singletonList(tagSet));
+        }
+
+        @Override
+        public SecondaryReadPreference withTagSetList(final List<TagSet> tagSetList) {
+            notNull("tagSetList", tagSetList);
+            return new SecondaryReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgedReads());
+        }
+
+        @Override
+        public SecondaryReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+            isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
+            return new SecondaryReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgedReads());
+        }
+
+        @Override
+        public SecondaryReadPreference withHedgedReads(final boolean hedgedReads) {
+            return new SecondaryReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgedReads);
         }
 
         @Override
@@ -320,7 +370,34 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         SecondaryPreferredReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit) {
-            super(tagSetList, maxStaleness, timeUnit);
+            this(tagSetList, maxStaleness, timeUnit, false);
+        }
+
+        SecondaryPreferredReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit,
+                                         final boolean hedgedReads) {
+            super(tagSetList, maxStaleness, timeUnit, hedgedReads);
+        }
+
+        @Override
+        public SecondaryPreferredReadPreference withTagSet(final TagSet tagSet) {
+            return withTagSetList(singletonList(tagSet));
+        }
+
+        @Override
+        public SecondaryPreferredReadPreference withTagSetList(final List<TagSet> tagSetList) {
+            notNull("tagSetList", tagSetList);
+            return new SecondaryPreferredReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgedReads());
+        }
+
+        @Override
+        public SecondaryPreferredReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+            isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
+            return new SecondaryPreferredReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgedReads());
+        }
+
+        @Override
+        public SecondaryPreferredReadPreference withHedgedReads(final boolean hedgedReads) {
+            return new SecondaryPreferredReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgedReads);
         }
 
         @Override
@@ -346,9 +423,35 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         NearestReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit) {
-            super(tagSetList, maxStaleness, timeUnit);
+            this(tagSetList, maxStaleness, timeUnit, false);
         }
 
+        NearestReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit,
+                              final boolean hedgedReads) {
+            super(tagSetList, maxStaleness, timeUnit, hedgedReads);
+        }
+
+        @Override
+        public NearestReadPreference withTagSet(final TagSet tagSet) {
+            return withTagSetList(singletonList(tagSet));
+        }
+
+        @Override
+        public NearestReadPreference withTagSetList(final List<TagSet> tagSetList) {
+            notNull("tagSetList", tagSetList);
+            return new NearestReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgedReads());
+        }
+
+        @Override
+        public NearestReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+            isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
+            return new NearestReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgedReads());
+        }
+
+        @Override
+        public NearestReadPreference withHedgedReads(final boolean hedgedReads) {
+            return new NearestReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgedReads);
+        }
 
         @Override
         public String getName() {
@@ -382,7 +485,34 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         PrimaryPreferredReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit) {
-            super(tagSetList, maxStaleness, timeUnit);
+            this(tagSetList, maxStaleness, timeUnit, false);
+        }
+
+        PrimaryPreferredReadPreference(final List<TagSet> tagSetList, @Nullable final Long maxStaleness, final TimeUnit timeUnit,
+                                       final boolean hedgedReads) {
+            super(tagSetList, maxStaleness, timeUnit, hedgedReads);
+        }
+
+        @Override
+        public PrimaryPreferredReadPreference withTagSet(final TagSet tagSet) {
+            return withTagSetList(singletonList(tagSet));
+        }
+
+        @Override
+        public PrimaryPreferredReadPreference withTagSetList(final List<TagSet> tagSetList) {
+            notNull("tagSetList", tagSetList);
+            return new PrimaryPreferredReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgedReads());
+        }
+
+        @Override
+        public PrimaryPreferredReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+            isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
+            return new PrimaryPreferredReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgedReads());
+        }
+
+        @Override
+        public PrimaryPreferredReadPreference withHedgedReads(final boolean hedgedReads) {
+            return new PrimaryPreferredReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgedReads);
         }
 
         @Override
