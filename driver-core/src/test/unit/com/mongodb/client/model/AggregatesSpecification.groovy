@@ -75,15 +75,16 @@ class AggregatesSpecification extends Specification {
         given:
         def initFunction = 'function() { return { count : 0, sum : 0 } }';
         def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
+        def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }';
+        def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
 
         expect:
-        toBson(accumulator(asList(new Field('init', null), new Field('accumulate', null)))) ==
-                parse('{$accumulator: {init: null, accumulate: null}}')
-        toBson(accumulator(new Field('init', initFunction))) == parse('{$accumulator: {init: "' + initFunction + '"}}')
-        toBson(accumulator(asList(new Field('init', initFunction), new Field('accumulate', accumulateFunction)))) ==
-                parse('{$accumulator: {init: "' + initFunction + '", accumulate: "' + accumulateFunction + '"}}')
-        toBson(accumulator(new Field('accumulateArgs', [ '$copies' ]))) ==
-                parse('{$accumulator: {accumulateArgs: [ "$copies" ]}}')
+        toBson(accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
+                new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
+                new Field('finalize', finalizeFunction), new Field('lang', 'js'))) ==
+                parse('{$accumulator: {init: "' + initFunction + '", accumulate: "' + accumulateFunction +
+                        '", accumulateArgs: [ "$copies" ], merge: "' + mergeFunction +
+                        '", finalize: "' + finalizeFunction + '", lang: "js"}}')
     }
 
     @IgnoreIf({ !serverVersionAtLeast(3, 4) })
@@ -741,36 +742,38 @@ class AggregatesSpecification extends Specification {
                 addFields(asList(new Field('b', 3), new Field('c', 5))).hashCode()
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 4) })
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) })
     def 'should test equals for AccumulatorStage'() {
+        given:
+        def initFunction = 'function() { return { count : 0, sum : 0 } }';
+        def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
+        def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }';
+        def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
+
         expect:
-        accumulator(new Field('newField', null)).equals(accumulator(new Field('newField', null)))
-        accumulator(new Field('newField', 'hello')).equals(accumulator(new Field('newField', 'hello')))
-        accumulator(new Field('this', '$$CURRENT')).equals(accumulator(new Field('this', '$$CURRENT')))
-        accumulator(new Field('myNewField', new Document('c', 3).append('d', 4)))
-                .equals(accumulator(new Field('myNewField', new Document('c', 3).append('d', 4))))
-        accumulator(new Field('alt3', new Document('$lt', asList('$a', 3))))
-                .equals(accumulator(new Field('alt3', new Document('$lt', asList('$a', 3)))))
-        accumulator(new Field('b', 3), new Field('c', 5))
-                .equals(accumulator(new Field('b', 3), new Field('c', 5)))
-        accumulator(asList(new Field('b', 3), new Field('c', 5)))
-                .equals(accumulator(asList(new Field('b', 3), new Field('c', 5))))
+        accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
+                new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
+                new Field('finalize', finalizeFunction), new Field('lang', 'js'))
+                .equals(accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
+                        new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
+                        new Field('finalize', finalizeFunction), new Field('lang', 'js')))
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 4) })
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) })
     def 'should test hashCode for AccumulatorStage'() {
+        given:
+        def initFunction = 'function() { return { count : 0, sum : 0 } }';
+        def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
+        def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }';
+        def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
+
         expect:
-        accumulator(new Field('newField', null)).hashCode() == accumulator(new Field('newField', null)).hashCode()
-        accumulator(new Field('newField', 'hello')).hashCode() == accumulator(new Field('newField', 'hello')).hashCode()
-        accumulator(new Field('this', '$$CURRENT')).hashCode() == accumulator(new Field('this', '$$CURRENT')).hashCode()
-        accumulator(new Field('myNewField', new Document('c', 3).append('d', 4))).hashCode() ==
-                accumulator(new Field('myNewField', new Document('c', 3).append('d', 4))).hashCode()
-        accumulator(new Field('alt3', new Document('$lt', asList('$a', 3)))).hashCode() ==
-                accumulator(new Field('alt3', new Document('$lt', asList('$a', 3)))).hashCode()
-        accumulator(new Field('b', 3), new Field('c', 5)).hashCode() ==
-                accumulator(new Field('b', 3), new Field('c', 5)).hashCode()
-        accumulator(asList(new Field('b', 3), new Field('c', 5))).hashCode() ==
-                accumulator(asList(new Field('b', 3), new Field('c', 5))).hashCode()
+        accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
+                new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
+                new Field('finalize', finalizeFunction), new Field('lang', 'js')).hashCode() ==
+                accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
+                        new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
+                        new Field('finalize', finalizeFunction), new Field('lang', 'js')).hashCode()
     }
 
     def 'should test equals for ReplaceRootStage'() {

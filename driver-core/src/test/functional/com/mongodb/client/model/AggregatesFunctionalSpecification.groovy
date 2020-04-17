@@ -813,12 +813,12 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
         def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }';
         def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
-        def accumulatorExpression = accumulator(asList(new Field('init', initFunction),
+        def accumulatorExpression = accumulator(new Field('init', initFunction), null,
                 new Field('accumulate', accumulateFunction),
                 new Field('accumulateArgs', [ '$copies' ]),
                 new Field('merge', mergeFunction),
                 new Field('finalize', finalizeFunction),
-                new Field('lang', 'js'))).toBsonDocument(BsonDocument, registry)
+                new Field('lang', 'js')).toBsonDocument(BsonDocument, registry)
         def results = helper.aggregate([group('$author', asList(
                 new BsonField('minCopies', new Document('$min', '$copies')),
                 new BsonField('avgCopies', accumulatorExpression),

@@ -44,13 +44,38 @@ object Aggregates {
   /**
    * Creates an \$accumulator pipeline stage
    *
-   * @param fields the fields to add
+   * @param initField            a function used to initialize the state
+   * @param initArgsField        init function’s arguments (may be null)
+   * @param accumulateField      a function used to accumulate documents
+   * @param accumulateArgsField  additional accumulate function’s arguments (may be null). The first argument to the
+   *                             function is ‘state’.
+   * @param mergeField           a function used to merge two internal states, e.g. accumulated on different shards or
+   *                             threads. It returns the resulting state of the accumulator.
+   * @param finalizeField        a function used to finalize the state and return the result (may be null)
+   * @param lang                 a language specifier
    * @return the \$accumulator pipeline stage
    * @see [[http://docs.mongodb.org/manual/reference/operator/aggregation/accumulator/ \$accumulator]]
    * @since 1.2
    * @note Requires MongoDB 4.4 or greater
    */
-  def accumulator(fields: Field[_]*): Bson = JAggregates.accumulator(fields.asJava)
+  def accumulator(
+      initField: Field[_],
+      initArgsField: Field[_],
+      accumulateField: Field[_],
+      accumulateArgsField: Field[_],
+      mergeField: Field[_],
+      finalizeField: Field[_],
+      lang: Field[_]
+  ): Bson =
+    JAggregates.accumulator(
+      initField,
+      initArgsField,
+      accumulateField,
+      accumulateArgsField,
+      mergeField,
+      finalizeField,
+      lang
+    )
 
   /**
    * Creates a \$bucket pipeline stage

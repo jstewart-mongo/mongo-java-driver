@@ -70,27 +70,24 @@ public final class Aggregates {
     /**
      * Creates an $accumulator pipeline stage
      *
-     * @param fields        the fields to add
+     * @param initField            a function used to initialize the state
+     * @param initArgsField        init function’s arguments (may be null)
+     * @param accumulateField      a function used to accumulate documents
+     * @param accumulateArgsField  additional accumulate function’s arguments (may be null). The first argument to the function is ‘state’.
+     * @param mergeField           a function used to merge two internal states, e.g. accumulated on different shards or threads. It returns
+     *                             the resulting state of the accumulator.
+     * @param finalizeField        a function used to finalize the state and return the result (may be null)
+     * @param lang                 a language specifier
      * @return the $accumulator pipeline stage
      * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
      * @mongodb.server.release 4.4
-     * @since 4.4
+     * @since 4.1
      */
-    public static Bson accumulator(final Field<?>... fields) {
-        return accumulator(asList(fields));
-    }
-
-    /**
-     * Creates an $accumulator pipeline stage
-     *
-     * @param fields        the fields to add
-     * @return the $accumulator pipeline stage
-     * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
-     * @mongodb.server.release 4.4
-     * @since 4.4
-     */
-    public static Bson accumulator(final List<Field<?>> fields) {
-        return new FieldsStage("$accumulator", fields);
+    public static Bson accumulator(final Field<?> initField, @Nullable final Field<?> initArgsField, final Field<?> accumulateField,
+                                   @Nullable final Field<?> accumulateArgsField, final Field<?> mergeField,
+                                   @Nullable final Field<?> finalizeField, final Field<?> lang) {
+        return new FieldsStage("$accumulator", asList(initField, initArgsField, accumulateField, accumulateArgsField,
+                mergeField, finalizeField, lang));
     }
 
     /**
@@ -1161,8 +1158,10 @@ public final class Aggregates {
             writer.writeName(stageName);
             writer.writeStartDocument();
             for (Field<?> field : fields) {
-                writer.writeName(field.getName());
-                BuildersHelper.encodeValue(writer, field.getValue(), codecRegistry);
+                if (field != null) {
+                    writer.writeName(field.getName());
+                    BuildersHelper.encodeValue(writer, field.getValue(), codecRegistry);
+                }
             }
             writer.writeEndDocument();
             writer.writeEndDocument();
