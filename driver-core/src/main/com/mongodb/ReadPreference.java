@@ -49,45 +49,6 @@ public abstract class ReadPreference {
     }
 
     /**
-     * Create a new ReadPreference instance with a new tag set.
-     *
-     * @param tagSet the new tag set
-     * @return a new ReadPreference instance with a new tag set
-     * @since 4.1
-     */
-    public abstract ReadPreference withTagSet(TagSet tagSet);
-
-    /**
-     * Create a new ReadPreference instance with a new tag set list.
-     *
-     * @param tagSet the new tag set list
-     * @return a new ReadPreference instance with a new tag set list
-     * @since 4.1
-     */
-    public abstract ReadPreference withTagSetList(List<TagSet> tagSet);
-
-    /**
-     * Create a new ReadPreference instance with the maximum acceptable staleness of a secondary in order to be considered for
-     * read operations.
-     *
-     * @param maxStalenessMS the max allowable staleness of secondaries. The minimum value is either 90 seconds, or the heartbeat frequency
-     *                       plus 10 seconds, whichever is greatest.
-     * @param timeUnit the time unit of maxStaleness
-     * @return a new ReadPreference instance with a new maximum allowable staleness
-     * @since 4.1
-     */
-    public abstract ReadPreference withMaxStalenessMS(Long maxStalenessMS, TimeUnit timeUnit);
-
-    /**
-     * Create a new ReadPreference instance where hedged reads are enabled/disabled in the server.
-     *
-     * @param hedgedReads true if hedged reads are enabled in the server
-     * @return a new ReadPreference instance where hedged reads are enabled/disabled in the server.
-     * @since 4.1
-     */
-    public abstract ReadPreference withHedgedReads(boolean hedgedReads);
-
-    /**
      * True if this read preference allows reading from a secondary member of a replica set.
      *
      * @return if reading from a secondary is ok
@@ -147,7 +108,7 @@ public abstract class ReadPreference {
      * @return ReadPreference which reads primary if available.
      */
     public static ReadPreference primaryPreferred() {
-        return new PrimaryPreferredReadPreference();
+        return PRIMARY_PREFERRED;
     }
 
     /**
@@ -156,7 +117,7 @@ public abstract class ReadPreference {
      * @return ReadPreference which reads secondary.
      */
     public static ReadPreference secondary() {
-        return new SecondaryReadPreference();
+        return SECONDARY;
     }
 
     /**
@@ -165,7 +126,7 @@ public abstract class ReadPreference {
      * @return ReadPreference which reads secondary if available, otherwise from primary.
      */
     public static ReadPreference secondaryPreferred() {
-        return new SecondaryPreferredReadPreference();
+        return SECONDARY_PREFERRED;
     }
 
     /**
@@ -174,7 +135,7 @@ public abstract class ReadPreference {
      * @return ReadPreference which reads nearest
      */
     public static ReadPreference nearest() {
-        return new NearestReadPreference();
+        return NEAREST;
     }
 
     /**
@@ -554,16 +515,16 @@ public abstract class ReadPreference {
             return PRIMARY;
         }
         if (nameToCheck.equals(SECONDARY.getName().toLowerCase())) {
-            return new SecondaryReadPreference();
+            return SECONDARY;
         }
         if (nameToCheck.equals(SECONDARY_PREFERRED.getName().toLowerCase())) {
-            return new SecondaryPreferredReadPreference();
+            return SECONDARY_PREFERRED;
         }
         if (nameToCheck.equals(PRIMARY_PREFERRED.getName().toLowerCase())) {
-            return new PrimaryPreferredReadPreference();
+            return PRIMARY_PREFERRED;
         }
         if (nameToCheck.equals(NEAREST.getName().toLowerCase())) {
-            return new NearestReadPreference();
+            return NEAREST;
         }
 
         throw new IllegalArgumentException("No match for read preference of " + name);
@@ -636,26 +597,6 @@ public abstract class ReadPreference {
      */
     private static final class PrimaryReadPreference extends ReadPreference {
         private PrimaryReadPreference() {
-        }
-
-        @Override
-        public ReadPreference withTagSet(final TagSet tagSet) {
-            throw new IllegalArgumentException("Primary read preference can not also specify tag sets");
-        }
-
-        @Override
-        public TaggableReadPreference withTagSetList(final List<TagSet> tagSet) {
-            throw new IllegalArgumentException("Primary read preference can not also specify tag sets");
-        }
-
-        @Override
-        public TaggableReadPreference withMaxStalenessMS(final Long maxStalenessMS, final TimeUnit timeUnit) {
-            throw new IllegalArgumentException("Primary read preference can not also specify max staleness");
-        }
-
-        @Override
-        public TaggableReadPreference withHedgedReads(final boolean hedgedReads) {
-            throw new IllegalArgumentException("Primary read preference can not also specify hedge");
         }
 
         @Override
