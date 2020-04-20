@@ -44,14 +44,96 @@ object Aggregates {
   /**
    * Creates an \$accumulator pipeline stage
    *
-   * @param initField            a function used to initialize the state
-   * @param initArgsField        init function’s arguments (may be null)
-   * @param accumulateField      a function used to accumulate documents
-   * @param accumulateArgsField  additional accumulate function’s arguments (may be null). The first argument to the
-   *                             function is ‘state’.
-   * @param mergeField           a function used to merge two internal states, e.g. accumulated on different shards or
+   * @param initFunction         a function used to initialize the state
+   * @param accumulateFunction   a function used to accumulate documents
+   * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or
    *                             threads. It returns the resulting state of the accumulator.
-   * @param finalizeField        a function used to finalize the state and return the result (may be null)
+   * @return the \$accumulator pipeline stage
+   * @see [[http://docs.mongodb.org/manual/reference/operator/aggregation/accumulator/ \$accumulator]]
+   * @since 1.2
+   * @note Requires MongoDB 4.4 or greater
+   */
+  def accumulator(
+      initFunction: String,
+      accumulateFunction: String,
+      mergeFunction: String
+  ): Bson =
+    JAggregates.accumulator(
+      initFunction,
+      accumulateFunction,
+      mergeFunction
+    )
+
+  /**
+   * Creates an \$accumulator pipeline stage
+   *
+   * @param initFunction         a function used to initialize the state
+   * @param accumulateFunction   a function used to accumulate documents
+   * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or
+   *                             threads. It returns the resulting state of the accumulator.
+   * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
+   * @return the \$accumulator pipeline stage
+   * @see [[http://docs.mongodb.org/manual/reference/operator/aggregation/accumulator/ \$accumulator]]
+   * @since 1.2
+   * @note Requires MongoDB 4.4 or greater
+   */
+  def accumulator(
+      initFunction: String,
+      accumulateFunction: String,
+      mergeFunction: String,
+      finalizeFunction: String
+  ): Bson =
+    JAggregates.accumulator(
+      initFunction,
+      accumulateFunction,
+      mergeFunction,
+      finalizeFunction
+    )
+
+  /**
+   * Creates an \$accumulator pipeline stage
+   *
+   * @param initFunction         a function used to initialize the state
+   * @param initArgs             init function’s arguments (may be null)
+   * @param accumulateFunction   a function used to accumulate documents
+   * @param accumulateArgs       additional accumulate function’s arguments (may be null). The first argument to the
+   *                             function is ‘state’.
+   * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or
+   *                             threads. It returns the resulting state of the accumulator.
+   * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
+   * @return the \$accumulator pipeline stage
+   * @see [[http://docs.mongodb.org/manual/reference/operator/aggregation/accumulator/ \$accumulator]]
+   * @since 1.2
+   * @note Requires MongoDB 4.4 or greater
+   */
+  def accumulator(
+      initFunction: String,
+      initArgs: Seq[String],
+      accumulateFunction: String,
+      accumulateArgs: Seq[String],
+      mergeFunction: String,
+      finalizeFunction: String
+  ): Bson =
+    JAggregates.accumulator(
+      initFunction,
+      initArgs.asJava,
+      accumulateFunction,
+      accumulateArgs.asJava,
+      mergeFunction,
+      finalizeFunction
+    )
+
+  /**
+   * Creates an \$accumulator pipeline stage
+   *
+   * @param initFunction         a function used to initialize the state
+   * @param initArgs             init function’s arguments (may be null)
+   * @param accumulateFunction   a function used to accumulate documents
+   * @param accumulateArgs       additional accumulate function’s arguments (may be null). The first argument to the
+   *                             function is ‘state’.
+   * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or
+   *                             threads. It returns the resulting state of the accumulator.
+   * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
    * @param lang                 a language specifier
    * @return the \$accumulator pipeline stage
    * @see [[http://docs.mongodb.org/manual/reference/operator/aggregation/accumulator/ \$accumulator]]
@@ -59,21 +141,21 @@ object Aggregates {
    * @note Requires MongoDB 4.4 or greater
    */
   def accumulator(
-      initField: Field[_],
-      initArgsField: Field[_],
-      accumulateField: Field[_],
-      accumulateArgsField: Field[_],
-      mergeField: Field[_],
-      finalizeField: Field[_],
-      lang: Field[_]
+      initFunction: String,
+      initArgs: Seq[String],
+      accumulateFunction: String,
+      accumulateArgs: Seq[String],
+      mergeFunction: String,
+      finalizeFunction: String,
+      lang: String
   ): Bson =
     JAggregates.accumulator(
-      initField,
-      initArgsField,
-      accumulateField,
-      accumulateArgsField,
-      mergeField,
-      finalizeField,
+      initFunction,
+      initArgs.asJava,
+      accumulateFunction,
+      accumulateArgs.asJava,
+      mergeFunction,
+      finalizeFunction,
       lang
     )
 

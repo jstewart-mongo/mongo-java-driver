@@ -79,9 +79,14 @@ class AggregatesSpecification extends Specification {
         def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
 
         expect:
-        toBson(accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
-                new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
-                new Field('finalize', finalizeFunction), new Field('lang', 'js'))) ==
+        toBson(accumulator(initFunction, accumulateFunction, mergeFunction)) ==
+                parse('{$accumulator: {init: "' + initFunction + '", accumulate: "' + accumulateFunction +
+                        '", merge: "' + mergeFunction + '", lang: "js"}}')
+        toBson(accumulator(initFunction, accumulateFunction, mergeFunction, finalizeFunction)) ==
+                parse('{$accumulator: {init: "' + initFunction + '", accumulate: "' + accumulateFunction +
+                        '", merge: "' + mergeFunction + '", finalize: "' + finalizeFunction + '", lang: "js"}}')
+        toBson(accumulator(initFunction, null, accumulateFunction, [ '$copies' ], mergeFunction,
+                finalizeFunction, 'js')) ==
                 parse('{$accumulator: {init: "' + initFunction + '", accumulate: "' + accumulateFunction +
                         '", accumulateArgs: [ "$copies" ], merge: "' + mergeFunction +
                         '", finalize: "' + finalizeFunction + '", lang: "js"}}')
@@ -751,12 +756,15 @@ class AggregatesSpecification extends Specification {
         def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
 
         expect:
-        accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
-                new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
-                new Field('finalize', finalizeFunction), new Field('lang', 'js'))
-                .equals(accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
-                        new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
-                        new Field('finalize', finalizeFunction), new Field('lang', 'js')))
+        accumulator(initFunction, accumulateFunction, mergeFunction)
+                .equals(accumulator(initFunction, null, accumulateFunction, null, mergeFunction,
+                        null, 'js'))
+        accumulator(initFunction, accumulateFunction, mergeFunction, finalizeFunction)
+                .equals(accumulator(initFunction, null, accumulateFunction, null, mergeFunction,
+                        finalizeFunction, 'js'))
+        accumulator(initFunction, null, accumulateFunction, [ '$copies' ], mergeFunction, finalizeFunction)
+                .equals(accumulator(initFunction, null, accumulateFunction, [ '$copies' ],
+                        mergeFunction, finalizeFunction, 'js'))
     }
 
     @IgnoreIf({ !serverVersionAtLeast(4, 3) })
@@ -768,12 +776,15 @@ class AggregatesSpecification extends Specification {
         def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
 
         expect:
-        accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
-                new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
-                new Field('finalize', finalizeFunction), new Field('lang', 'js')).hashCode() ==
-                accumulator(new Field('init', initFunction), null, new Field('accumulate', accumulateFunction),
-                        new Field('accumulateArgs', [ '$copies' ]), new Field('merge', mergeFunction),
-                        new Field('finalize', finalizeFunction), new Field('lang', 'js')).hashCode()
+        accumulator(initFunction, accumulateFunction, mergeFunction).hashCode() ==
+                accumulator(initFunction, null, accumulateFunction, null,
+                        mergeFunction, null, 'js').hashCode()
+        accumulator(initFunction, accumulateFunction, mergeFunction, finalizeFunction).hashCode() ==
+                accumulator(initFunction, null, accumulateFunction, null,
+                        mergeFunction, finalizeFunction, 'js').hashCode()
+        accumulator(initFunction, null, accumulateFunction, [ '$copies' ], mergeFunction,
+                finalizeFunction).hashCode() == accumulator(initFunction, null, accumulateFunction, [ '$copies' ],
+                mergeFunction, finalizeFunction, 'js').hashCode()
     }
 
     def 'should test equals for ReplaceRootStage'() {
