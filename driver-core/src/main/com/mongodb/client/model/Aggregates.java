@@ -18,6 +18,7 @@ package com.mongodb.client.model;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.lang.Nullable;
+import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
@@ -30,6 +31,7 @@ import org.bson.conversions.Bson;
 import java.util.List;
 
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toList;
 import static org.bson.assertions.Assertions.notNull;
 
 /**
@@ -64,7 +66,7 @@ public final class Aggregates {
      * @since 3.4
      */
     public static Bson addFields(final List<Field<?>> fields) {
-        return new FieldsStage("$addFields", fields);
+        return new AddFieldsStage(fields);
     }
 
     /**
@@ -162,13 +164,22 @@ public final class Aggregates {
     public static Bson accumulator(final String initFunction, @Nullable final List<String> initArgs, final String accumulateFunction,
                                    @Nullable final List<String> accumulateArgs, final String mergeFunction,
                                    @Nullable final String finalizeFunction, final String lang) {
-        return new FieldsStage("$accumulator", asList(new Field<String>("init", initFunction),
-                initArgs != null ? new Field<List<String>>("initArgs", initArgs) : null,
-                new Field<String>("accumulate", accumulateFunction),
-                accumulateArgs != null ? new Field<List<String>>("accumulateArgs", accumulateArgs) : null,
-                new Field<String>("merge", mergeFunction),
-                finalizeFunction != null ? new Field<String>("finalize", finalizeFunction) : null,
-                new Field<String>("lang", lang)));
+        BsonDocument accumulatorStage = new BsonDocument("init", new BsonString(initFunction))
+                .append("accumulate", new BsonString(accumulateFunction))
+                .append("merge", new BsonString(mergeFunction))
+                .append("lang", new BsonString(lang));
+        if (initArgs != null) {
+            accumulatorStage.append("initArgs", new BsonArray(initArgs.stream().map(initArg ->
+                    new BsonString(initArg)).collect(toList())));
+        }
+        if (accumulateArgs != null) {
+            accumulatorStage.append("accumulateArgs", new BsonArray(accumulateArgs.stream().map(accumulateArg ->
+                    new BsonString(accumulateArg)).collect(toList())));
+        }
+        if (finalizeFunction != null) {
+            accumulatorStage.append("finalize", new BsonString(finalizeFunction));
+        }
+        return new BsonDocument("$accumulator", accumulatorStage);
     }
 
     /**
@@ -1223,12 +1234,10 @@ public final class Aggregates {
 
     }
 
-    private static class FieldsStage implements Bson {
+    private static class AddFieldsStage implements Bson {
         private final List<Field<?>> fields;
-        private final String stageName;
 
-        FieldsStage(final String stageName, final List<Field<?>> fields) {
-            this.stageName = stageName;
+        AddFieldsStage(final List<Field<?>> fields) {
             this.fields = fields;
         }
 
@@ -1236,13 +1245,11 @@ public final class Aggregates {
         public <TDocument> BsonDocument toBsonDocument(final Class<TDocument> tDocumentClass, final CodecRegistry codecRegistry) {
             BsonDocumentWriter writer = new BsonDocumentWriter(new BsonDocument());
             writer.writeStartDocument();
-            writer.writeName(stageName);
+            writer.writeName("$addFields");
             writer.writeStartDocument();
             for (Field<?> field : fields) {
-                if (field != null) {
-                    writer.writeName(field.getName());
-                    BuildersHelper.encodeValue(writer, field.getValue(), codecRegistry);
-                }
+                writer.writeName(field.getName());
+                BuildersHelper.encodeValue(writer, field.getValue(), codecRegistry);
             }
             writer.writeEndDocument();
             writer.writeEndDocument();
@@ -1259,23 +1266,21 @@ public final class Aggregates {
                 return false;
             }
 
-            FieldsStage that = (FieldsStage) o;
+            AddFieldsStage that = (AddFieldsStage) o;
 
-            return stageName.equals(that.stageName) && fields != null ? fields.equals(that.fields) : that.fields == null;
+            return fields != null ? fields.equals(that.fields) : that.fields == null;
         }
 
         @Override
         public int hashCode() {
-            int result = stageName.hashCode();
-            result = 31 * result + (fields != null ? fields.hashCode() : 0);
-            return result;
+            return fields != null ? fields.hashCode() : 0;
         }
 
         @Override
         public String toString() {
             return "Stage{"
-                + "stageName=" + stageName
-                + ", fields=" + fields
+                + "name='$addFields', "
+                + "fields=" + fields
                 + '}';
         }
     }
