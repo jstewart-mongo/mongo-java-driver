@@ -25,7 +25,6 @@ import com.mongodb.ReadConcern
 import com.mongodb.ReadPreference
 import com.mongodb.ReadPreferenceHedgeOptions
 import com.mongodb.ServerAddress
-import com.mongodb.TaggableReadPreference
 import com.mongodb.async.FutureResultCallback
 import com.mongodb.client.model.CreateCollectionOptions
 import com.mongodb.connection.ClusterId
@@ -482,7 +481,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 3) || !ClusterFixture.isDiscoverableReplicaSet() })
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) || ClusterFixture.isStandalone() })
     def 'should read from a secondary when hedge is specified'() {
         given:
         def documents = [new Document('_id', 3), new Document('_id', 1), new Document('_id', 2), new Document('_id', 5),
@@ -493,7 +492,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         when:
         def hedgeOptions = isHedgeEnabled != null ?
                 ReadPreferenceHedgeOptions.builder().hedgedReads(isHedgeEnabled as boolean).build() : null
-        def readPreference = ((TaggableReadPreference) ReadPreference.primaryPreferred()).withHedgeOptions(hedgeOptions)
+        def readPreference = ReadPreference.primaryPreferred().withHedgeOptions(hedgeOptions)
         def syncBinding = new ClusterBinding(getCluster(), readPreference, ReadConcern.DEFAULT)
         def asyncBinding = new AsyncClusterBinding(getAsyncCluster(), readPreference, ReadConcern.DEFAULT)
         def cursor = async ? executeAsync(operation, asyncBinding) : executeSync(operation, syncBinding)

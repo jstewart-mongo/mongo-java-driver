@@ -70,47 +70,6 @@ public abstract class TaggableReadPreference extends ReadPreference {
         this.hedgeOptions = hedgeOptions;
     }
 
-    /**
-     * Create a new TaggableReadPreference instance with a new tag set.
-     *
-     * @param tagSet the new tag set
-     * @return a new TaggableReadPreference instance with a new tag set
-     * @since 4.1
-     */
-    public abstract TaggableReadPreference withTagSet(TagSet tagSet);
-
-    /**
-     * Create a new TaggableReadPreference instance with a new tag set list.
-     *
-     * @param tagSet the new tag set list
-     * @return a new TaggableReadPreference instance with a new tag set list
-     * @since 4.1
-     */
-    public abstract TaggableReadPreference withTagSetList(List<TagSet> tagSet);
-
-    /**
-     * Create a new TaggableReadPreference instance with the maximum acceptable staleness of a secondary in order to be considered for
-     * read operations.
-     *
-     * @param maxStalenessMS the max allowable staleness of secondaries. The minimum value is either 90 seconds, or the heartbeat frequency
-     *                       plus 10 seconds, whichever is greatest.
-     * @param timeUnit the time unit of maxStaleness
-     * @return a new TaggableReadPreference instance with a new maximum allowable staleness
-     * @mongodb.server.release 3.4
-     * @since 4.1
-     */
-    public abstract TaggableReadPreference withMaxStalenessMS(Long maxStalenessMS, TimeUnit timeUnit);
-
-    /**
-     * Create a new TaggableReadPreference instance with hedge options.
-     *
-     * @param hedgeOptions the hedge options
-     * @return a new TaggableReadPreference instance with hedge options
-     * @since 4.1
-     * @mongodb.server.release 4.4
-     */
-    public abstract TaggableReadPreference withHedgeOptions(ReadPreferenceHedgeOptions hedgeOptions);
-
     @Override
     public boolean isSlaveOk() {
         return true;

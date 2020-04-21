@@ -74,32 +74,28 @@ class ReadPreferenceSpecification extends Specification {
         ReadPreference.primaryPreferred(TAG_SET_LIST, 10, SECONDS)     | 10000          | TAG_SET_LIST | null
         ReadPreference.nearest(TAG_SET_LIST, 10, SECONDS)              | 10000          | TAG_SET_LIST | null
 
-        ((TaggableReadPreference) ReadPreference.secondary())
+        ReadPreference.secondary().withMaxStalenessMS(10, SECONDS)     | 10000          | emptyList()  | null
+        ReadPreference.secondaryPreferred()
                 .withMaxStalenessMS(10, SECONDS)                       | 10000          | emptyList()  | null
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred())
+        ReadPreference.primaryPreferred()
                 .withMaxStalenessMS(10, SECONDS)                       | 10000          | emptyList()  | null
-        ((TaggableReadPreference) ReadPreference.primaryPreferred())
-                .withMaxStalenessMS(10, SECONDS)                       | 10000          | emptyList()  | null
-        ((TaggableReadPreference) ReadPreference.nearest())
-                .withMaxStalenessMS(10, SECONDS)                       | 10000          | emptyList()  | null
-        ((TaggableReadPreference) ReadPreference.secondary())
+        ReadPreference.nearest().withMaxStalenessMS(10, SECONDS)      | 10000          | emptyList()  | null
+        ReadPreference.secondary().withHedgeOptions(HEDGE_OPTIONS)    | null           | emptyList()  | HEDGE_OPTIONS
+        ReadPreference.secondaryPreferred()
                 .withHedgeOptions(HEDGE_OPTIONS)                       | null           | emptyList()  | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred())
+        ReadPreference.primaryPreferred()
                 .withHedgeOptions(HEDGE_OPTIONS)                       | null           | emptyList()  | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.primaryPreferred())
-                .withHedgeOptions(HEDGE_OPTIONS)                       | null           | emptyList()  | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.nearest())
-                .withHedgeOptions(HEDGE_OPTIONS)                       | null           | emptyList()  | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.secondary()).withTagSet(TAG_SET)
+        ReadPreference.nearest().withHedgeOptions(HEDGE_OPTIONS)      | null           | emptyList()  | HEDGE_OPTIONS
+        ReadPreference.secondary().withTagSet(TAG_SET)
                 .withMaxStalenessMS(10, SECONDS)
                 .withHedgeOptions(HEDGE_OPTIONS)                       | 10000          | TAG_SET_LIST | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred()).withTagSet(TAG_SET)
+        ReadPreference.secondaryPreferred().withTagSet(TAG_SET)
                 .withMaxStalenessMS(10, SECONDS)
                 .withHedgeOptions(HEDGE_OPTIONS)                       | 10000          | TAG_SET_LIST | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.primaryPreferred()).withTagSet(TAG_SET)
+        ReadPreference.primaryPreferred().withTagSet(TAG_SET)
                 .withMaxStalenessMS(10, SECONDS)
                 .withHedgeOptions(HEDGE_OPTIONS)                       | 10000          | TAG_SET_LIST | HEDGE_OPTIONS
-        ((TaggableReadPreference) ReadPreference.nearest()).withTagSet(TAG_SET)
+        ReadPreference.nearest().withTagSet(TAG_SET)
                 .withMaxStalenessMS(10, SECONDS)
                 .withHedgeOptions(HEDGE_OPTIONS)                       | 10000          | TAG_SET_LIST | HEDGE_OPTIONS
     }
@@ -112,7 +108,7 @@ class ReadPreferenceSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        ((TaggableReadPreference) ReadPreference.secondary()).withMaxStalenessMS(-1, SECONDS)
+        ReadPreference.secondary().withMaxStalenessMS(-1, SECONDS)
 
         then:
         thrown(IllegalArgumentException)
@@ -188,15 +184,15 @@ class ReadPreferenceSpecification extends Specification {
         ReadPreference.nearest(10, SECONDS)                      | parse('{mode : "nearest", maxStalenessSeconds : {$numberLong : "10" }}}')
         ReadPreference.nearest(10005, MILLISECONDS)              | parse('{mode : "nearest", maxStalenessSeconds : {$numberLong : "10" }}}')
 
-        ((TaggableReadPreference) ReadPreference.primaryPreferred())
+        ReadPreference.primaryPreferred()
                 .withMaxStalenessMS(10, SECONDS)                 | parse('{mode : "primaryPreferred", maxStalenessSeconds : {$numberLong : "10" }}}')
-        ((TaggableReadPreference) ReadPreference.secondary())
+        ReadPreference.secondary()
                 .withMaxStalenessMS(10, SECONDS)                 | parse('{mode : "secondary", maxStalenessSeconds : {$numberLong : "10" }}}')
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred())
+        ReadPreference.secondaryPreferred()
                 .withMaxStalenessMS(10, SECONDS)                 | parse('{mode : "secondaryPreferred", maxStalenessSeconds : {$numberLong : "10" }}}')
-        ((TaggableReadPreference) ReadPreference.nearest())
+        ReadPreference.nearest()
                 .withMaxStalenessMS(10, SECONDS)                 | parse('{mode : "nearest", maxStalenessSeconds : {$numberLong : "10" }}}')
-        ((TaggableReadPreference) ReadPreference.nearest())
+        ReadPreference.nearest()
                 .withMaxStalenessMS(10005, MILLISECONDS) | parse('{mode : "nearest", maxStalenessSeconds : {$numberLong : "10" }}}')
     }
 
@@ -206,13 +202,13 @@ class ReadPreferenceSpecification extends Specification {
 
         where:
         readPreference                                 | document
-        ((TaggableReadPreference) ReadPreference.primaryPreferred())
+        ReadPreference.primaryPreferred()
                 .withHedgeOptions(HEDGE_OPTIONS)       | parse('{mode : "primaryPreferred", hedge : { enabled : true }}}')
-        ((TaggableReadPreference) ReadPreference.secondary())
+        ReadPreference.secondary()
                 .withHedgeOptions(HEDGE_OPTIONS)       | parse('{mode : "secondary", hedge : { enabled : true }}}')
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred())
+        ReadPreference.secondaryPreferred()
                 .withHedgeOptions(HEDGE_OPTIONS)       | parse('{mode : "secondaryPreferred", hedge : { enabled : true }}}')
-        ((TaggableReadPreference) ReadPreference.nearest())
+        ReadPreference.nearest()
                 .withHedgeOptions(HEDGE_OPTIONS)       | parse('{mode : "nearest", hedge : { enabled : true }}}')
     }
 
@@ -247,23 +243,23 @@ class ReadPreferenceSpecification extends Specification {
                 new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])) | new BsonDocument('mode', new BsonString('nearest'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.primaryPreferred()).withTagSet(
+        ReadPreference.primaryPreferred().withTagSet(
                 new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])) | new BsonDocument('mode', new BsonString('primaryPreferred'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.secondary()).withTagSet(
+        ReadPreference.secondary().withTagSet(
                 new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])) | new BsonDocument('mode', new BsonString('secondary'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred()).withTagSet(
+        ReadPreference.secondaryPreferred().withTagSet(
                 new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])) | new BsonDocument('mode', new BsonString('secondaryPreferred'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.nearest()).withTagSet(
+        ReadPreference.nearest().withTagSet(
                 new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])) | new BsonDocument('mode', new BsonString('nearest'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.nearest()).withTagSet(
+        ReadPreference.nearest().withTagSet(
                 new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])) | new BsonDocument('mode', new BsonString('nearest'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
     }
@@ -302,23 +298,23 @@ class ReadPreferenceSpecification extends Specification {
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1')),
                                                new BsonDocument('dc', new BsonString('ca')).append('rack', new BsonString('2'))]))
 
-        ((TaggableReadPreference) ReadPreference.primaryPreferred()).withTagSetList(
+        ReadPreference.primaryPreferred().withTagSetList(
                 [new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])]) | new BsonDocument('mode', new BsonString('primaryPreferred'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.secondary()).withTagSetList(
+        ReadPreference.secondary().withTagSetList(
                 [new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])]) | new BsonDocument('mode', new BsonString('secondary'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.secondaryPreferred()).withTagSetList(
+        ReadPreference.secondaryPreferred().withTagSetList(
                 [new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])]) | new BsonDocument('mode', new BsonString('secondaryPreferred'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.nearest()).withTagSetList(
+        ReadPreference.nearest().withTagSetList(
                 [new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')])]) | new BsonDocument('mode', new BsonString('nearest'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1'))]))
 
-        ((TaggableReadPreference) ReadPreference.nearest()).withTagSetList(
+        ReadPreference.nearest().withTagSetList(
                 [new TagSet([new Tag('dc', 'ny'), new Tag('rack', '1')]),
                  new TagSet([new Tag('dc', 'ca'), new Tag('rack', '2')])]) | new BsonDocument('mode', new BsonString('nearest'))
                 .append('tags', new BsonArray([new BsonDocument('dc', new BsonString('ny')).append('rack', new BsonString('1')),

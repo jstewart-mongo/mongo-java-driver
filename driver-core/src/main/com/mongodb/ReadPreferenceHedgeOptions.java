@@ -28,7 +28,7 @@ import org.bson.BsonDocument;
  */
 @Immutable
 public final class ReadPreferenceHedgeOptions {
-    private final Boolean hedgedReads;
+    private final boolean hedgedReads;
 
     /**
      * Gets whether hedged reads are enabled in the server.
@@ -68,7 +68,7 @@ public final class ReadPreferenceHedgeOptions {
 
         ReadPreferenceHedgeOptions that = (ReadPreferenceHedgeOptions) o;
 
-        return hedgedReads.equals(that.hedgedReads);
+        return hedgedReads == that.hedgedReads;
     }
 
     @Override
