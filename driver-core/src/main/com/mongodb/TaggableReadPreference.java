@@ -321,24 +321,24 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         @Override
-        public SecondaryReadPreference withTagSet(final TagSet tagSet) {
+        public TaggableReadPreference withTagSet(final TagSet tagSet) {
             return withTagSetList(singletonList(tagSet));
         }
 
         @Override
-        public SecondaryReadPreference withTagSetList(final List<TagSet> tagSetList) {
+        public TaggableReadPreference withTagSetList(final List<TagSet> tagSetList) {
             notNull("tagSetList", tagSetList);
             return new SecondaryReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgeOptions());
         }
 
         @Override
-        public SecondaryReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+        public TaggableReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
             isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
             return new SecondaryReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgeOptions());
         }
 
         @Override
-        public SecondaryReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
+        public TaggableReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
             return new SecondaryReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgeOptions);
         }
 
@@ -382,24 +382,24 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         @Override
-        public SecondaryPreferredReadPreference withTagSet(final TagSet tagSet) {
+        public TaggableReadPreference withTagSet(final TagSet tagSet) {
             return withTagSetList(singletonList(tagSet));
         }
 
         @Override
-        public SecondaryPreferredReadPreference withTagSetList(final List<TagSet> tagSetList) {
+        public TaggableReadPreference withTagSetList(final List<TagSet> tagSetList) {
             notNull("tagSetList", tagSetList);
             return new SecondaryPreferredReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgeOptions());
         }
 
         @Override
-        public SecondaryPreferredReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+        public TaggableReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
             isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
             return new SecondaryPreferredReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgeOptions());
         }
 
         @Override
-        public SecondaryPreferredReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
+        public TaggableReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
             return new SecondaryPreferredReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgeOptions);
         }
 
@@ -435,24 +435,24 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         @Override
-        public NearestReadPreference withTagSet(final TagSet tagSet) {
+        public TaggableReadPreference withTagSet(final TagSet tagSet) {
             return withTagSetList(singletonList(tagSet));
         }
 
         @Override
-        public NearestReadPreference withTagSetList(final List<TagSet> tagSetList) {
+        public TaggableReadPreference withTagSetList(final List<TagSet> tagSetList) {
             notNull("tagSetList", tagSetList);
             return new NearestReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgeOptions());
         }
 
         @Override
-        public NearestReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+        public TaggableReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
             isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
             return new NearestReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgeOptions());
         }
 
         @Override
-        public NearestReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
+        public TaggableReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
             return new NearestReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgeOptions);
         }
 
@@ -497,24 +497,24 @@ public abstract class TaggableReadPreference extends ReadPreference {
         }
 
         @Override
-        public PrimaryPreferredReadPreference withTagSet(final TagSet tagSet) {
+        public TaggableReadPreference withTagSet(final TagSet tagSet) {
             return withTagSetList(singletonList(tagSet));
         }
 
         @Override
-        public PrimaryPreferredReadPreference withTagSetList(final List<TagSet> tagSetList) {
+        public TaggableReadPreference withTagSetList(final List<TagSet> tagSetList) {
             notNull("tagSetList", tagSetList);
             return new PrimaryPreferredReadPreference(tagSetList, getMaxStaleness(MILLISECONDS), MILLISECONDS, getHedgeOptions());
         }
 
         @Override
-        public PrimaryPreferredReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
+        public TaggableReadPreference withMaxStalenessMS(@Nullable final Long maxStaleness, final TimeUnit timeUnit) {
             isTrueArgument("maxStaleness is null or >= 0", maxStaleness == null || maxStaleness >= 0);
             return new PrimaryPreferredReadPreference(getTagSetList(), maxStaleness, timeUnit, getHedgeOptions());
         }
 
         @Override
-        public PrimaryPreferredReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
+        public TaggableReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
             return new PrimaryPreferredReadPreference(getTagSetList(), getMaxStaleness(MILLISECONDS), MILLISECONDS, hedgeOptions);
         }
 

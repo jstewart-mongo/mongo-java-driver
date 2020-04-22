@@ -654,22 +654,22 @@ public abstract class ReadPreference {
 
         @Override
         public ReadPreference withTagSet(final TagSet tagSet) {
-            throw new IllegalArgumentException("Primary read preference can not also specify tag sets");
+            throw new UnsupportedOperationException("Primary read preference can not also specify tag sets");
         }
 
         @Override
         public TaggableReadPreference withTagSetList(final List<TagSet> tagSet) {
-            throw new IllegalArgumentException("Primary read preference can not also specify tag sets");
+            throw new UnsupportedOperationException("Primary read preference can not also specify tag sets");
         }
 
         @Override
         public TaggableReadPreference withMaxStalenessMS(final Long maxStalenessMS, final TimeUnit timeUnit) {
-            throw new IllegalArgumentException("Primary read preference can not also specify max staleness");
+            throw new UnsupportedOperationException("Primary read preference can not also specify max staleness");
         }
 
         @Override
         public TaggableReadPreference withHedgeOptions(final ReadPreferenceHedgeOptions hedgeOptions) {
-            throw new IllegalArgumentException("Primary read preference can not also specify hedge");
+            throw new UnsupportedOperationException("Primary read preference can not also specify hedge");
         }
 
         @Override

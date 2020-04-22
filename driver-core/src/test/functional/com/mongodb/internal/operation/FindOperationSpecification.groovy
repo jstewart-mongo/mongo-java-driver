@@ -491,7 +491,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
         when:
         def hedgeOptions = isHedgeEnabled != null ?
-                ReadPreferenceHedgeOptions.builder().hedgedReads(isHedgeEnabled as boolean).build() : null
+                ReadPreferenceHedgeOptions.builder().enabled(isHedgeEnabled as boolean).build() : null
         def readPreference = ReadPreference.primaryPreferred().withHedgeOptions(hedgeOptions)
         def syncBinding = new ClusterBinding(getCluster(), readPreference, ReadConcern.DEFAULT)
         def asyncBinding = new AsyncClusterBinding(getAsyncCluster(), readPreference, ReadConcern.DEFAULT)
