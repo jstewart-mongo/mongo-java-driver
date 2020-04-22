@@ -26,6 +26,7 @@ import spock.lang.Specification
 
 import static BucketGranularity.R5
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.client.model.Accumulators.accumulator
 import static com.mongodb.client.model.Accumulators.addToSet
 import static com.mongodb.client.model.Accumulators.avg
 import static com.mongodb.client.model.Accumulators.first
@@ -36,7 +37,6 @@ import static com.mongodb.client.model.Accumulators.push
 import static com.mongodb.client.model.Accumulators.stdDevPop
 import static com.mongodb.client.model.Accumulators.stdDevSamp
 import static com.mongodb.client.model.Accumulators.sum
-import static com.mongodb.client.model.Aggregates.accumulator
 import static com.mongodb.client.model.Aggregates.addFields
 import static com.mongodb.client.model.Aggregates.bucket
 import static com.mongodb.client.model.Aggregates.bucketAuto
@@ -748,7 +748,7 @@ class AggregatesSpecification extends Specification {
     }
 
     @IgnoreIf({ !serverVersionAtLeast(4, 3) })
-    def 'should test equals for AccumulatorStage'() {
+    def 'should test equals for accumulator operator'() {
         given:
         def initFunction = 'function() { return { count : 0, sum : 0 } }';
         def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
@@ -763,12 +763,12 @@ class AggregatesSpecification extends Specification {
                 .equals(accumulator(initFunction, null, accumulateFunction, null, mergeFunction,
                         finalizeFunction, 'js'))
         accumulator(initFunction, null, accumulateFunction, [ '$copies' ], mergeFunction, finalizeFunction)
-                .equals(accumulator(initFunction, null, accumulateFunction, [ '$copies' ],
-                        mergeFunction, finalizeFunction, 'js'))
+                .equals(accumulator(initFunction, null, accumulateFunction, [ '$copies' ], mergeFunction,
+                        finalizeFunction, 'js'))
     }
 
     @IgnoreIf({ !serverVersionAtLeast(4, 3) })
-    def 'should test hashCode for AccumulatorStage'() {
+    def 'should test hashCode for accumulator operator'() {
         given:
         def initFunction = 'function() { return { count : 0, sum : 0 } }';
         def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
@@ -783,8 +783,8 @@ class AggregatesSpecification extends Specification {
                 accumulator(initFunction, null, accumulateFunction, null,
                         mergeFunction, finalizeFunction, 'js').hashCode()
         accumulator(initFunction, null, accumulateFunction, [ '$copies' ], mergeFunction,
-                finalizeFunction).hashCode() == accumulator(initFunction, null, accumulateFunction, [ '$copies' ],
-                mergeFunction, finalizeFunction, 'js').hashCode()
+                finalizeFunction).hashCode() == accumulator(initFunction, null, accumulateFunction,
+                [ '$copies' ], mergeFunction, finalizeFunction, 'js').hashCode()
     }
 
     def 'should test equals for ReplaceRootStage'() {

@@ -18,7 +18,6 @@ package com.mongodb.client.model;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.lang.Nullable;
-import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
@@ -31,7 +30,6 @@ import org.bson.conversions.Bson;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toList;
 import static org.bson.assertions.Assertions.notNull;
 
 /**
@@ -67,119 +65,6 @@ public final class Aggregates {
      */
     public static Bson addFields(final List<Field<?>> fields) {
         return new AddFieldsStage(fields);
-    }
-
-    /**
-     * Creates an $accumulator pipeline stage
-     *
-     * @param initFunction         a function used to initialize the state
-     * @param accumulateFunction   a function used to accumulate documents
-     * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
-     *                             returns the resulting state of the accumulator.
-     * @return the $accumulator pipeline stage
-     * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
-     * @mongodb.server.release 4.4
-     * @since 4.1
-     */
-    public static Bson accumulator(final String initFunction, final String accumulateFunction, final String mergeFunction) {
-        return accumulator(initFunction, null, accumulateFunction, null, mergeFunction, null, "js");
-    }
-
-    /**
-     * Creates an $accumulator pipeline stage
-     *
-     * @param initFunction         a function used to initialize the state
-     * @param accumulateFunction   a function used to accumulate documents
-     * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
-     *                             returns the resulting state of the accumulator.
-     * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
-     * @return the $accumulator pipeline stage
-     * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
-     * @mongodb.server.release 4.4
-     * @since 4.1
-     */
-    public static Bson accumulator(final String initFunction, final String accumulateFunction, final String mergeFunction,
-                                   @Nullable final String finalizeFunction) {
-        return accumulator(initFunction, null, accumulateFunction, null, mergeFunction, finalizeFunction, "js");
-    }
-
-    /**
-     * Creates an $accumulator pipeline stage
-     *
-     * @param initFunction         a function used to initialize the state
-     * @param initArgs             init function’s arguments (may be null)
-     * @param accumulateFunction   a function used to accumulate documents
-     * @param accumulateArgs       additional accumulate function’s arguments (may be null). The first argument to the function
-     *                             is ‘state’.
-     * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
-     *                             returns the resulting state of the accumulator.
-     * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
-     * @return the $accumulator pipeline stage
-     * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
-     * @mongodb.server.release 4.4
-     * @since 4.1
-     */
-    public static Bson accumulator(final String initFunction, @Nullable final List<String> initArgs,
-                                   final String accumulateFunction, @Nullable final List<String> accumulateArgs,
-                                   final String mergeFunction, @Nullable final String finalizeFunction) {
-        return accumulator(initFunction, initArgs, accumulateFunction, accumulateArgs, mergeFunction, finalizeFunction, "js");
-    }
-
-    /**
-     * Creates an $accumulator pipeline stage
-     *
-     * @param initFunction         a function used to initialize the state
-     * @param accumulateFunction   a function used to accumulate documents
-     * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
-     *                             returns the resulting state of the accumulator.
-     * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
-     * @param lang                 a language specifier
-     * @return the $accumulator pipeline stage
-     * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
-     * @mongodb.server.release 4.4
-     * @since 4.1
-     */
-    public static Bson accumulator(final String initFunction, final String accumulateFunction, final String mergeFunction,
-                                   @Nullable final String finalizeFunction, final String lang) {
-        return accumulator(initFunction, null, accumulateFunction, null, mergeFunction, finalizeFunction, lang);
-    }
-
-    /**
-     * Creates an $accumulator pipeline stage
-     *
-     * @param initFunction         a function used to initialize the state
-     * @param initArgs             init function’s arguments (may be null)
-     * @param accumulateFunction   a function used to accumulate documents
-     * @param accumulateArgs       additional accumulate function’s arguments (may be null). The first argument to the function
-     *                             is ‘state’.
-     * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
-     *                             returns the resulting state of the accumulator.
-     * @param finalizeFunction     a function used to finalize the state and return the result (may be null)
-     * @param lang                 a language specifier
-     * @return the $accumulator pipeline stage
-     * @mongodb.driver.manual reference/operator/aggregation/accumulator/ $accumulator
-     * @mongodb.server.release 4.4
-     * @since 4.1
-     */
-    public static Bson accumulator(final String initFunction, @Nullable final List<String> initArgs, final String accumulateFunction,
-                                   @Nullable final List<String> accumulateArgs, final String mergeFunction,
-                                   @Nullable final String finalizeFunction, final String lang) {
-        BsonDocument accumulatorStage = new BsonDocument("init", new BsonString(initFunction))
-                .append("accumulate", new BsonString(accumulateFunction))
-                .append("merge", new BsonString(mergeFunction))
-                .append("lang", new BsonString(lang));
-        if (initArgs != null) {
-            accumulatorStage.append("initArgs", new BsonArray(initArgs.stream().map(initArg ->
-                    new BsonString(initArg)).collect(toList())));
-        }
-        if (accumulateArgs != null) {
-            accumulatorStage.append("accumulateArgs", new BsonArray(accumulateArgs.stream().map(accumulateArg ->
-                    new BsonString(accumulateArg)).collect(toList())));
-        }
-        if (finalizeFunction != null) {
-            accumulatorStage.append("finalize", new BsonString(finalizeFunction));
-        }
-        return new BsonDocument("$accumulator", accumulatorStage);
     }
 
     /**

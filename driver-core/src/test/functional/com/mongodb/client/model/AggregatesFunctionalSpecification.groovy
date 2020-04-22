@@ -31,6 +31,7 @@ import org.bson.conversions.Bson
 import spock.lang.IgnoreIf
 
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.client.model.Accumulators.accumulator
 import static com.mongodb.client.model.Accumulators.addToSet
 import static com.mongodb.client.model.Accumulators.avg
 import static com.mongodb.client.model.Accumulators.first
@@ -41,7 +42,6 @@ import static com.mongodb.client.model.Accumulators.push
 import static com.mongodb.client.model.Accumulators.stdDevPop
 import static com.mongodb.client.model.Accumulators.stdDevSamp
 import static com.mongodb.client.model.Accumulators.sum
-import static com.mongodb.client.model.Aggregates.accumulator
 import static com.mongodb.client.model.Aggregates.addFields
 import static com.mongodb.client.model.Aggregates.bucket
 import static com.mongodb.client.model.Aggregates.bucketAuto
@@ -813,7 +813,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }';
         def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }';
         def finalizeFunction = 'function(state) { return (state.sum / state.count) }';
-        def accumulatorExpression = accumulator(initFunction, null, accumulateFunction, [ '$copies' ],
+        def accumulatorExpression = accumulator(initFunction, null, accumulateFunction, ['$copies' ],
                 mergeFunction, finalizeFunction).toBsonDocument(BsonDocument, registry)
         def results = helper.aggregate([group('$author', asList(
                 new BsonField('minCopies', new Document('$min', '$copies')),
