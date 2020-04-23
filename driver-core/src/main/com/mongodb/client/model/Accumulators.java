@@ -20,7 +20,6 @@ import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.conversions.Bson;
 
 import java.util.List;
 
@@ -189,6 +188,7 @@ public final class Accumulators {
     /**
      * Creates an $accumulator pipeline stage
      *
+     * @param fieldName            the field name
      * @param initFunction         a function used to initialize the state
      * @param accumulateFunction   a function used to accumulate documents
      * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
@@ -198,13 +198,15 @@ public final class Accumulators {
      * @mongodb.server.release 4.4
      * @since 4.1
      */
-    public static Bson accumulator(final String initFunction, final String accumulateFunction, final String mergeFunction) {
-        return accumulator(initFunction, null, accumulateFunction, null, mergeFunction, null, "js");
+    public static BsonField accumulator(final String fieldName, final String initFunction, final String accumulateFunction,
+                                        final String mergeFunction) {
+        return accumulator(fieldName, initFunction, null, accumulateFunction, null, mergeFunction, null, "js");
     }
 
     /**
      * Creates an $accumulator pipeline stage
      *
+     * @param fieldName            the field name
      * @param initFunction         a function used to initialize the state
      * @param accumulateFunction   a function used to accumulate documents
      * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
@@ -215,14 +217,15 @@ public final class Accumulators {
      * @mongodb.server.release 4.4
      * @since 4.1
      */
-    public static Bson accumulator(final String initFunction, final String accumulateFunction, final String mergeFunction,
-                                   @Nullable final String finalizeFunction) {
-        return accumulator(initFunction, null, accumulateFunction, null, mergeFunction, finalizeFunction, "js");
+    public static BsonField accumulator(final String fieldName, final String initFunction, final String accumulateFunction,
+                                        final String mergeFunction, @Nullable final String finalizeFunction) {
+        return accumulator(fieldName, initFunction, null, accumulateFunction, null, mergeFunction, finalizeFunction, "js");
     }
 
     /**
      * Creates an $accumulator pipeline stage
      *
+     * @param fieldName            the field name
      * @param initFunction         a function used to initialize the state
      * @param initArgs             init function’s arguments (may be null)
      * @param accumulateFunction   a function used to accumulate documents
@@ -236,15 +239,16 @@ public final class Accumulators {
      * @mongodb.server.release 4.4
      * @since 4.1
      */
-    public static Bson accumulator(final String initFunction, @Nullable final List<String> initArgs,
-                                   final String accumulateFunction, @Nullable final List<String> accumulateArgs,
-                                   final String mergeFunction, @Nullable final String finalizeFunction) {
-        return accumulator(initFunction, initArgs, accumulateFunction, accumulateArgs, mergeFunction, finalizeFunction, "js");
+    public static BsonField accumulator(final String fieldName, final String initFunction, @Nullable final List<String> initArgs,
+                                        final String accumulateFunction, @Nullable final List<String> accumulateArgs,
+                                        final String mergeFunction, @Nullable final String finalizeFunction) {
+        return accumulator(fieldName, initFunction, initArgs, accumulateFunction, accumulateArgs, mergeFunction, finalizeFunction, "js");
     }
 
     /**
      * Creates an $accumulator pipeline stage
      *
+     * @param fieldName            the field name
      * @param initFunction         a function used to initialize the state
      * @param accumulateFunction   a function used to accumulate documents
      * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or threads. It
@@ -256,14 +260,15 @@ public final class Accumulators {
      * @mongodb.server.release 4.4
      * @since 4.1
      */
-    public static Bson accumulator(final String initFunction, final String accumulateFunction, final String mergeFunction,
-                                   @Nullable final String finalizeFunction, final String lang) {
-        return accumulator(initFunction, null, accumulateFunction, null, mergeFunction, finalizeFunction, lang);
+    public static BsonField accumulator(final String fieldName, final String initFunction, final String accumulateFunction,
+                                        final String mergeFunction, @Nullable final String finalizeFunction, final String lang) {
+        return accumulator(fieldName, initFunction, null, accumulateFunction, null, mergeFunction, finalizeFunction, lang);
     }
 
     /**
      * Creates an $accumulator pipeline stage
      *
+     * @param fieldName            the field name
      * @param initFunction         a function used to initialize the state
      * @param initArgs             init function’s arguments (may be null)
      * @param accumulateFunction   a function used to accumulate documents
@@ -278,25 +283,21 @@ public final class Accumulators {
      * @mongodb.server.release 4.4
      * @since 4.1
      */
-    public static Bson accumulator(final String initFunction, @Nullable final List<String> initArgs,
-                                   final String accumulateFunction, @Nullable final List<String> accumulateArgs,
-                                   final String mergeFunction, @Nullable final String finalizeFunction, final String lang) {
+    public static BsonField accumulator(final String fieldName, final String initFunction, @Nullable final List<String> initArgs,
+                                        final String accumulateFunction, @Nullable final List<String> accumulateArgs,
+                                        final String mergeFunction, @Nullable final String finalizeFunction, final String lang) {
         BsonDocument accumulatorStage = new BsonDocument("init", new BsonString(initFunction))
+                .append("initArgs", initArgs != null ? new BsonArray(initArgs.stream().map(initArg ->
+                        new BsonString(initArg)).collect(toList())) : new BsonArray())
                 .append("accumulate", new BsonString(accumulateFunction))
+                .append("accumulateArgs", accumulateArgs != null ? new BsonArray(accumulateArgs.stream().map(accumulateArg ->
+                        new BsonString(accumulateArg)).collect(toList())) : new BsonArray())
                 .append("merge", new BsonString(mergeFunction))
                 .append("lang", new BsonString(lang));
-        if (initArgs != null) {
-            accumulatorStage.append("initArgs", new BsonArray(initArgs.stream().map(initArg ->
-                    new BsonString(initArg)).collect(toList())));
-        }
-        if (accumulateArgs != null) {
-            accumulatorStage.append("accumulateArgs", new BsonArray(accumulateArgs.stream().map(accumulateArg ->
-                    new BsonString(accumulateArg)).collect(toList())));
-        }
         if (finalizeFunction != null) {
             accumulatorStage.append("finalize", new BsonString(finalizeFunction));
         }
-        return new BsonDocument("$accumulator", accumulatorStage);
+        return accumulatorOperator("$accumulator", fieldName, accumulatorStage);
     }
 
     private static <TExpression> BsonField accumulatorOperator(final String name, final String fieldName, final TExpression expression) {

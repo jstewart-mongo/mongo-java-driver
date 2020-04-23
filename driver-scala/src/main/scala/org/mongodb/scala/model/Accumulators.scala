@@ -169,6 +169,7 @@ object Accumulators {
   /**
    * Creates an \$accumulator pipeline stage
    *
+   * @param fieldName            the field name
    * @param initFunction         a function used to initialize the state
    * @param accumulateFunction   a function used to accumulate documents
    * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or
@@ -178,12 +179,18 @@ object Accumulators {
    * @since 1.2
    * @note Requires MongoDB 4.4 or greater
    */
-  def accumulator(initFunction: String, accumulateFunction: String, mergeFunction: String): Bson =
-    JAccumulators.accumulator(initFunction, accumulateFunction, mergeFunction)
+  def accumulator(
+      fieldName: String,
+      initFunction: String,
+      accumulateFunction: String,
+      mergeFunction: String
+  ): BsonField =
+    JAccumulators.accumulator(fieldName, initFunction, accumulateFunction, mergeFunction)
 
   /**
    * Creates an \$accumulator pipeline stage
    *
+   * @param fieldName            the field name
    * @param initFunction         a function used to initialize the state
    * @param accumulateFunction   a function used to accumulate documents
    * @param mergeFunction        a function used to merge two internal states, e.g. accumulated on different shards or
@@ -195,16 +202,18 @@ object Accumulators {
    * @note Requires MongoDB 4.4 or greater
    */
   def accumulator(
+      fieldName: String,
       initFunction: String,
       accumulateFunction: String,
       mergeFunction: String,
       finalizeFunction: String
-  ): Bson =
-    JAccumulators.accumulator(initFunction, accumulateFunction, mergeFunction, finalizeFunction)
+  ): BsonField =
+    JAccumulators.accumulator(fieldName, initFunction, accumulateFunction, mergeFunction, finalizeFunction)
 
   /**
    * Creates an \$accumulator pipeline stage
    *
+   * @param fieldName            the field name
    * @param initFunction         a function used to initialize the state
    * @param initArgs             init function’s arguments (may be null)
    * @param accumulateFunction   a function used to accumulate documents
@@ -219,14 +228,16 @@ object Accumulators {
    * @note Requires MongoDB 4.4 or greater
    */
   def accumulator(
+      fieldName: String,
       initFunction: String,
       initArgs: Seq[String],
       accumulateFunction: String,
       accumulateArgs: Seq[String],
       mergeFunction: String,
       finalizeFunction: String
-  ): Bson =
+  ): BsonField =
     JAccumulators.accumulator(
+      fieldName,
       initFunction,
       initArgs.asJava,
       accumulateFunction,
@@ -238,6 +249,7 @@ object Accumulators {
   /**
    * Creates an \$accumulator pipeline stage
    *
+   * @param fieldName            the field name
    * @param initFunction         a function used to initialize the state
    * @param initArgs             init function’s arguments (may be null)
    * @param accumulateFunction   a function used to accumulate documents
@@ -253,6 +265,7 @@ object Accumulators {
    * @note Requires MongoDB 4.4 or greater
    */
   def accumulator(
+      fieldName: String,
       initFunction: String,
       initArgs: Seq[String],
       accumulateFunction: String,
@@ -260,8 +273,9 @@ object Accumulators {
       mergeFunction: String,
       finalizeFunction: String,
       lang: String
-  ): Bson =
+  ): BsonField =
     JAccumulators.accumulator(
+      fieldName,
       initFunction,
       initArgs.asJava,
       accumulateFunction,
