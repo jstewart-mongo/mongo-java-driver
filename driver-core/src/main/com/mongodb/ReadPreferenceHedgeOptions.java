@@ -28,15 +28,15 @@ import org.bson.BsonDocument;
  */
 @Immutable
 public final class ReadPreferenceHedgeOptions {
-    private final boolean isEnabled;
+    private final boolean enabled;
 
     /**
      * Gets whether hedged reads are enabled in the server.
      *
      * @return true if hedged reads are enabled in the server
      */
-    public boolean getEnabled() {
-        return isEnabled;
+    public boolean isEnabled() {
+        return enabled;
     }
 
     /**
@@ -54,7 +54,7 @@ public final class ReadPreferenceHedgeOptions {
      * @return a BsonDocument containing the hedge options
      */
     public BsonDocument toBsonDocument() {
-        return new BsonDocument("enabled", new BsonBoolean(isEnabled));
+        return new BsonDocument("enabled", new BsonBoolean(enabled));
     }
 
     @Override
@@ -68,18 +68,18 @@ public final class ReadPreferenceHedgeOptions {
 
         ReadPreferenceHedgeOptions that = (ReadPreferenceHedgeOptions) o;
 
-        return isEnabled == that.isEnabled;
+        return enabled == that.enabled;
     }
 
     @Override
     public int hashCode() {
-        return isEnabled ? 1 : 0;
+        return enabled ? 1 : 0;
     }
 
     @Override
     public String toString() {
         return "ReadPreferenceHedgeOptions{"
-                + "isEnabled=" + isEnabled
+                + "enabled=" + enabled
                 + '}';
     }
 
@@ -87,16 +87,16 @@ public final class ReadPreferenceHedgeOptions {
      * The builder for read preference hedge options
      */
     public static final class Builder {
-        private boolean isEnabled;
+        private boolean enabled;
 
         /**
          * Sets whether hedged reads are enabled in the server.
          *
-         * @param isEnabled true if hedged reads are enabled
+         * @param enabled true if hedged reads are enabled
          * @return this
          */
-        public Builder enabled(final boolean isEnabled) {
-            this.isEnabled = isEnabled;
+        public Builder enabled(final boolean enabled) {
+            this.enabled = enabled;
             return this;
         }
 
@@ -115,6 +115,6 @@ public final class ReadPreferenceHedgeOptions {
 
 
     private ReadPreferenceHedgeOptions(final Builder builder) {
-        isEnabled = builder.isEnabled;
+        enabled = builder.enabled;
     }
 }

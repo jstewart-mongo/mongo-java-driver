@@ -71,6 +71,18 @@ public abstract class TaggableReadPreference extends ReadPreference {
     }
 
     @Override
+    public abstract TaggableReadPreference withTagSet(TagSet tagSet);
+
+    @Override
+    public abstract TaggableReadPreference withTagSetList(List<TagSet> tagSet);
+
+    @Override
+    public abstract TaggableReadPreference withMaxStalenessMS(Long maxStalenessMS, TimeUnit timeUnit);
+
+    @Override
+    public abstract TaggableReadPreference withHedgeOptions(ReadPreferenceHedgeOptions hedgeOptions);
+
+    @Override
     public boolean isSlaveOk() {
         return true;
     }
