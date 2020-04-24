@@ -341,6 +341,54 @@ package object model {
   }
 
   /**
+   * Defines a Function for use in \$function pipeline stages.
+   *
+   * @since 1.2
+   */
+  type Function = com.mongodb.client.model.Function
+
+  /**
+   * Defines a Function for use in \$function pipeline stages.
+   *
+   * @since 1.2
+   */
+  object Function {
+
+    /**
+     * Construct a new Function instance with no function arguments
+     *
+     * @param functionBody   the body of the function
+     * @return the \$function pipeline stage
+     */
+    def apply(functionBody: String): Function = {
+      new com.mongodb.client.model.Function(functionBody)
+    }
+
+    /**
+     * Construct a new Function instance with function arguments
+     *
+     * @param functionBody   the body of the function
+     * @param functionArgs   the arguments to the function
+     * @return the \$function pipeline stage
+     */
+    def apply(functionBody: String, functionArgs: String*): Function = {
+      new com.mongodb.client.model.Function(functionBody, functionArgs.asJava)
+    }
+
+    /**
+     * Construct a new Function instance with function arguments and a language specifier
+     *
+     * @param functionBody   the body of the function
+     * @param lang           the language specifier. Defaults to "js".
+     * @param functionArgs   the arguments to the function
+     * @return the \$function pipeline stage
+     */
+    def apply(functionBody: String, lang: String, functionArgs: String*): Function = {
+      new com.mongodb.client.model.Function(functionBody, functionArgs.asJava, lang)
+    }
+  }
+
+  /**
    * The options for a graphLookup aggregation pipeline stage
    * @since 1.2
    */

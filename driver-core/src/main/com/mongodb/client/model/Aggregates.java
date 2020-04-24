@@ -310,6 +310,19 @@ public final class Aggregates {
     }
 
     /**
+     * Creates a function pipeline stage
+     *
+     * @param function  the function to use
+     * @return the new pipeline stage
+     * @mongodb.driver.manual reference/operator/aggregation/function/ $function
+     * @mongodb.server.release 4.4
+     * @since 4.1
+     */
+    public static Bson function(final Function function) {
+        return new FunctionStage(function);
+    }
+
+    /**
      * Creates a graphLookup pipeline stage for the specified filter
      *
      * @param <TExpression>     the expression type
@@ -1115,6 +1128,64 @@ public final class Aggregates {
             return "Stage{"
                 + "name='$facet', "
                 + "facets=" + facets + '}';
+        }
+
+    }
+
+    private static class FunctionStage implements Bson {
+        private final Function function;
+        FunctionStage(final Function function) {
+            this.function = function;
+        }
+
+        @Override
+        public <TDocument> BsonDocument toBsonDocument(final Class<TDocument> tDocumentClass, final CodecRegistry codecRegistry) {
+            BsonDocumentWriter writer = new BsonDocumentWriter(new BsonDocument());
+            writer.writeStartDocument();
+            writer.writeName("$function");
+            writer.writeStartDocument();
+            writer.writeName("body");
+            writer.writeString(function.getFunctionBody());
+            writer.writeName("args");
+            writer.writeStartArray();
+            if (function.getFunctionArgs() != null) {
+                for (String arg : function.getFunctionArgs()) {
+                    BuildersHelper.encodeValue(writer, new BsonString(arg), codecRegistry);
+                }
+            }
+            writer.writeEndArray();
+            writer.writeName("lang");
+            writer.writeString(function.getLang());
+            writer.writeEndDocument();
+            writer.writeEndDocument();
+
+            return writer.getDocument();
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            FunctionStage that = (FunctionStage) o;
+
+            return function != null ? function.equals(that.function) : that.function == null;
+        }
+
+        @Override
+        public int hashCode() {
+            return function != null ? function.hashCode() : 0;
+        }
+
+        @Override
+        public String toString() {
+            return "FunctionStage{"
+                    + "name='$function', "
+                    + "function=" + function + '}';
         }
 
     }

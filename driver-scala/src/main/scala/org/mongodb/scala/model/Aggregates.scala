@@ -156,6 +156,17 @@ object Aggregates {
   def facet(facets: Facet*): Bson = JAggregates.facet(facets.asJava)
 
   /**
+   * Creates a \$function pipeline stage
+   *
+   * @param function the function to use
+   * @return the new pipeline stage
+   * @see [[http://docs.mongodb.org/manual/reference/operator/aggregation/function/ \$function]]
+   * @since 1.2
+   * @note Requires MongoDB 4.4 or greater
+   */
+  def function(function: Function): Bson = JAggregates.function(function)
+
+  /**
    * Creates a \$graphLookup pipeline stage for the specified filter
    *
    * @param from             the collection to query

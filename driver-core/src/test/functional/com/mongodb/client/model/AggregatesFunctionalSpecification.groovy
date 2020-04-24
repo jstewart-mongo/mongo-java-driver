@@ -42,6 +42,7 @@ import static com.mongodb.client.model.Aggregates.bucket
 import static com.mongodb.client.model.Aggregates.bucketAuto
 import static com.mongodb.client.model.Aggregates.count
 import static com.mongodb.client.model.Aggregates.facet
+import static com.mongodb.client.model.Aggregates.function
 import static com.mongodb.client.model.Aggregates.graphLookup
 import static com.mongodb.client.model.Aggregates.group
 import static com.mongodb.client.model.Aggregates.limit
@@ -487,6 +488,40 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
                     ]}
                     '''),
         ]
+
+        cleanup:
+        helper?.drop()
+    }
+
+    @IgnoreIf({ !serverVersionAtLeast(4, 3) })
+    def '$function'() {
+        given:
+        def helper = getCollectionHelper()
+
+        helper.drop()
+        helper.insertDocuments(Document.parse("{ _id : 1, name : 'Miss Cheevous',  scores : [ 10, 5, 10 ] }"),
+                Document.parse("{ _id : 2, name : 'Miss Ann Thrope', scores : [ 10, 10, 10 ] }"),
+                Document.parse("{ _id : 3, name : 'Mrs. Eppie Delta', scores : [ 9, 8, 8 ] }"))
+        def isFoundFunction = "function(name) { return hex_md5(name) == '15b0a220baa16331e8d80e15367677ad' }";
+        def messageFunction = 'function(name, scores) { let total = Array.sum(scores); ' +
+                'return \'Hello \' + name + \'. Your total score is \' + total + \'.\' }';
+
+        def isFoundExpression = function(new Function(isFoundFunction, [ '$name' ]))
+        def messageExpression = function(new Function(messageFunction, ['$name', '$scores']))
+
+        when:
+        def results = helper.aggregate([addFields(new Field('isFound', isFoundExpression), new Field('message', messageExpression))]);
+
+        then:
+        results.size() == 3
+        results == [
+                Document.parse('{ _id : 1, name : \'Miss Cheevous\', scores : [ 10, 5, 10 ], isFound : false, ' +
+                        'message : \'Hello Miss Cheevous. Your total score is 25.\' }'),
+                Document.parse('{ _id : 2, name : \'Miss Ann Thrope\', scores : [ 10, 10, 10 ], isFound : true, ' +
+                        'message : \'Hello Miss Ann Thrope. Your total score is 30.\' }'),
+                Document.parse('{ _id : 3, name : \'Mrs. Eppie Delta\', scores : [ 9, 8, 8 ], isFound : false, ' +
+                        'message : \'Hello Mrs. Eppie Delta. Your total score is 25.\' }')
+                ]
 
         cleanup:
         helper?.drop()

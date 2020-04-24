@@ -42,6 +42,7 @@ import static com.mongodb.client.model.Aggregates.bucket
 import static com.mongodb.client.model.Aggregates.bucketAuto
 import static com.mongodb.client.model.Aggregates.count
 import static com.mongodb.client.model.Aggregates.facet
+import static com.mongodb.client.model.Aggregates.function
 import static com.mongodb.client.model.Aggregates.graphLookup
 import static com.mongodb.client.model.Aggregates.group
 import static com.mongodb.client.model.Aggregates.limit
@@ -66,6 +67,7 @@ import static com.mongodb.client.model.Projections.include
 import static com.mongodb.client.model.Sorts.ascending
 import static com.mongodb.client.model.Sorts.descending
 import static java.util.Arrays.asList
+import static java.util.Arrays.hashCode
 import static org.bson.BsonDocument.parse
 
 class AggregatesSpecification extends Specification {
@@ -284,6 +286,21 @@ class AggregatesSpecification extends Specification {
              {$limit: 5}
            ]
         }} ''')
+    }
+
+    def 'should render $function'() {
+        given:
+        def bodyNoArgs = 'function() { return { count : 0, sum : 0 } }';
+        def body = 'function(value) { return { count : parseInt(value) } }';
+        def args = [ '$value' ]
+
+        expect:
+        toBson(function(new Function(bodyNoArgs))) ==
+                parse('{$function: {body: "' + bodyNoArgs + '", args: [], lang: "js"}}')
+        toBson(function(new Function(body, args))) ==
+                parse('{$function: {body: "' + body + '", args: [ "$value" ], lang: "js"}}')
+        toBson(function(new Function(body, args, 'c'))) ==
+                parse('{$function: {body: "' + body + '", args: [ "$value" ], lang: "c"}}')
     }
 
     def 'should render $graphLookup'() {
@@ -728,6 +745,30 @@ class AggregatesSpecification extends Specification {
                         group('$attributes.value', sum('count', 1)),
                         sort(descending('count')),
                         limit(5))).hashCode()
+    }
+
+    def 'should test equals for FunctionStage'() {
+        given:
+        def bodyNoArgs = 'function() { return { count : 0, sum : 0 } }';
+        def body = 'function(value) { return { count : parseInt(value) } }';
+        def args = [ '$value' ]
+
+        expect:
+        function(new Function(bodyNoArgs)).equals(function(new Function(bodyNoArgs, null, 'js')))
+        function(new Function(body, args)).equals(function(new Function(body, args, 'js')))
+        function(new Function(body, args, 'c')).equals(function(new Function(body, args, 'c')))
+    }
+
+    def 'should test hashCode for FunctionStage'() {
+        given:
+        def bodyNoArgs = 'function() { return { count : 0, sum : 0 } }';
+        def body = 'function(value) { return { count : parseInt(value) } }';
+        def args = [ '$value' ]
+
+        expect:
+        function(new Function(bodyNoArgs)).hashCode() == function(new Function(bodyNoArgs, null, 'js')).hashCode()
+        function(new Function(body, args)).hashCode() == function(new Function(body, args, 'js')).hashCode()
+        function(new Function(body, args, 'c')).hashCode() == function(new Function(body, args, 'c')).hashCode()
     }
 
     def 'should test equals for AddFieldsStage'() {
