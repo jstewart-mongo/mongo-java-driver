@@ -1001,7 +1001,8 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
                 Document.parse('{ "name2" : "cookies" }'),
                 Document.parse('{ "name2" : "pecans" }'))
 
-        def pipeline = asList(match(eq('name2', 'cookies')), project(fields(excludeId(), computed('name', '$name2'))))
+        def pipeline = asList(match(eq('name2', 'cookies')), project(fields(excludeId(), computed('name', '$name2'))),
+                sort(ascending('name')))
 
         when:
         def results = coll1Helper.aggregate([project(fields(excludeId(), computed('name', '$name1'))),
