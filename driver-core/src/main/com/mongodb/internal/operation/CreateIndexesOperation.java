@@ -16,6 +16,7 @@
 
 package com.mongodb.internal.operation;
 
+import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.DuplicateKeyException;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoCommandException;
@@ -58,6 +59,7 @@ import static com.mongodb.internal.operation.OperationHelper.releasingCallback;
 import static com.mongodb.internal.operation.OperationHelper.validateIndexRequestCollations;
 import static com.mongodb.internal.operation.OperationHelper.withAsyncConnection;
 import static com.mongodb.internal.operation.OperationHelper.withConnection;
+import static com.mongodb.internal.operation.ServerVersionHelper.serverIsAtLeastVersionFourDotFour;
 import static com.mongodb.internal.operation.WriteConcernHelper.appendWriteConcernToCommand;
 
 /**
@@ -71,6 +73,7 @@ public class CreateIndexesOperation implements AsyncWriteOperation<Void>, WriteO
     private final List<IndexRequest> requests;
     private final WriteConcern writeConcern;
     private long maxTimeMS;
+    private CreateIndexCommitQuorum commitQuorum;
 
     /**
      * Construct a new instance.
@@ -158,6 +161,28 @@ public class CreateIndexesOperation implements AsyncWriteOperation<Void>, WriteO
         notNull("timeUnit", timeUnit);
         isTrueArgument("maxTime >= 0", maxTime >= 0);
         this.maxTimeMS = TimeUnit.MILLISECONDS.convert(maxTime, timeUnit);
+        return this;
+    }
+
+    /**
+     * Gets the create index commit quorum.
+     *
+     * @return the create index commit quorum
+     * @since 4.1
+     */
+    public CreateIndexCommitQuorum getCommitQuorum() {
+        return commitQuorum;
+    }
+
+    /**
+     * Sets the create index commit quorum.
+     *
+     * @param commitQuorum the create index commit quorum
+     * @return this
+     * @since 4.1
+     */
+    public CreateIndexesOperation commitQuorum(final CreateIndexCommitQuorum commitQuorum) {
+        this.commitQuorum = commitQuorum;
         return this;
     }
 
@@ -284,6 +309,9 @@ public class CreateIndexesOperation implements AsyncWriteOperation<Void>, WriteO
         command.put("indexes", new BsonArray(values));
         putIfNotZero(command, "maxTimeMS", maxTimeMS);
         appendWriteConcernToCommand(writeConcern, command, description);
+        if (commitQuorum != null && serverIsAtLeastVersionFourDotFour(description)) {
+            command.put("commitQuorum", commitQuorum.toBsonValue());
+        }
         return command;
     }
 

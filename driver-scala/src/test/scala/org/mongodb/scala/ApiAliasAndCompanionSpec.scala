@@ -45,6 +45,7 @@ class ApiAliasAndCompanionSpec extends BaseSpec {
       "BSONTimestampCodec",
       "CausalConsistencyExamples",
       "ChangeStreamSamples",
+      "CreateIndexCommitQuorum",
       "DBObject",
       "DBObjectCodec",
       "DBObjectCodecProvider",
