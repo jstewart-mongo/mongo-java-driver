@@ -71,15 +71,12 @@ class NettyStreamSpecification extends Specification {
     @IgnoreIf({ getSslSettings().isEnabled() })
     def 'should fail AsyncCompletionHandler if name resolution fails'() {
         given:
-        SocketSettings socketSettings = SocketSettings.builder().connectTimeout(1000, TimeUnit.MILLISECONDS).build()
-        SslSettings sslSettings = SslSettings.builder().build()
-        def factory = new NettyStreamFactory(socketSettings, sslSettings)
-
         def serverAddress = Stub(ServerAddress)
         def exception = new MongoSocketException('Temporary failure in name resolution', serverAddress)
         serverAddress.getSocketAddresses() >> { throw exception }
 
-        def stream = factory.create(serverAddress)
+        def stream = new NettyStreamFactory(SocketSettings.builder().connectTimeout(1000, TimeUnit.MILLISECONDS).build(),
+                SslSettings.builder().build()).create(serverAddress)
         def callback = new CallbackErrorHolder()
 
         when:

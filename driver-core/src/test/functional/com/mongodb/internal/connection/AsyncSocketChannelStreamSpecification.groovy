@@ -77,16 +77,13 @@ class AsyncSocketChannelStreamSpecification extends Specification {
     @IgnoreIf({ getSslSettings().isEnabled() })
     def 'should fail AsyncCompletionHandler if name resolution fails'() {
         given:
-        def socketSettings = SocketSettings.builder().connectTimeout(100, MILLISECONDS).build()
-        def channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newFixedThreadPool(5))
-        def factoryFactory = AsynchronousSocketChannelStreamFactoryFactory.builder().group(channelGroup).build()
-        def factory = factoryFactory.create(socketSettings, sslSettings)
-
         def serverAddress = Stub(ServerAddress)
         def exception = new MongoSocketException('Temporary failure in name resolution', serverAddress)
         serverAddress.getSocketAddresses() >> { throw exception }
 
-        def stream = factory.create(serverAddress)
+        def stream = new AsynchronousSocketChannelStream(serverAddress,
+                SocketSettings.builder().connectTimeout(100, MILLISECONDS).build(),
+                new PowerOfTwoBufferPool(), null)
         def callback = new CallbackErrorHolder()
 
         when:
