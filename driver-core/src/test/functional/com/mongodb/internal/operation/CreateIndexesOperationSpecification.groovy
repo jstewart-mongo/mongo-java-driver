@@ -18,6 +18,7 @@ package com.mongodb.internal.operation
 
 import com.mongodb.CreateIndexCommitQuorum
 import com.mongodb.DuplicateKeyException
+import com.mongodb.MongoClientException
 import com.mongodb.MongoCommandException
 import com.mongodb.MongoExecutionTimeoutException
 import com.mongodb.MongoWriteConcernException
@@ -93,6 +94,23 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         cleanup:
         disableMaxTimeFailPoint()
+
+        where:
+        async << [true, false]
+    }
+
+    @IgnoreIf({ serverVersionAtLeast(4, 3) })
+    def 'should throw exception if commit quorum is set where server < 4.3'() {
+        given:
+        def keys = new BsonDocument('field', new BsonInt32(1))
+        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)])
+                .commitQuorum(CreateIndexCommitQuorum.MAJORITY)
+
+        when:
+        execute(operation, async)
+
+        then:
+        thrown(MongoClientException)
 
         where:
         async << [true, false]

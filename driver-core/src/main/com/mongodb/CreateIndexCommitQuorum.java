@@ -69,6 +69,9 @@ public abstract class CreateIndexCommitQuorum {
      */
     public abstract BsonValue toBsonValue();
 
+    private CreateIndexCommitQuorum() {
+    }
+
     private static final class CreateIndexCommitQuorumWithMode extends CreateIndexCommitQuorum {
         private final String mode;
 

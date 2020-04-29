@@ -19,6 +19,7 @@ package com.mongodb.internal.operation;
 import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.DuplicateKeyException;
 import com.mongodb.ErrorCategory;
+import com.mongodb.MongoClientException;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
@@ -219,14 +220,18 @@ public class CreateIndexesOperation implements AsyncWriteOperation<Void>, WriteO
                             if (t != null) {
                                 wrappedCallback.onResult(null, t);
                             } else {
-                                executeCommandAsync(binding, namespace.getDatabaseName(),
-                                        getCommand(connection.getDescription()), connection, writeConcernErrorWriteTransformer(),
-                                        new SingleResultCallback<Void>() {
-                                            @Override
-                                            public void onResult(final Void result, final Throwable t) {
-                                                wrappedCallback.onResult(null, translateException(t));
-                                            }
-                                        });
+                                try {
+                                    executeCommandAsync(binding, namespace.getDatabaseName(),
+                                            getCommand(connection.getDescription()), connection, writeConcernErrorWriteTransformer(),
+                                            new SingleResultCallback<Void>() {
+                                                @Override
+                                                public void onResult(final Void result, final Throwable t) {
+                                                    wrappedCallback.onResult(null, translateException(t));
+                                                }
+                                            });
+                                } catch (Throwable t1) {
+                                    wrappedCallback.onResult(null, t1);
+                                }
                             }
                         }
                     });
@@ -309,8 +314,13 @@ public class CreateIndexesOperation implements AsyncWriteOperation<Void>, WriteO
         command.put("indexes", new BsonArray(values));
         putIfNotZero(command, "maxTimeMS", maxTimeMS);
         appendWriteConcernToCommand(writeConcern, command, description);
-        if (commitQuorum != null && serverIsAtLeastVersionFourDotFour(description)) {
-            command.put("commitQuorum", commitQuorum.toBsonValue());
+        if (commitQuorum != null) {
+            if (serverIsAtLeastVersionFourDotFour(description)) {
+                command.put("commitQuorum", commitQuorum.toBsonValue());
+            } else {
+                throw new MongoClientException("Specifying a value for the create index commit quorum option "
+                        + "requires a minimum MongoDB version of 4.4");
+            }
         }
         return command;
     }
