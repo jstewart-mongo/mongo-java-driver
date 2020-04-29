@@ -86,6 +86,25 @@ public abstract class CreateIndexCommitQuorum {
             return new BsonString(mode);
         }
 
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            CreateIndexCommitQuorumWithMode that = (CreateIndexCommitQuorumWithMode) o;
+            return mode.equals(that.mode);
+        }
+
+        @Override
+        public int hashCode() {
+            return mode.hashCode();
+        }
+
         @Override
         public String toString() {
             return "CreateIndexCommitQuorum{"
@@ -111,6 +130,24 @@ public abstract class CreateIndexCommitQuorum {
         @Override
         public BsonValue toBsonValue() {
             return new BsonInt32(w);
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            CreateIndexCommitQuorumWithW that = (CreateIndexCommitQuorumWithW) o;
+            return w == that.w;
+        }
+
+        @Override
+        public int hashCode() {
+            return w;
         }
 
         @Override

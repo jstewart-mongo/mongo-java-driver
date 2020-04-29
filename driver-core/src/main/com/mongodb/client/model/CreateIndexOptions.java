@@ -18,6 +18,7 @@ package com.mongodb.client.model;
 
 
 import com.mongodb.CreateIndexCommitQuorum;
+import com.mongodb.lang.Nullable;
 
 import java.util.concurrent.TimeUnit;
 
@@ -61,7 +62,10 @@ public class CreateIndexOptions {
      * Gets the create index commit quorum for this operation.
      *
      * @return the create index commit quorum
+     * @mongodb.server.release 4.4
+     * @since 4.1
      */
+    @Nullable
     public CreateIndexCommitQuorum getCommitQuorum() {
         return commitQuorum;
     }
@@ -71,6 +75,8 @@ public class CreateIndexOptions {
      *
      * @param commitQuorum the create index commit quorum
      * @return this
+     * @mongodb.server.release 4.4
+     * @since 4.1
      */
     public CreateIndexOptions commitQuorum(final CreateIndexCommitQuorum commitQuorum) {
         this.commitQuorum = commitQuorum;

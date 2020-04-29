@@ -45,7 +45,6 @@ class ApiAliasAndCompanionSpec extends BaseSpec {
       "BSONTimestampCodec",
       "CausalConsistencyExamples",
       "ChangeStreamSamples",
-      "CreateIndexCommitQuorum",
       "DBObject",
       "DBObjectCodec",
       "DBObjectCodecProvider",
@@ -275,7 +274,7 @@ class ApiAliasAndCompanionSpec extends BaseSpec {
       .filter(classFilter)
       .map(_.getSimpleName)
       .toSet
-    val scalaExclusions = Set("package", "FullDocument")
+    val scalaExclusions = Set("package", "FullDocument", "CreateIndexCommitQuorum")
     val local = (localPackage ++ localObjects) -- scalaExclusions
 
     diff(local, wrapped) shouldBe empty
