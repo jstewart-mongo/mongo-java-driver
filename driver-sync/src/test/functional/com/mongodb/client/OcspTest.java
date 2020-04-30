@@ -6,18 +6,18 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.junit.Test;
 
+import static com.mongodb.ClusterFixture.getOcspShouldSucceed;
+
 import static org.junit.Assert.fail;
 
 public class OcspTest {
-    private final boolean shouldSucceed = Integer.parseInt(System.getenv("OCSP_TLS_SHOULD_SUCCEED")) == 1;
-
     @Test
     public void testTLS() {
         String options = "tls=true";
         try {
             connect(options);
         } catch (MongoTimeoutException e) {
-            if (shouldSucceed) {
+            if (getOcspShouldSucceed()) {
                 fail("Unexpected exception when using OCSP with tls=true: " + e);
             }
         }

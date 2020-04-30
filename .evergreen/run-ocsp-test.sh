@@ -9,6 +9,7 @@ set -o errexit  # Exit the script with error if any of the commands fail
 
 JDK=${JDK:-jdk11}
 OCSP_MUST_STAPLE=${OCSP_MUST_STAPLE:-}
+OCSP_TLS_SHOULD_SUCCEED=${OCSP_TLS_SHOULD_SUCCEED:-}
 
 ############################################
 #            Functions                     #
@@ -21,7 +22,7 @@ provision_ssl () {
   ${JAVA_HOME}/bin/keytool -import -trustcacerts -file ${CA_FILE} -keystore mongo-truststore -alias ca_ocsp -storepass changeit -noprompt
 
   # We add extra gradle arguments for SSL
-  export GRADLE_EXTRA_VARS="-Pssl.enabled=true -Pocsp.property=`pwd`/java-security-ocsp-property -Pssl.trustStoreType=jks -Pssl.trustStore=`pwd`/mongo-truststore -Pssl.trustStorePassword=changeit -Pssl.checkRevocation=true -Pclient.enableStatusRequestExtension=${OCSP_MUST_STAPLE} -Pclient.protocols=TLSv1.2"
+  export GRADLE_EXTRA_VARS="-Pssl.enabled=true -Pocsp.property=`pwd`/java-security-ocsp-property -Pssl.trustStoreType=jks -Pssl.trustStore=`pwd`/mongo-truststore -Pssl.trustStorePassword=changeit -Pssl.checkRevocation=true -Pclient.enableStatusRequestExtension=${OCSP_MUST_STAPLE} -Pclient.protocols=TLSv1.2 -Pocsp.tls.should.succeed=${OCSP_TLS_SHOULD_SUCCEED}"
 }
 
 ############################################
@@ -31,7 +32,6 @@ provision_ssl () {
 echo "Running OCSP tests"
 
 export JAVA_HOME="/opt/java/${JDK}"
-export OCSP_TLS_SHOULD_SUCCEED=${OCSP_TLS_SHOULD_SUCCEED}
 
 # show test output
 set -x

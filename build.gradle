@@ -213,6 +213,7 @@ configure(javaCodeCheckedProjects) {
             }
             if (project.hasProperty('ocsp.property')) {
                 systemProperties(
+                    'org.mongodb.test.ocsp.tls.should.succeed': project.property('ocsp.tls.should.succeed'),
                     'java.security.properties': file(project.property('ocsp.property')),
                     'com.sun.net.ssl.checkRevocation': project.property('ssl.checkRevocation'),
                     'jdk.tls.client.enableStatusRequestExtension': project.property('client.enableStatusRequestExtension'),

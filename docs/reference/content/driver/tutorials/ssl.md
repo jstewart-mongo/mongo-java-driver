@@ -211,23 +211,23 @@ The Java driver cannot enable OCSP by default on a per MongoClient basis.
 
 ### Client-driven OCSP
 
-An application will need to set several JVM system properties to ensure that client-driven OCSP is enabled:
+An application will need to set JVM system and security properties to ensure that client-driven OCSP is enabled:
 
 -  `com.sun.net.ssl.checkRevocation`:
-      When set to `true`, this enables revocation checking.
+      When set to `true`, this system property enables revocation checking.
 
 -  `ocsp.enable`:
-      When set to `true`, this enables client-driven OCSP.
+      When set to `true`, this security property enables client-driven OCSP.
       
 To configure an application to use client-driven OCSP, the application must already be set up to connect to a server using TLS. Setting these system properties is required to enable client-driven OCSP.
 
 ### OCSP Stapling
 
-{{% note %}}
+{{% note class="important" %}}
 Red Hat Enterprise Linux 7 does not support OCSP stapling.
 {{% /note %}}
 
-{{% note %}}
+{{% note class=important %}}
 The following exception may occur when using OCSP stapling with Java runtime environments that use the TLS 1.3 protocol (Java 11 and higher use TLS 1.3 by default):
 
 `javax.net.ssl.SSLHandshakeException: extension (5) should not be presented in certificate_request`
