@@ -274,7 +274,7 @@ class ApiAliasAndCompanionSpec extends BaseSpec {
       .filter(classFilter)
       .map(_.getSimpleName)
       .toSet
-    val scalaExclusions = Set("package", "FullDocument", "CreateIndexCommitQuorum")
+    val scalaExclusions = Set("package", "FullDocument")
     val local = (localPackage ++ localObjects) -- scalaExclusions
 
     diff(local, wrapped) shouldBe empty

@@ -163,12 +163,6 @@ package object model {
   }
 
   /**
-   * Represents the  commit quorum specifies how many data-bearing members of a replica set, including the primary, must
-   * complete the index builds successfully before the primary marks the indexes as ready.
-   */
-  type CreateIndexCommitQuorum = com.mongodb.CreateIndexCommitQuorum
-
-  /**
    * Options for creating a view
    *
    * @since 1.2
