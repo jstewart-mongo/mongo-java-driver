@@ -222,14 +222,10 @@ An application will need to set JVM system and security properties to ensure tha
 To configure an application to use client-driven OCSP, the application must already be set up to connect to a server using TLS. Setting these system properties is required to enable client-driven OCSP.
 
 {{% note %}}
-The support for TLS provided by the JDK utilizes “hard fail” behavior in the case of an unavailable OCSP responder in contrast to the mongo shell and drivers that utilize “soft-fail” behavior.
+The support for TLS provided by the JDK utilizes “hard fail” behavior in the case of an unavailable OCSP responder in contrast to the mongo shell and drivers that utilize “soft fail” behavior.
 {{% /note %}}
 
 ### OCSP Stapling
-
-{{% note class="important" %}}
-MongoDB servers running on Red Hat Enterprise Linux 7 do not support OCSP stapling. A Java driver running on Red Hat Enterprise Linux 7 will be able to utilize OCSP stapling.
-{{% /note %}}
 
 {{% note class=important %}}
 The following exception may occur when using OCSP stapling with Java runtime environments that use the TLS 1.3 protocol (Java 11 and higher use TLS 1.3 by default):
