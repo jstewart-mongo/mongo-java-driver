@@ -250,4 +250,4 @@ An application will need to set several JVM system properties to set up OCSP sta
 To configure an application to use OCSP stapling, the application must already be set up to connect to a server using TLS, and the server must be set up to staple an OCSP response to the certificate it returns as part of the the TLS handshake.
 
 For more information on configuring a Java application to use OCSP, please
-refer to the "Client-driven OCSP and OCSP Stapling" section in the [`JSSE Reference Guide`](https://docs.oracle.com/javase/9/security/java-secure-socket-extension-jsse-reference-guide.htm#JSSEC-GUID-E1A3A7C3-309A-4415-903B-B31C96F68C86).
+refer to the "Client-driven OCSP and OCSP Stapling" section in the [`JSSE Reference Guide`](https://docs.oracle.com/javase/9/security/java-secure-socket-extension-jsse-reference-guide.htm).

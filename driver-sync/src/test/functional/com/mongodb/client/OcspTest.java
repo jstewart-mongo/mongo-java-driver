@@ -13,20 +13,13 @@ import static org.junit.Assert.fail;
 public class OcspTest {
     @Test
     public void testTLS() {
-        String options = "tls=true";
-        try {
-            connect(options);
+        String uri = "mongodb://localhost/?serverSelectionTimeoutMS=2000&tls=true";
+        try (MongoClient client = MongoClients.create(uri)) {
+            client.getDatabase("admin").runCommand(new BsonDocument("ping", new BsonInt32(1)));
         } catch (MongoTimeoutException e) {
             if (getOcspShouldSucceed()) {
                 fail("Unexpected exception when using OCSP with tls=true: " + e);
             }
-        }
-    }
-
-    private void connect(final String options) {
-        String uri = "mongodb://localhost/?serverSelectionTimeoutMS=2000&" + options;
-        try (MongoClient client = MongoClients.create(uri)) {
-            client.getDatabase("admin").runCommand(new BsonDocument("ping", new BsonInt32(1)));
         }
     }
 }
