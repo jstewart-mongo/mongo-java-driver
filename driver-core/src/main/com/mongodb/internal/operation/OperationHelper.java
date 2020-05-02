@@ -152,11 +152,12 @@ final class OperationHelper {
         }
     }
 
-    private static void validateWriteRequestHint(final ConnectionDescription connectionDescription, final WriteConcern writeConcern) {
+    private static void validateWriteRequestHint(final ConnectionDescription connectionDescription, final WriteConcern writeConcern,
+                                                 final WriteRequest request) {
         if (serverIsLessThanVersionThreeDotFour(connectionDescription)) {
             throw new IllegalArgumentException(format("Hint not supported by wire version: %s",
                     connectionDescription.getMaxWireVersion()));
-        } else if (!writeConcern.isAcknowledged()) {
+        } else if ((request instanceof DeleteRequest || request instanceof UpdateRequest) && !writeConcern.isAcknowledged()) {
             throw new MongoClientException("Specifying hints with an unacknowledged WriteConcern is not supported");
         }
     }
@@ -233,7 +234,7 @@ final class OperationHelper {
                 hintString = ((DeleteRequest) request).getHintString();
             }
             if (hint != null || hintString != null) {
-                validateWriteRequestHint(connectionDescription, writeConcern);
+                validateWriteRequestHint(connectionDescription, writeConcern, request);
                 break;
             }
         }
