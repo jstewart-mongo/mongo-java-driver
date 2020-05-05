@@ -75,7 +75,7 @@ public interface AsyncListDatabasesIterable<T> extends AsyncMongoIterable<T> {
      * @param authorizedDatabasesOnly the authorizedDatabasesOnly flag, which may be null
      * @return this
      * @since 4.1
-     * @mongodb.server.release 4.0.5
+     * @mongodb.server.release 4.0
      */
     AsyncListDatabasesIterable<T> authorizedDatabasesOnly(@Nullable Boolean authorizedDatabasesOnly);
 }

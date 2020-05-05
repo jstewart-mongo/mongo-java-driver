@@ -139,8 +139,6 @@ public class ListDatabasesOperation<T> implements AsyncReadOperation<AsyncBatchC
      *
      * @param authorizedDatabasesOnly the authorizedDatabasesOnly flag, which may be null
      * @return this
-     * @since 4.1
-     * @mongodb.server.release 4.0.5
      */
     public ListDatabasesOperation<T> authorizedDatabasesOnly(final Boolean authorizedDatabasesOnly) {
         this.authorizedDatabasesOnly = authorizedDatabasesOnly;

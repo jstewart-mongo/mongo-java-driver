@@ -42,7 +42,7 @@ class AsyncMongoClientSpecification extends Specification {
 
     def 'should use ListDatabasesIterableImpl correctly'() {
         given:
-        def executor = new TestOperationExecutor([null, null, null, null])
+        def executor = new TestOperationExecutor([null, null])
         def client = new AsyncMongoClientImpl(MongoClientSettings.builder().build(), Stub(Cluster), executor)
         def listDatabasesMethod = client.&listDatabases
         def listDatabasesNamesMethod = client.&listDatabaseNames
