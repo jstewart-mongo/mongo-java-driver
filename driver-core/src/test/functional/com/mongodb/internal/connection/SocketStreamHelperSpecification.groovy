@@ -20,6 +20,7 @@ import com.mongodb.ClusterFixture
 import com.mongodb.MongoInternalException
 import com.mongodb.connection.SocketSettings
 import com.mongodb.connection.SslSettings
+import jdk.net.ExtendedSocketOptions
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 
@@ -48,6 +49,13 @@ class SocketStreamHelperSpecification extends Specification {
         socket.getTcpNoDelay()
         socket.getKeepAlive()
         socket.getSoTimeout() == socketSettings.getReadTimeout(MILLISECONDS)
+
+        // If the Java 11+ extended socket options for keep alive probes are available, check those values.
+        if (Arrays.stream(ExtendedSocketOptions.getDeclaredFields()).anyMatch{ f -> f.getName().equals('TCP_KEEPCOUNT') }) {
+            socket.getOption((SocketOption<Integer>) ExtendedSocketOptions.getField('TCP_KEEPCOUNT').get(null)) == 9
+            socket.getOption((SocketOption<Integer>) ExtendedSocketOptions.getField('TCP_KEEPIDLE').get(null)) == 300
+            socket.getOption((SocketOption<Integer>) ExtendedSocketOptions.getField('TCP_KEEPINTERVAL').get(null)) == 10
+        }
 
         cleanup:
         socket?.close()
