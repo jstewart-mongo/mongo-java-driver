@@ -33,7 +33,9 @@ public class StringCodec implements Codec<String> {
 
     @Override
     public String decode(final BsonReader reader, final DecoderContext decoderContext) {
-        if (reader.getCurrentBsonType() == BsonType.SYMBOL) {
+        if (reader.getCurrentBsonType() == BsonType.OBJECT_ID) {
+            return reader.readObjectId().toHexString();
+        } else if (reader.getCurrentBsonType() == BsonType.SYMBOL) {
             return reader.readSymbol();
         } else {
             return reader.readString();
