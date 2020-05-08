@@ -100,12 +100,12 @@ public final class SingleServerCluster extends BaseCluster {
                                 .setName(null)
                                 .ok(false)
                                 .build();
-                        publishDescription(ClusterType.UNKNOWN, newDescription);
+                        publishDescription(ClusterType.UNKNOWN, newDescription, true);
                         return;
                     }
                 }
             }
-            publishDescription(descriptionToPublish, shouldPublishChangeEvent(event.getNewDescription(), event.getPreviousDescription()));
+            publishDescription(newDescription, shouldPublishChangeEvent(event.getNewDescription(), event.getPreviousDescription()));
         }
     }
 
@@ -114,10 +114,11 @@ public final class SingleServerCluster extends BaseCluster {
         if (clusterType == ClusterType.UNKNOWN && serverDescription != null) {
             clusterType = serverDescription.getClusterType();
         }
-        publishDescription(clusterType, serverDescription);
+        publishDescription(clusterType, serverDescription, shouldPublishChangeEvent);
     }
 
-    private void publishDescription(final ClusterType clusterType, final ServerDescription serverDescription) {
+    private void publishDescription(final ClusterType clusterType, final ServerDescription serverDescription,
+                                    final boolean shouldPublishChangeEvent) {
         ClusterDescription currentDescription = getCurrentDescription();
         ClusterDescription description = new ClusterDescription(ClusterConnectionMode.SINGLE, clusterType,
                 serverDescription == null ? emptyList() : singletonList(serverDescription), getSettings(),
