@@ -24,6 +24,7 @@ import jdk.net.ExtendedSocketOptions;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketOption;
@@ -81,11 +82,12 @@ final class SocketStreamHelper {
     private static void setExtendedSocketOptions(final Socket socket) {
         if (Arrays.stream(ExtendedSocketOptions.class.getDeclaredFields()).anyMatch(f -> f.getName().equals(TCP_KEEPCOUNT))) {
             try {
-                socket.setOption((SocketOption<Integer>) ExtendedSocketOptions.class.getField(TCP_KEEPCOUNT).get(null),
+                Method setOptionMethod = Socket.class.getMethod("setOption", SocketOption.class, Object.class);
+                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPCOUNT).get(null),
                         TCP_KEEPCOUNT_LIMIT);
-                socket.setOption((SocketOption<Integer>) ExtendedSocketOptions.class.getField(TCP_KEEPIDLE).get(null),
+                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPCOUNT).get(null),
                         TCP_KEEPIDLE_DURATION);
-                socket.setOption((SocketOption<Integer>) ExtendedSocketOptions.class.getField(TCP_KEEPINTERVAL).get(null),
+                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPCOUNT).get(null),
                         TCP_KEEPINTERVAL_DURATION);
             } catch (Throwable t) {
             }
