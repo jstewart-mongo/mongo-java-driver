@@ -85,9 +85,9 @@ final class SocketStreamHelper {
                 Method setOptionMethod = Socket.class.getMethod("setOption", SocketOption.class, Object.class);
                 setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPCOUNT).get(null),
                         TCP_KEEPCOUNT_LIMIT);
-                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPCOUNT).get(null),
+                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPIDLE).get(null),
                         TCP_KEEPIDLE_DURATION);
-                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPCOUNT).get(null),
+                setOptionMethod.invoke(socket, ExtendedSocketOptions.class.getDeclaredField(TCP_KEEPINTERVAL).get(null),
                         TCP_KEEPINTERVAL_DURATION);
             } catch (Throwable t) {
             }
