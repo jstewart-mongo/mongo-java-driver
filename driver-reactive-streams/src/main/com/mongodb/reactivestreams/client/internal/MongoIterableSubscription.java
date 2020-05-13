@@ -81,6 +81,9 @@ final class MongoIterableSubscription<TResult> extends AbstractSubscription<TRes
         }
 
         if (mustRead) {
+            if (batchCursor.isClosed()) {
+                return;
+            }
             batchCursor.setBatchSize(calculateBatchSize());
             batchCursor.next((result, t) -> {
                 synchronized (MongoIterableSubscription.this) {
