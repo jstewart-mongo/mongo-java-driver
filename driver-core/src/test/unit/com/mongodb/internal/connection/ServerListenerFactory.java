@@ -21,4 +21,5 @@ import com.mongodb.event.ServerListener;
 
 interface ServerListenerFactory {
     ServerListener create(ServerAddress serverAddress);
+    ServerListener createApplicationListener(ServerAddress serverAddress);
 }

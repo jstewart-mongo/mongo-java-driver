@@ -19,27 +19,18 @@ package com.mongodb.internal.connection
 import com.mongodb.MongoSocketException
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.ServerAddress
-import com.mongodb.Tag
-import com.mongodb.TagSet
 import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerId
 import com.mongodb.connection.ServerSettings
-import com.mongodb.connection.ServerType
 import com.mongodb.connection.SocketSettings
 import com.mongodb.connection.SocketStreamFactory
-import org.bson.types.ObjectId
 
 import java.util.concurrent.CountDownLatch
 
 import static com.mongodb.ClusterFixture.getCredentialWithCache
 import static com.mongodb.ClusterFixture.getPrimary
 import static com.mongodb.ClusterFixture.getSslSettings
-import static com.mongodb.connection.ServerConnectionState.CONNECTED
-import static com.mongodb.connection.ServerConnectionState.CONNECTING
-import static com.mongodb.connection.ServerDescription.builder
-import static com.mongodb.internal.connection.DefaultServerMonitor.shouldLogStageChange
-import static java.util.Arrays.asList
 
 class ServerMonitorSpecification extends OperationFunctionalSpecification {
     ServerDescription newDescription
@@ -70,119 +61,6 @@ class ServerMonitorSpecification extends OperationFunctionalSpecification {
 
         then:
         newDescription.exception instanceof MongoSocketException
-    }
-
-    def 'should log state change if significant properties have changed'() {
-        given:
-        ServerDescription.Builder builder = createBuilder();
-        ServerDescription description = builder.build();
-        ServerDescription otherDescription
-
-        expect:
-        !shouldLogStageChange(description, builder.build())
-
-        when:
-        otherDescription = createBuilder().address(new ServerAddress('localhost:27018')).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().type(ServerType.STANDALONE).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().tagSet(null).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().setName('test2').build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().primary('localhost:27018').build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().canonicalAddress('localhost:27018').build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().hosts(new HashSet<String>(asList('localhost:27018'))).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().arbiters(new HashSet<String>(asList('localhost:27018'))).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().passives(new HashSet<String>(asList('localhost:27018'))).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().ok(false).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().state(CONNECTING).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().electionId(new ObjectId()).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        when:
-        otherDescription = createBuilder().setVersion(3).build();
-
-        then:
-        shouldLogStageChange(description, otherDescription)
-
-        // test exception state changes
-        shouldLogStageChange(createBuilder().exception(new IOException()).build(),
-                createBuilder().exception(new RuntimeException()).build())
-        shouldLogStageChange(createBuilder().exception(new IOException('message one')).build(),
-                createBuilder().exception(new IOException('message two')).build())
-    }
-
-    private static ServerDescription.Builder createBuilder() {
-        builder().ok(true)
-                .state(CONNECTED)
-                .address(new ServerAddress())
-                .type(ServerType.SHARD_ROUTER)
-                .tagSet(new TagSet(asList(new Tag('dc', 'ny'))))
-                .setName('test')
-                .primary('localhost:27017')
-                .canonicalAddress('localhost:27017')
-                .hosts(new HashSet<String>(asList('localhost:27017', 'localhost:27018')))
-                .passives(new HashSet<String>(asList('localhost:27019')))
-                .arbiters(new HashSet<String>(asList('localhost:27020')))
-                .electionId(new ObjectId('abcdabcdabcdabcdabcdabcd'))
-                .setVersion(2)
     }
 
     def initializeServerMonitor(ServerAddress address) {

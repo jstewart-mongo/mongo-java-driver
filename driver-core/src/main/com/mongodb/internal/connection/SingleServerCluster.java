@@ -32,6 +32,7 @@ import com.mongodb.event.ServerDescriptionChangedEvent;
 import com.mongodb.event.ServerListener;
 
 import static com.mongodb.assertions.Assertions.isTrue;
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -57,7 +58,7 @@ public final class SingleServerCluster extends BaseCluster {
         // In other words, we are leaking a reference to "this" from the constructor.
         synchronized (this) {
             this.server = createServer(settings.getHosts().get(0), new DefaultServerStateListener());
-            publishDescription(server.getDescription());
+            publishDescription(server.getDescription(), true);
         }
     }
 
@@ -99,30 +100,33 @@ public final class SingleServerCluster extends BaseCluster {
                                 .setName(null)
                                 .ok(false)
                                 .build();
-                        publishDescription(ClusterType.UNKNOWN, newDescription);
+                        publishDescription(ClusterType.UNKNOWN, newDescription, true);
                         return;
                     }
                 }
             }
-            publishDescription(newDescription);
+            publishDescription(newDescription, shouldPublishChangeEvent(event.getNewDescription(), event.getPreviousDescription()));
         }
     }
 
-    private void publishDescription(final ServerDescription serverDescription) {
+    private void publishDescription(final ServerDescription serverDescription, final boolean shouldPublishChangeEvent) {
         ClusterType clusterType = getSettings().getRequiredClusterType();
         if (clusterType == ClusterType.UNKNOWN && serverDescription != null) {
             clusterType = serverDescription.getClusterType();
         }
-        publishDescription(clusterType, serverDescription);
+        publishDescription(clusterType, serverDescription, shouldPublishChangeEvent);
     }
 
-    private void publishDescription(final ClusterType clusterType, final ServerDescription serverDescription) {
+    private void publishDescription(final ClusterType clusterType, final ServerDescription serverDescription,
+                                    final boolean shouldPublishChangeEvent) {
         ClusterDescription currentDescription = getCurrentDescription();
         ClusterDescription description = new ClusterDescription(ClusterConnectionMode.SINGLE, clusterType,
                 serverDescription == null ? emptyList() : singletonList(serverDescription), getSettings(),
                 getServerFactory().getSettings());
 
         updateDescription(description);
-        fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), description, currentDescription));
+        if (shouldPublishChangeEvent) {
+            fireChangeEvent(new ClusterDescriptionChangedEvent(getClusterId(), description, currentDescription));
+        }
     }
 }

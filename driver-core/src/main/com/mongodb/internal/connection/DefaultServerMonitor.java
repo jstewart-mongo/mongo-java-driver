@@ -39,6 +39,7 @@ import static com.mongodb.connection.ServerConnectionState.CONNECTING;
 import static com.mongodb.connection.ServerType.UNKNOWN;
 import static com.mongodb.internal.connection.CommandHelper.executeCommand;
 import static com.mongodb.internal.connection.DescriptionHelper.createServerDescription;
+import static com.mongodb.internal.connection.ServerDescriptionChangeEventHelper.shouldPublishChangeEvent;
 import static com.mongodb.internal.event.EventListenerHelper.getServerMonitorListener;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -194,7 +195,7 @@ class DefaultServerMonitor implements ServerMonitor {
 
         private void logStateChange(final ServerDescription previousServerDescription,
                                     final ServerDescription currentServerDescription) {
-            if (shouldLogStageChange(previousServerDescription, currentServerDescription)) {
+            if (shouldPublishChangeEvent(previousServerDescription, currentServerDescription)) {
                 if (currentServerDescription.getException() != null) {
                     LOGGER.info(format("Exception in monitor thread while connecting to server %s", serverId.getAddress()),
                                 currentServerDescription.getException());
