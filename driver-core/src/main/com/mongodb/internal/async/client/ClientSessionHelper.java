@@ -17,6 +17,7 @@
 package com.mongodb.internal.async.client;
 
 import com.mongodb.ClientSessionOptions;
+import com.mongodb.MongoException;
 import com.mongodb.TransactionOptions;
 import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ClusterDescription;
@@ -62,7 +63,7 @@ class ClientSessionHelper {
                 && clusterDescription.getType() != ClusterType.STANDALONE) {
             callback.onResult(createClientSession(options, executor), null);
         } else if (mongoClient.getCluster().isClosed()) {
-            callback.onResult(null, null);
+            callback.onResult(null, new MongoException("createClientSession called after the cluster was closed"));
         } else {
             mongoClient.getCluster().selectServerAsync(new ServerSelector() {
                 @Override
