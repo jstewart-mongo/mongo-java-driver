@@ -47,7 +47,7 @@ import static com.mongodb.internal.operation.CommandOperationHelper.executeComma
 import static com.mongodb.internal.operation.DocumentHelper.putIfNotNullOrEmpty;
 import static com.mongodb.internal.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.internal.operation.OperationHelper.LOGGER;
-import static com.mongodb.internal.operation.OperationHelper.validateReadConcernAndCollation;
+import static com.mongodb.internal.operation.OperationHelper.validateFindOptions;
 import static com.mongodb.internal.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 /**
@@ -223,7 +223,7 @@ public class DistinctOperation<T> implements AsyncReadOperation<AsyncBatchCursor
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
-                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
+                validateFindOptions(connectionDescription, sessionContext.getReadConcern(), collation, null);
                 return getCommand(sessionContext);
             }
         };

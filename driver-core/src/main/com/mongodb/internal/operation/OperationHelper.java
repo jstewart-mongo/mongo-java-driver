@@ -171,6 +171,27 @@ final class OperationHelper {
         }
     }
 
+    static void validateAllowDiskUse(final Connection connection, final Boolean allowDiskUse) {
+        validateAllowDiskUse(connection.getDescription(), allowDiskUse);
+    }
+
+    static void validateAllowDiskUse(final ConnectionDescription connectionDescription, final Boolean allowDiskUse) {
+        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(connectionDescription)) {
+            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
+                    connectionDescription.getMaxWireVersion()));
+        }
+    }
+
+    static void validateAllowDiskUse(final AsyncConnection connection, final Boolean allowDiskUse,
+                                     final AsyncCallableWithConnection callable) {
+        Throwable throwable = null;
+        if (!serverIsAtLeastVersionThreeDotFour(connection.getDescription()) && allowDiskUse != null) {
+            throwable = new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
+                    connection.getDescription().getMaxWireVersion()));
+        }
+        callable.call(connection, throwable);
+    }
+
     static void validateCollation(final AsyncConnection connection, final Collation collation,
                                   final AsyncCallableWithConnection callable) {
         Throwable throwable = null;
@@ -287,37 +308,48 @@ final class OperationHelper {
         }
     }
 
-    static void validateReadConcernAndCollation(final Connection connection, final ReadConcern readConcern,
-                                                final Collation collation) {
+    static void validateFindOptions(final Connection connection, final ReadConcern readConcern, final Collation collation,
+                                    final Boolean allowDiskUse) {
         validateReadConcern(connection, readConcern);
         validateCollation(connection, collation);
+        validateAllowDiskUse(connection, allowDiskUse);
     }
 
-    static void validateReadConcernAndCollation(final ConnectionDescription description, final ReadConcern readConcern,
-                                                final Collation collation) {
+    static void validateFindOptions(final ConnectionDescription description, final ReadConcern readConcern,
+                                    final Collation collation, final Boolean allowDiskUse) {
         validateReadConcern(description, readConcern);
         validateCollation(description, collation);
+        validateAllowDiskUse(description, allowDiskUse);
     }
 
-    static void validateReadConcernAndCollation(final AsyncConnection connection, final ReadConcern readConcern,
-                                                final Collation collation,
-                                                final AsyncCallableWithConnection callable) {
+    static void validateFindOptions(final AsyncConnection connection, final ReadConcern readConcern,
+                                    final Collation collation, final Boolean allowDiskUse,
+                                    final AsyncCallableWithConnection callable) {
         validateReadConcern(connection, readConcern, new AsyncCallableWithConnection(){
             @Override
             public void call(final AsyncConnection connection, final Throwable t) {
                 if (t != null) {
                     callable.call(connection, t);
                 } else {
-                    validateCollation(connection, collation, callable);
+                    validateCollation(connection, collation, new AsyncCallableWithConnection() {
+                        @Override
+                        public void call(final AsyncConnection connection, final Throwable t1) {
+                            if (t1 != null) {
+                                callable.call(connection, t1);
+                            } else {
+                                validateAllowDiskUse(connection, allowDiskUse, callable);
+                            }
+                        }
+                    });
                 }
             }
         });
     }
 
-    static void validateReadConcernAndCollation(final AsyncConnectionSource source, final AsyncConnection connection,
-                                                final ReadConcern readConcern, final Collation collation,
-                                                final AsyncCallableWithConnectionAndSource callable) {
-        validateReadConcernAndCollation(connection, readConcern, collation, new AsyncCallableWithConnection(){
+    static void validateFindOptions(final AsyncConnectionSource source, final AsyncConnection connection, final ReadConcern readConcern,
+                                    final Collation collation, final Boolean allowDiskUse,
+                                    final AsyncCallableWithConnectionAndSource callable) {
+        validateFindOptions(connection, readConcern, collation, allowDiskUse, new AsyncCallableWithConnection(){
             @Override
             public void call(final AsyncConnection connection, final Throwable t) {
                 callable.call(source, connection, t);

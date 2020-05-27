@@ -105,7 +105,6 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
                 .max(BsonDocument.parse('{ abc: 1000 }'))
                 .returnKey(true)
                 .showRecordId(true)
-                .allowDiskUse(true)
 
         when:
         operation.execute(readBinding)
@@ -174,7 +173,7 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
         }
 
         then:
-        testOperation(operation, [3, 2, 0], expectedCommand, async, commandResult)
+        testOperation(operation, [3, 4, 0], expectedCommand, async, commandResult)
 
         where:
         async << [true, true, true, true, true, false, false, false, false, false]
