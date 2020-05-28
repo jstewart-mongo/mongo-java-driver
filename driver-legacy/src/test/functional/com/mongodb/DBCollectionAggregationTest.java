@@ -46,7 +46,6 @@ public class DBCollectionAggregationTest extends DatabaseTestCase {
 
     @Test
     public void testAggregationCursor() {
-        assumeTrue(serverVersionAtLeast(3, 4));
         List<DBObject> pipeline = prepareData();
 
         verify(pipeline, AggregationOptions.builder()

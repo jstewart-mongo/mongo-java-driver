@@ -53,7 +53,7 @@ import static com.mongodb.internal.operation.CommandOperationHelper.executeComma
 import static com.mongodb.internal.operation.DocumentHelper.putIfNotNull;
 import static com.mongodb.internal.operation.DocumentHelper.putIfNotZero;
 import static com.mongodb.internal.operation.ExplainHelper.asExplainCommand;
-import static com.mongodb.internal.operation.OperationHelper.validateFindOptions;
+import static com.mongodb.internal.operation.OperationHelper.validateReadConcernAndCollation;
 import static com.mongodb.internal.operation.OperationReadConcernHelper.appendReadConcernToCommand;
 
 /**
@@ -343,7 +343,7 @@ public class CountOperation implements AsyncReadOperation<Long>, ReadOperation<L
         return new CommandCreator() {
             @Override
             public BsonDocument create(final ServerDescription serverDescription, final ConnectionDescription connectionDescription) {
-                validateFindOptions(connectionDescription, sessionContext.getReadConcern(), collation, null);
+                validateReadConcernAndCollation(connectionDescription, sessionContext.getReadConcern(), collation);
                 return getCommand(sessionContext);
             }
         };
