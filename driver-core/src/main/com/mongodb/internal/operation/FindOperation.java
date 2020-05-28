@@ -702,7 +702,7 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
                     } else {
                         final SingleResultCallback<AsyncBatchCursor<T>> wrappedCallback =
                                 releasingCallback(errHandlingCallback, source, connection);
-                        OperationHelper.validateFindOptions(source, connection, binding.getSessionContext().getReadConcern(), collation,
+                        validateFindOptions(source, connection, binding.getSessionContext().getReadConcern(), collation,
                                 allowDiskUse,
                                 new AsyncCallableWithConnectionAndSource() {
                                     @Override
@@ -797,9 +797,6 @@ public class FindOperation<T> implements AsyncReadOperation<AsyncBatchCursor<T>>
         }
         if (showRecordId) {
             document.put("$showDiskLoc", BsonBoolean.TRUE);
-        }
-        if (allowDiskUse != null) {
-            document.put("$allowDiskUse", new BsonBoolean(allowDiskUse));
         }
 
         if (document.isEmpty()) {

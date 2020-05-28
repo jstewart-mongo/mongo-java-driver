@@ -171,17 +171,6 @@ final class OperationHelper {
         }
     }
 
-    static void validateAllowDiskUse(final Connection connection, final Boolean allowDiskUse) {
-        validateAllowDiskUse(connection.getDescription(), allowDiskUse);
-    }
-
-    static void validateAllowDiskUse(final ConnectionDescription connectionDescription, final Boolean allowDiskUse) {
-        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(connectionDescription)) {
-            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
-                    connectionDescription.getMaxWireVersion()));
-        }
-    }
-
     static void validateAllowDiskUse(final AsyncConnection connection, final Boolean allowDiskUse,
                                      final AsyncCallableWithConnection callable) {
         Throwable throwable = null;
@@ -311,13 +300,20 @@ final class OperationHelper {
     static void validateFindOptions(final Connection connection, final ReadConcern readConcern, final Collation collation,
                                     final Boolean allowDiskUse) {
         validateReadConcernAndCollation(connection, readConcern, collation);
-        validateAllowDiskUse(connection, allowDiskUse);
+        final ConnectionDescription connectionDescription = connection.getDescription();
+        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(connectionDescription)) {
+            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
+                    connectionDescription.getMaxWireVersion()));
+        }
     }
 
     static void validateFindOptions(final ConnectionDescription description, final ReadConcern readConcern,
                                     final Collation collation, final Boolean allowDiskUse) {
         validateReadConcernAndCollation(description, readConcern, collation);
-        validateAllowDiskUse(description, allowDiskUse);
+        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(description)) {
+            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
+                    description.getMaxWireVersion()));
+        }
     }
 
     static void validateReadConcernAndCollation(final Connection connection, final ReadConcern readConcern,
