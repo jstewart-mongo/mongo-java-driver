@@ -73,6 +73,9 @@ abstract class AbstractSubscription<TResult> implements Subscription {
     @Override
     public void request(final long n) {
 
+        if (isTerminated()) {
+            return;
+        }
         if (!isUnsubscribed() && n < 1) {
             onError(new IllegalArgumentException("3.9 While the Subscription is not cancelled, "
                     + "Subscription.request(long n) MUST throw a java.lang.IllegalArgumentException if the "
