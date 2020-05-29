@@ -52,6 +52,7 @@ import org.bson.conversions.Bson;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
@@ -172,21 +173,15 @@ final class OperationHelper {
     }
 
     static void validateAllowDiskUse(final Connection connection, final Boolean allowDiskUse) {
-        final ConnectionDescription connectionDescription = connection.getDescription();
-        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(connectionDescription)) {
-            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
-                    connectionDescription.getMaxWireVersion()));
-        }
+        validateAllowDiskUse(connection.getDescription(), allowDiskUse).ifPresent(throwable -> {
+            throw new IllegalArgumentException(throwable.getMessage());
+        });
     }
 
     static void validateAllowDiskUse(final AsyncConnection connection, final Boolean allowDiskUse,
                                      final AsyncCallableWithConnection callable) {
-        Throwable throwable = null;
-        if (!serverIsAtLeastVersionThreeDotFour(connection.getDescription()) && allowDiskUse != null) {
-            throwable = new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
-                    connection.getDescription().getMaxWireVersion()));
-        }
-        callable.call(connection, throwable);
+        Optional<Throwable> throwable = validateAllowDiskUse(connection.getDescription(), allowDiskUse);
+        callable.call(connection, throwable.isPresent() ? throwable.get() : null);
     }
 
     static void validateCollation(final AsyncConnection connection, final Collation collation,
@@ -314,10 +309,9 @@ final class OperationHelper {
     static void validateFindOptions(final ConnectionDescription description, final ReadConcern readConcern,
                                     final Collation collation, final Boolean allowDiskUse) {
         validateReadConcernAndCollation(description, readConcern, collation);
-        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(description)) {
-            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
-                    description.getMaxWireVersion()));
-        }
+        validateAllowDiskUse(description, allowDiskUse).ifPresent(throwable -> {
+            throw new IllegalArgumentException(throwable.getMessage());
+        });
     }
 
     static void validateReadConcernAndCollation(final Connection connection, final ReadConcern readConcern,
@@ -756,6 +750,15 @@ final class OperationHelper {
                 withAsyncConnectionSource(source, callable);
             }
         }
+    }
+
+    private static Optional<Throwable> validateAllowDiskUse(final ConnectionDescription description, final Boolean allowDiskUse) {
+        Optional<Throwable> throwable = Optional.empty();
+        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(description)) {
+            throwable = Optional.of(new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
+                    description.getMaxWireVersion())));
+        }
+        return throwable;
     }
 
     private OperationHelper() {

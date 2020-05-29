@@ -180,22 +180,14 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
         testOperation(operation, version, expectedCommand, async, commandResult)
 
         where:
-        async << [true, true, true, true, true, false, false, false, false, false,
-                  true, true, true, true, true, false, false, false, false, false]
-        limit << [100, -100, 100, 0, 100, 100, -100, 100, 0, 100,
-                  100, -100, 100, 0, 100, 100, -100, 100, 0, 100]
-        batchSize << [10, 10, -10, 10, 0, 10, 10, -10, 10, 0,
-                      10, 10, -10, 10, 0, 10, 10, -10, 10, 0]
-        commandLimit << [100, 100, 10, null, 100, 100, 100, 10, null, 100,
-                         100, 100, 10, null, 100, 100, 100, 10, null, 100]
-        commandBatchSize << [10, null, null, 10, null, 10, null, null, 10, null,
-                             10, null, null, 10, null, 10, null, null, 10, null]
-        commandSingleBatch << [null, true, true, null, null, null, true, true, null, null,
-                               null, true, true, null, null, null, true, true, null, null]
-        allowDiskUse << [null, null, null, null, null, null, null, null, null, null,
-                         true, true, true, true, true, true, true, true, true, true]
-        version << [[3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0], [3, 2, 0],
-                    [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0], [3, 4, 0]]
+        async << [true] * 5 + [false] * 5 + [true] * 5 + [false] * 5
+        limit << [100, -100, 100, 0, 100] * 4
+        batchSize << [10, 10, -10, 10, 0] * 4
+        commandLimit << [100, 100, 10, null, 100] * 4
+        commandBatchSize << [10, null, null, 10, null] * 4
+        commandSingleBatch << [null, true, true, null, null] * 4
+        allowDiskUse << [null] * 10 + [true] * 10
+        version << [[3, 2, 0]] * 10 + [[3, 4, 0]] * 10
     }
 
     def 'should use the ReadBindings readPreference to set slaveOK'() {
