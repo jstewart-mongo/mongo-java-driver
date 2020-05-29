@@ -171,6 +171,14 @@ final class OperationHelper {
         }
     }
 
+    static void validateAllowDiskUse(final Connection connection, final Boolean allowDiskUse) {
+        final ConnectionDescription connectionDescription = connection.getDescription();
+        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(connectionDescription)) {
+            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
+                    connectionDescription.getMaxWireVersion()));
+        }
+    }
+
     static void validateAllowDiskUse(final AsyncConnection connection, final Boolean allowDiskUse,
                                      final AsyncCallableWithConnection callable) {
         Throwable throwable = null;
@@ -300,11 +308,7 @@ final class OperationHelper {
     static void validateFindOptions(final Connection connection, final ReadConcern readConcern, final Collation collation,
                                     final Boolean allowDiskUse) {
         validateReadConcernAndCollation(connection, readConcern, collation);
-        final ConnectionDescription connectionDescription = connection.getDescription();
-        if (allowDiskUse != null && serverIsLessThanVersionThreeDotFour(connectionDescription)) {
-            throw new IllegalArgumentException(format("allowDiskUse not supported by wire version: %s",
-                    connectionDescription.getMaxWireVersion()));
-        }
+        validateAllowDiskUse(connection, allowDiskUse);
     }
 
     static void validateFindOptions(final ConnectionDescription description, final ReadConcern readConcern,
