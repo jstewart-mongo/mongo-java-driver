@@ -493,8 +493,7 @@ public class IndexOptions {
     }
 
     /**
-     * Gets if the index should exist on the target collection but should not be used by the query
-     * planner when executing operations.
+     * Gets whether the index should not be used by the query planner when executing operations.
      *
      * @return true if the index should not be used by the query planner when executing operations.
      * @mongodb.server.release 4.4
@@ -505,8 +504,7 @@ public class IndexOptions {
     }
 
     /**
-     * Should the index exist on the target collection but should not be used by the query
-     * planner when executing operations.
+     * Should the index not be used by the query planner when executing operations.
      *
      * @param hidden true if the index should be hidden
      * @return this

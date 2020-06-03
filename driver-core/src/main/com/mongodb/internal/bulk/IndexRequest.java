@@ -543,8 +543,6 @@ public class IndexRequest {
      * planner when executing operations.
      *
      * @return true if the index should not be used by the query planner when executing operations.
-     * @mongodb.server.release 4.4
-     * @since 4.1
      */
     public boolean isHidden() {
         return hidden;
@@ -556,8 +554,6 @@ public class IndexRequest {
      *
      * @param hidden true if the index should be hidden
      * @return this
-     * @mongodb.server.release 4.4
-     * @since 4.1
      */
     public IndexRequest hidden(final boolean hidden) {
         this.hidden = hidden;
