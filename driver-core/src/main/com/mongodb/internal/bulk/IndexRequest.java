@@ -56,6 +56,7 @@ public class IndexRequest {
     private BsonDocument partialFilterExpression;
     private Collation collation;
     private BsonDocument wildcardProjection;
+    private boolean hidden;
 
     /**
      * Construct a new instance with the given keys
@@ -534,6 +535,32 @@ public class IndexRequest {
      */
     public IndexRequest wildcardProjection(final BsonDocument wildcardProjection) {
         this.wildcardProjection = wildcardProjection;
+        return this;
+    }
+
+    /**
+     * Gets if the index should exist on the target collection but should not be used by the query
+     * planner when executing operations.
+     *
+     * @return true if the index should not be used by the query planner when executing operations.
+     * @mongodb.server.release 4.4
+     * @since 4.1
+     */
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    /**
+     * Should the index exist on the target collection but should not be used by the query
+     * planner when executing operations.
+     *
+     * @param hidden true if the index should be hidden
+     * @return this
+     * @mongodb.server.release 4.4
+     * @since 4.1
+     */
+    public IndexRequest hidden(final boolean hidden) {
+        this.hidden = hidden;
         return this;
     }
 }
