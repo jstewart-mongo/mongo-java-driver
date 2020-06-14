@@ -61,8 +61,6 @@ class ClientSessionHelper {
                 && clusterDescription.getLogicalSessionTimeoutMinutes() != null
                 && clusterDescription.getType() != ClusterType.STANDALONE) {
             callback.onResult(createClientSession(options, executor), null);
-        } else if (mongoClient.getCluster().isClosed()) {
-            callback.onResult(null, new IllegalStateException("createClientSession called after the cluster was closed"));
         } else {
             mongoClient.getCluster().selectServerAsync(new ServerSelector() {
                 @Override
