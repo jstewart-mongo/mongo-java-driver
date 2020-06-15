@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "description": "ListDatabaseNames succeeds",
+      "operations": [
+        {
+          "name": "listDatabaseNames",
+          "object": "client"
+        }
+      ],
+      "expectations": [
+        {
+          "command_started_event": {
+            "command": {
+              "listDatabases": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

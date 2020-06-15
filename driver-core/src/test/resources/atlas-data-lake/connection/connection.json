@@ -1,0 +1,55 @@
+{
+  "tests": [
+    {
+      "description": "should use the default test database",
+      "uri": "mongodb://mhuser:pencil@localhost",
+      "valid": true
+    },
+    {
+      "description": "URI with no auth-related info doesn't create credential",
+      "uri": "mongodb://localhost/",
+      "valid": true,
+      "credential": null
+    },
+    {
+      "description": "error if username is provided without a password",
+      "uri": "mongodb://mhuser@localhost",
+      "valid": false
+    },
+    {
+      "description": "should use the test2 database",
+      "uri": "mongodb://mhuser:pencil@localhost/test2",
+      "valid": true
+    },
+    {
+      "description": "should recognize the mechanism (SCRAM-SHA-1)",
+      "uri": "mongodb://mhuser:pencil@localhost/?authMechanism=SCRAM-SHA-1&authSource=admin",
+      "valid": true
+    },
+    {
+      "description": "error when authSource is empty",
+      "uri": "mongodb://mhuser:pencil@localhost/?authMechanism=SCRAM-SHA-1&authSource=",
+      "valid": false
+    },
+    {
+      "description": "should recognize the mechanism (SCRAM-SHA-1) using the test2 database",
+      "uri": "mongodb://mhuser:pencil@localhost/test2?authMechanism=SCRAM-SHA-1&authSource=admin",
+      "valid": true
+    },
+    {
+      "description": "should recognize the mechanism (SCRAM-SHA-256)",
+      "uri": "mongodb://mhuser:pencil@localhost/?authMechanism=SCRAM-SHA-256&authSource=admin",
+      "valid": true
+    },
+    {
+      "description": "should recognize the mechanism (SCRAM-SHA-256) using the test2 database",
+      "uri": "mongodb://mhuser:pencil@localhost/test2?authMechanism=SCRAM-SHA-256&authSource=admin",
+      "valid": true
+    },
+    {
+      "description": "error when using the mechanism (GSSAPI)",
+      "uri": "mongodb://mhuser:pencil@localhost/?authMechanism=GSSAPI&authSource=admin",
+      "valid": false
+    }
+  ]
+}

@@ -94,7 +94,8 @@ functions:
             # If this was a patch build, doing a fresh clone would not actually test the patch
             cp -R ${PROJECT_DIRECTORY}/ $DRIVERS_TOOLS
           else
-            git clone git://github.com/mongodb-labs/drivers-evergreen-tools.git $DRIVERS_TOOLS
+            #git clone git://github.com/mongodb-labs/drivers-evergreen-tools.git $DRIVERS_TOOLS
+            git clone -b drivers829 https://github.com/mongodb-labs/drivers-evergreen-tools.git $DRIVERS_TOOLS
           fi
           echo "{ \"releases\": { \"default\": \"$MONGODB_BINARIES\" }}" > $MONGO_ORCHESTRATION_HOME/orchestration.config
 
@@ -223,6 +224,14 @@ functions:
     - command: expansions.update
       params:
         file: mo-expansion.yml
+
+  "bootstrap mongohoused":
+    - command: shell.exec
+      params:
+        background: true
+        script: |
+          DRIVERS_TOOLS="${DRIVERS_TOOLS}" \
+          sh ${DRIVERS_TOOLS}/.evergreen/atlas_data_lake/run-mongohouse-local.sh
 
   "run tests":
     - command: shell.exec
@@ -441,6 +450,15 @@ functions:
 
           mongo --nodb setup.js aws_e2e_ecs.js
           cd -
+
+  "run atlas data lake test":
+    - command: shell.exec
+      type: test
+      params:
+        working_dir: "src"
+        script: |
+          ${PREPARE_SHELL}
+          JDK=${JDK} .evergreen/run-atlas-data-lake-test.sh
 
   "run-ocsp-test":
     - command: shell.exec
@@ -758,6 +776,11 @@ tasks:
           vars:
             OCSP_MUST_STAPLE: "false"
             OCSP_TLS_SHOULD_SUCCEED: "0"
+
+    - name: "atlas-data-lake-test"
+      commands:
+        - func: "bootstrap mongohoused"
+        - func: "run atlas data lake test"
 
     - name: "gssapi-auth-test"
       commands:
@@ -1080,6 +1103,12 @@ buildvariants:
   display_name: "OCSP test ${version} ${os}"
   tasks:
     - name: ".ocsp"
+
+- matrix_name: "atlas-data-lake-test"
+  matrix_spec: { auth: "noauth", ssl: "ssl", jdk: "jdk11", version: "*", os: "ubuntu" }
+  display_name: "Atlas Data Lake test ${version} ${os}"
+  tasks:
+    - name: "atlas-data-lake-test"
 
 - name: atlas-test
   display_name: "Atlas test"
