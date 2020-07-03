@@ -449,7 +449,7 @@ functions:
         working_dir: "src"
         script: |
           ${PREPARE_SHELL}
-          CA_FILE="$DRIVERS_TOOLS/.evergreen/ocsp/rsa/ca.pem" \
+          CA_FILE="$DRIVERS_TOOLS/.evergreen/ocsp/${OCSP_ALGORITHM}/ca.pem" \
           OCSP_TLS_SHOULD_SUCCEED="${OCSP_TLS_SHOULD_SUCCEED}" \
           OCSP_MUST_STAPLE="${OCSP_MUST_STAPLE}" \
           sh ${PROJECT_DIRECTORY}/.evergreen/run-ocsp-test.sh
@@ -467,9 +467,9 @@ functions:
         script: |
           cd ${DRIVERS_TOOLS}/.evergreen/ocsp
           nohup ./venv/bin/python3 ocsp_mock.py \
-          --ca_file rsa/ca.pem \
-          --ocsp_responder_cert rsa/ca.crt \
-          --ocsp_responder_key rsa/ca.key \
+          --ca_file ${OCSP_ALGORITHM}/ca.pem \
+          --ocsp_responder_cert ${OCSP_ALGORITHM}/ca.crt \
+          --ocsp_responder_key ${OCSP_ALGORITHM}/ca.key \
           -p 8100 -v
 
   "run-revoked-ocsp-server":
@@ -485,9 +485,9 @@ functions:
         script: |
           cd ${DRIVERS_TOOLS}/.evergreen/ocsp
           nohup ./venv/bin/python3 ocsp_mock.py \
-          --ca_file rsa/ca.pem \
-          --ocsp_responder_cert rsa/ca.crt \
-          --ocsp_responder_key rsa/ca.key \
+          --ca_file ${OCSP_ALGORITHM}/ca.pem \
+          --ocsp_responder_cert ${OCSP_ALGORITHM}/ca.crt \
+          --ocsp_responder_key ${OCSP_ALGORITHM}/ca.key \
           -p 8100 \
           -v \
           --fault revoked
@@ -663,10 +663,12 @@ tasks:
         - func: "run aws auth test with aws EC2 credentials"
         - func: "run aws ECS auth test"
 
-    - name: "test-ocsp-valid-cert-server-staples"
+    - name: "test-ocsp-rsa-valid-cert-server-staples"
       tags: ["ocsp"]
       commands:
         - func: "run-valid-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: rsa
         - func: "bootstrap mongo-orchestration"
           vars:
             ORCHESTRATION_FILE: "rsa-basic-tls-ocsp-mustStaple-singleEndpoint.json"
@@ -674,13 +676,16 @@ tasks:
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
             OCSP_MUST_STAPLE: "true"
             OCSP_TLS_SHOULD_SUCCEED: "1"
 
-    - name: "test-ocsp-invalid-cert-server-staples"
+    - name: "test-ocsp-rsa-invalid-cert-server-staples"
       tags: ["ocsp"]
       commands:
         - func: "run-revoked-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: rsa
         - func: "bootstrap mongo-orchestration"
           vars:
             ORCHESTRATION_FILE: "rsa-basic-tls-ocsp-mustStaple-singleEndpoint.json"
@@ -688,13 +693,16 @@ tasks:
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
             OCSP_MUST_STAPLE: "true"
             OCSP_TLS_SHOULD_SUCCEED: "0"
 
-    - name: "test-ocsp-valid-cert-server-does-not-staple"
+    - name: "test-ocsp-rsa-valid-cert-server-does-not-staple"
       tags: ["ocsp"]
       commands:
         - func: "run-valid-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: rsa
         - func: "bootstrap mongo-orchestration"
           vars:
             ORCHESTRATION_FILE: "rsa-basic-tls-ocsp-disableStapling-singleEndpoint.json"
@@ -702,13 +710,16 @@ tasks:
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
             OCSP_MUST_STAPLE: "false"
             OCSP_TLS_SHOULD_SUCCEED: "1"
 
-    - name: "test-ocsp-invalid-cert-server-does-not-staple"
+    - name: "test-ocsp-rsa-invalid-cert-server-does-not-staple"
       tags: ["ocsp"]
       commands:
         - func: "run-revoked-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: rsa
         - func: "bootstrap mongo-orchestration"
           vars:
             ORCHESTRATION_FILE: "rsa-basic-tls-ocsp-disableStapling-singleEndpoint.json"
@@ -716,26 +727,31 @@ tasks:
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
             OCSP_MUST_STAPLE: "false"
             OCSP_TLS_SHOULD_SUCCEED: "0"
 
-    - name: "test-ocsp-soft-fail"
+    - name: "test-ocsp-rsa-soft-fail"
       tags: ["ocsp"]
       commands:
         - func: "bootstrap mongo-orchestration"
           vars:
+            OCSP_ALGORITHM: rsa
             ORCHESTRATION_FILE: "rsa-basic-tls-ocsp-disableStapling-singleEndpoint.json"
             VERSION: "latest"
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
             OCSP_MUST_STAPLE: "false"
             OCSP_TLS_SHOULD_SUCCEED: "0"
 
-    - name: "test-ocsp-malicious-invalid-cert-mustStaple-server-does-not-staple"
+    - name: "test-ocsp-rsa-malicious-invalid-cert-mustStaple-server-does-not-staple"
       tags: ["ocsp"]
       commands:
         - func: "run-revoked-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: rsa
         - func: "bootstrap mongo-orchestration"
           vars:
             ORCHESTRATION_FILE: "rsa-basic-tls-ocsp-mustStaple-disableStapling-singleEndpoint.json"
@@ -743,10 +759,11 @@ tasks:
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
             OCSP_MUST_STAPLE: "false"
             OCSP_TLS_SHOULD_SUCCEED: "0"
 
-    - name: "test-ocsp-malicious-no-responder-mustStaple-server-does-not-staple"
+    - name: "test-ocsp-rsa-malicious-no-responder-mustStaple-server-does-not-staple"
       tags: ["ocsp"]
       commands:
         - func: "bootstrap mongo-orchestration"
@@ -756,6 +773,120 @@ tasks:
             TOPOLOGY: "server"
         - func: "run-ocsp-test"
           vars:
+            OCSP_ALGORITHM: rsa
+            OCSP_MUST_STAPLE: "false"
+            OCSP_TLS_SHOULD_SUCCEED: "0"
+
+    - name: "test-ocsp-ecdsa-valid-cert-server-staples"
+      tags: ["ocsp"]
+      commands:
+        - func: "run-valid-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-mustStaple-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+            OCSP_MUST_STAPLE: "true"
+            OCSP_TLS_SHOULD_SUCCEED: "1"
+
+    - name: "test-ocsp-ecdsa-invalid-cert-server-staples"
+      tags: ["ocsp"]
+      commands:
+        - func: "run-revoked-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-mustStaple-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+            OCSP_MUST_STAPLE: "true"
+            OCSP_TLS_SHOULD_SUCCEED: "0"
+
+    - name: "test-ocsp-ecdsa-valid-cert-server-does-not-staple"
+      tags: ["ocsp"]
+      commands:
+        - func: "run-valid-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-disableStapling-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+            OCSP_MUST_STAPLE: "false"
+            OCSP_TLS_SHOULD_SUCCEED: "1"
+
+    - name: "test-ocsp-ecdsa-invalid-cert-server-does-not-staple"
+      tags: ["ocsp"]
+      commands:
+        - func: "run-revoked-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-disableStapling-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+            OCSP_MUST_STAPLE: "false"
+            OCSP_TLS_SHOULD_SUCCEED: "0"
+
+    - name: "test-ocsp-ecdsa-soft-fail"
+      tags: ["ocsp"]
+      commands:
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-disableStapling-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+            OCSP_MUST_STAPLE: "false"
+            OCSP_TLS_SHOULD_SUCCEED: "0"
+
+    - name: "test-ocsp-ecdsa-malicious-invalid-cert-mustStaple-server-does-not-staple"
+      tags: ["ocsp"]
+      commands:
+        - func: "run-revoked-ocsp-server"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-mustStaple-disableStapling-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
+            OCSP_MUST_STAPLE: "false"
+            OCSP_TLS_SHOULD_SUCCEED: "0"
+
+    - name: "test-ocsp-ecdsa-malicious-no-responder-mustStaple-server-does-not-staple"
+      tags: ["ocsp"]
+      commands:
+        - func: "bootstrap mongo-orchestration"
+          vars:
+            ORCHESTRATION_FILE: "ecdsa-basic-tls-ocsp-mustStaple-disableStapling-singleEndpoint.json"
+            VERSION: "latest"
+            TOPOLOGY: "server"
+        - func: "run-ocsp-test"
+          vars:
+            OCSP_ALGORITHM: ecdsa
             OCSP_MUST_STAPLE: "false"
             OCSP_TLS_SHOULD_SUCCEED: "0"
 
