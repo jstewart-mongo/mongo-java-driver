@@ -1,16 +1,19 @@
 {
+  "collection_name": "driverdata",
+  "database_name": "test",
   "tests": [
     {
       "description": "ListCollections succeeds using runCommand",
       "operations": [
         {
           "name": "runCommand",
+          "object": "database",
+          "command_name": "listCollections",
           "arguments": {
             "command": {
               "listCollections": 1
             }
-          },
-          "object": "database"
+          }
         }
       ],
       "expectations": [
@@ -28,12 +31,13 @@
       "operations": [
         {
           "name": "runCommand",
+          "object": "collection",
+          "command_name": "count",
           "arguments": {
             "command": {
               "count": "driverdata"
             }
-          },
-          "object": "collection"
+          }
         }
       ],
       "expectations": [
@@ -51,20 +55,31 @@
       "operations": [
         {
           "name": "runCommand",
+          "object": "collection",
+          "command_name": "find",
           "arguments": {
             "command": {
               "find": "driverdata",
-              "projection": {
-                "_id": 0
-              },
-              "sort": {
-                "a": 1
-              },
-              "skip": 2,
-              "limit": 2
+              "pipeline": [
+                {
+                  "$projection": {
+                    "_id": 0
+                  }
+                },
+                {
+                  "$sort": {
+                    "a": 1
+                  }
+                },
+                {
+                  "$skip": 2
+                },
+                {
+                  "$limit": 2
+                }
+              ]
             }
-          },
-          "object": "collection"
+          }
         }
       ],
       "expectations": [
@@ -82,6 +97,8 @@
       "operations": [
         {
           "name": "runCommand",
+          "object": "collection",
+          "command_name": "aggregate",
           "arguments": {
             "command": {
               "aggregate": "driverdata",
@@ -102,8 +119,7 @@
               ],
               "cursor": {}
             }
-          },
-          "object": "collection"
+          }
         }
       ],
       "expectations": [

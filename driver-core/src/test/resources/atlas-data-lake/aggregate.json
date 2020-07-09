@@ -1,6 +1,4 @@
 {
-  "database_name": "test",
-  "collection_name": "driverdata",
   "tests": [
     {
       "description": "Aggregate with pipeline (project, sort, limit)",

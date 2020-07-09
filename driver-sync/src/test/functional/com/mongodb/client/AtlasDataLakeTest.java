@@ -122,35 +122,27 @@ public class AtlasDataLakeTest {
 
     @Test
     public void shouldPassAllOutcomes() {
-        if (definition.containsKey("uri")) {
-            if (definition.getBoolean("valid").getValue()) {
-                testValidUri(definition.getString("uri").getValue());
+        executeOperations(definition.getArray("operations"));
+
+        if (definition.containsKey("expectations")) {
+            List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), databaseName, null);
+            List<CommandEvent> events = commandListener.getCommandStartedEvents();
+
+            assertEventsEquality(expectedEvents, events.subList(0, expectedEvents.size()), null);
+        }
+
+        BsonDocument expectedOutcome = definition.getDocument("outcome", new BsonDocument());
+        if (expectedOutcome.containsKey("collection")) {
+            BsonDocument collectionDocument = expectedOutcome.getDocument("collection");
+            List<BsonDocument> collectionData;
+            if (collectionDocument.containsKey("name")) {
+                collectionData = new CollectionHelper<Document>(new DocumentCodec(),
+                        new MongoNamespace(databaseName, collectionDocument.getString("name").getValue()))
+                        .find(new BsonDocumentCodec());
             } else {
-                testInvalidUri(definition.getString("uri").getValue());
+                collectionData = collectionHelper.find(new BsonDocumentCodec());
             }
-        } else {
-            executeOperations(definition.getArray("operations"));
-
-            if (definition.containsKey("expectations")) {
-                List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), databaseName, null);
-                List<CommandEvent> events = commandListener.getCommandStartedEvents();
-
-                assertEventsEquality(expectedEvents, events.subList(0, expectedEvents.size()), null);
-            }
-
-            BsonDocument expectedOutcome = definition.getDocument("outcome", new BsonDocument());
-            if (expectedOutcome.containsKey("collection")) {
-                BsonDocument collectionDocument = expectedOutcome.getDocument("collection");
-                List<BsonDocument> collectionData;
-                if (collectionDocument.containsKey("name")) {
-                    collectionData = new CollectionHelper<Document>(new DocumentCodec(),
-                            new MongoNamespace(databaseName, collectionDocument.getString("name").getValue()))
-                            .find(new BsonDocumentCodec());
-                } else {
-                    collectionData = collectionHelper.find(new BsonDocumentCodec());
-                }
-                assertEquals(expectedOutcome.getDocument("collection").getArray("data").getValues(), collectionData);
-            }
+            assertEquals(expectedOutcome.getDocument("collection").getArray("data").getValues(), collectionData);
         }
     }
 
@@ -304,35 +296,5 @@ public class AtlasDataLakeTest {
     private ConnectionString getADLConnectionString() {
         // NOTE: create a system property for this value
         return new ConnectionString("mongodb://mhuser:pencil@localhost");
-    }
-
-    private void testInvalidUri(final String uri) {
-        Throwable expectedError = null;
-
-        try {
-            new ConnectionString(uri);
-        } catch (Throwable t) {
-            expectedError = t;
-        }
-
-        assertTrue(String.format("Connection string '%s' should have throw an exception", uri),
-                expectedError instanceof IllegalArgumentException);
-    }
-
-    private void testValidUri(final String uri) {
-        ConnectionString connectionString = null;
-
-        try {
-            connectionString = new ConnectionString(uri);
-        } catch (Throwable t) {
-            assertTrue(String.format("Connection string '%s' should not have throw an exception: %s", uri, t.toString()), false);
-        }
-
-        MongoClientSettings.Builder builder = getMongoClientSettingsBuilder()
-                .applyConnectionString(connectionString)
-                .addCommandListener(commandListener)
-                .retryWrites(false)
-                .retryReads(false);
-        mongoClient = createMongoClient(builder.build());
     }
 }

@@ -1,4 +1,5 @@
 {
+  "database_name": "test",
   "tests": [
     {
       "description": "ListCollections succeeds",
@@ -11,8 +12,10 @@
       "expectations": [
         {
           "command_started_event": {
+            "command_name": "listCollections",
             "command": {
-              "listCollections": 1
+              "listCollections": 1,
+              "$db": "test"
             }
           }
         }

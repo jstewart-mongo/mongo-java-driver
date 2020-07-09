@@ -1,10 +1,10 @@
 {
   "tests": [
     {
-      "description": "ListDatabaseNames succeeds",
+      "description": "ListDatabases succeeds",
       "operations": [
         {
-          "name": "listDatabaseNames",
+          "name": "listDatabases",
           "object": "client"
         }
       ],

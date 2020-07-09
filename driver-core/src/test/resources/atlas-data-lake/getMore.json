@@ -17,12 +17,8 @@
             "sort": {
               "a": 1
             },
-            "batchSize": {
-              "$numberLong": "3"
-            },
-            "limit": {
-              "$numberLong": "4"
-            }
+            "batchSize": 3,
+            "limit": 4
           }
         }
       ],
@@ -39,8 +35,8 @@
               "sort": {
                 "a": 1
               },
-              "limit": 4,
-              "batchSize": 3
+              "batchSize": 3,
+              "limit": 4
             },
             "command_name": "find",
             "database_name": "test"
@@ -52,7 +48,7 @@
               "batchSize": 1
             },
             "command_name": "getMore",
-            "database_name": "cursors"
+            "database_name": "test"
           }
         }
       ]
