@@ -11,8 +11,10 @@
       "expectations": [
         {
           "command_started_event": {
+            "command_name": "listDatabases",
             "command": {
-              "listDatabases": 1
+              "listDatabases": 1,
+              "$db": "admin"
             }
           }
         }

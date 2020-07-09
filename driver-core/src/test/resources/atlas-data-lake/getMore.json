@@ -48,7 +48,7 @@
               "batchSize": 1
             },
             "command_name": "getMore",
-            "database_name": "test"
+            "database_name": "cursors"
           }
         }
       ]

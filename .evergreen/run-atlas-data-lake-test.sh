@@ -23,3 +23,4 @@ set -x
 echo "Running Atlas Data Lake tests with ${JDK}"
 ./gradlew -version
 ./gradlew -PjdkHome=${JAVA_HOME} --stacktrace --debug --info driver-sync:test --tests AtlasDataLakeTest
+./gradlew -PjdkHome=${JAVA_HOME} --stacktrace --debug --info driver-sync:test --tests AtlasDataLakeProseTest

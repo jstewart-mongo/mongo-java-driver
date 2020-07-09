@@ -19,6 +19,7 @@
       "expectations": [
         {
           "command_started_event": {
+            "command_name": "listCollections",
             "command": {
               "listCollections": 1
             }
@@ -43,6 +44,8 @@
       "expectations": [
         {
           "command_started_event": {
+            "command_name": "count",
+            "database_name": "test",
             "command": {
               "count": "driverdata"
             }
@@ -85,6 +88,8 @@
       "expectations": [
         {
           "command_started_event": {
+            "command_name": "find",
+            "database_name": "test",
             "command": {
               "find": "driverdata"
             }
@@ -125,6 +130,8 @@
       "expectations": [
         {
           "command_started_event": {
+            "command_name": "aggregate",
+            "database_name": "test",
             "command": {
               "aggregate": "driverdata"
             }

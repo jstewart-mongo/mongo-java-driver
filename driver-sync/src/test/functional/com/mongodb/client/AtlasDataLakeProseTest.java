@@ -22,8 +22,14 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.test.CollectionHelper;
+import com.mongodb.event.CommandEvent;
+import com.mongodb.event.CommandStartedEvent;
+import com.mongodb.internal.connection.TestCommandListener;
+import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.BsonInt32;
 import org.bson.codecs.DocumentCodec;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,9 +49,8 @@ import static org.junit.Assume.assumeTrue;
 public class AtlasDataLakeProseTest {
     private static String databaseName = "test";
     private static String collectionName = "driverdata";
-    private MongoNamespace namespace;
     private CollectionHelper<Document> collectionHelper;
-    private ConnectionString connectionString = null;
+    private TestCommandListener commandListener;
     private MongoClient client;
     private MongoDatabase database;
     private MongoCollection<Document> collection;
@@ -53,35 +58,63 @@ public class AtlasDataLakeProseTest {
     @Before
     public void setUp() {
         assumeTrue(canRunTests());
-        namespace = new MongoNamespace(databaseName, collectionName);
         collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
-        connectionString = getADLConnectionString();
-
-        MongoClientSettings.Builder builder = getMongoClientSettingsBuilder()
-                .applyConnectionString(connectionString)
-                .retryWrites(false)
-                .retryReads(false);
-        client = MongoClients.create(builder.build());
-
+        commandListener = new TestCommandListener();
+        client = getMongoClient(getADLConnectionString());
         database = client.getDatabase(databaseName);
         collection = database.getCollection(collectionName);
     }
 
-    @Test(expected = NoSuchElementException.class)
+    @Test
     public void testKillCursorsOnAtlasDataLake() {
         List<Document> documents = asList(Document.parse("{a: 1, b: 2, c: 3}"), Document.parse("{a: 2, b: 3, c: 4}"),
                 Document.parse("{a: 3, b: 4, c: 5}"));
-        MongoCursor<Document> cursor = collection.find().batchSize(3).iterator();
+        MongoCursor<Document> cursor = collection.find().batchSize(3).cursor();
         assertEquals(documents, asList(cursor.next(), cursor.next(), cursor.next()));
-        collectionHelper.killCursor(namespace, cursor.getServerCursor());
+        cursor.close();
+        assertTrue(killCursorsCommandEventFound());
+    }
 
-        // should throw exception
-        cursor.next();
+    @Test
+    public void testADLConnections() {
+        runConnectionTest("mongodb://mhuser:pencil@localhost");
+        runConnectionTest("mongodb://localhost/");
+        runConnectionTest("mongodb://mhuser:pencil@localhost/test?authSource=admin");
+        runConnectionTest("mongodb://mhuser:pencil@localhost/?authMechanism=SCRAM-SHA-1&authSource=admin");
+        runConnectionTest("mongodb://mhuser:pencil@localhost/test?authMechanism=SCRAM-SHA-1&authSource=admin");
+        runConnectionTest("mongodb://mhuser:pencil@localhost/?authMechanism=SCRAM-SHA-256&authSource=admin");
+        runConnectionTest("mongodb://mhuser:pencil@localhost/test?authMechanism=SCRAM-SHA-256&authSource=admin");
+    }
+
+    private void runConnectionTest(final String uri) {
+        MongoClient mongoClient = getMongoClient(new ConnectionString(uri));
+        MongoDatabase db = mongoClient.getDatabase(databaseName);
+        db.runCommand(new BsonDocument("ping", new BsonInt32(1)));
+        mongoClient.close();
+    }
+
+    private MongoClient getMongoClient(final ConnectionString connectionString) {
+        MongoClientSettings.Builder builder = getMongoClientSettingsBuilder()
+                .applyConnectionString(connectionString)
+                .addCommandListener(commandListener)
+                .retryWrites(false)
+                .retryReads(false);
+        return MongoClients.create(builder.build());
     }
 
     private ConnectionString getADLConnectionString() {
         // NOTE: create a system property for this value
         return new ConnectionString("mongodb://mhuser:pencil@localhost");
+    }
+
+    private boolean killCursorsCommandEventFound() {
+        for (CommandEvent event : commandListener.getCommandStartedEvents()) {
+            CommandStartedEvent startedEvent = (CommandStartedEvent)event;
+            if (startedEvent.getCommandName().equals("killCursors") && startedEvent.getDatabaseName().equals("cursors")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean canRunTests() {
