@@ -19,6 +19,7 @@
         {
           "command_started_event": {
             "command_name": "ping",
+            "database_name": "test",
             "command": {
               "ping": 1
             }
