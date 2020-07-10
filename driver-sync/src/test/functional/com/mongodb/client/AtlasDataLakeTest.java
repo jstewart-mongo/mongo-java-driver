@@ -16,30 +16,17 @@
 
 package com.mongodb.client;
 
-import com.mongodb.Block;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCommandException;
-import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
-import com.mongodb.MongoWriteConcernException;
-import com.mongodb.WriteConcern;
-import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.test.CollectionHelper;
-import com.mongodb.connection.ConnectionPoolSettings;
-import com.mongodb.event.CommandEvent;
-import com.mongodb.internal.connection.TestCommandListener;
-import com.mongodb.internal.connection.TestConnectionPoolListener;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
-import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.DocumentCodec;
-import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import util.JsonPoweredTestHelper;
@@ -51,16 +38,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.mongodb.ClusterFixture.getConnectionString;
 import static com.mongodb.JsonTestServerVersionChecker.skipTest;
-import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
-import static com.mongodb.client.CommandMonitoringTestHelper.getExpectedEvents;
 import static com.mongodb.client.Fixture.getDefaultDatabaseName;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 
 // See https://github.com/mongodb/specifications/tree/master/source/transactions/tests
@@ -74,21 +54,23 @@ public class AtlasDataLakeTest extends AbstractUnifiedTest {
     @Before
     @Override
     public void setUp() {
-        assumeFalse(skipTest);
+        assumeFalse(getSkipTest());
 
-        collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
-        connectionString = getADLConnectionString();
+        setCollectionHelper(new CollectionHelper<Document>(new DocumentCodec(),
+                new MongoNamespace(getDatabaseName(), getCollectionName())));
+        setConnectionString(getADLConnectionString());
 
+        ConnectionString connectionString = getConnectionString();
         MongoClientSettings.Builder builder = getMongoClientSettingsBuilder()
                 .applyConnectionString(connectionString)
-                .addCommandListener(commandListener)
+                .addCommandListener(getCommandListener())
                 .retryWrites(false)
                 .retryReads(false);
-        mongoClient = createMongoClient(builder.build());
+        setMongoClient(createMongoClient(builder.build()));
 
-        database = mongoClient.getDatabase(databaseName);
-        helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class),
-                null, mongoClient);
+        setDatabase(getMongoClient().getDatabase(getDatabaseName()));
+        setTestHelper(new JsonPoweredCrudTestHelper(getDescription(), getDatabase(),
+                getDatabase().getCollection(getCollectionName(), BsonDocument.class), null, getMongoClient()));
     }
 
     @Parameterized.Parameters(name = "{0}: {1}")

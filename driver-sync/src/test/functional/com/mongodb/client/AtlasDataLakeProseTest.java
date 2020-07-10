@@ -17,9 +17,7 @@
 package com.mongodb.client;
 
 import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientException;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.event.CommandEvent;
@@ -29,17 +27,13 @@ import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.BsonInt32;
 import org.bson.codecs.DocumentCodec;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
-import static com.mongodb.ClusterFixture.getServerStatus;
 import static com.mongodb.ClusterFixture.isStandalone;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
-import static com.mongodb.ClusterFixture.serverVersionLessThan;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -109,7 +103,7 @@ public class AtlasDataLakeProseTest {
 
     private boolean killCursorsCommandEventFound() {
         for (CommandEvent event : commandListener.getCommandStartedEvents()) {
-            CommandStartedEvent startedEvent = (CommandStartedEvent)event;
+            CommandStartedEvent startedEvent = (CommandStartedEvent) event;
             if (startedEvent.getCommandName().equals("killCursors") && startedEvent.getDatabaseName().equals("cursors")) {
                 return true;
             }

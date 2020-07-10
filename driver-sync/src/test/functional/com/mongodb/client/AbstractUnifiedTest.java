@@ -94,23 +94,23 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public abstract class AbstractUnifiedTest {
     private final String filename;
-    protected final String description;
-    protected final String databaseName;
+    private String description;
+    private String databaseName;
     private final BsonArray data;
     private final BsonDocument definition;
-    protected final boolean skipTest;
-    protected JsonPoweredCrudTestHelper helper;
-    protected final TestCommandListener commandListener;
+    private boolean skipTest;
+    private JsonPoweredCrudTestHelper helper;
+    private TestCommandListener commandListener;
     private final TestConnectionPoolListener connectionPoolListener;
     private final TestServerListener serverListener;
-    protected MongoClient mongoClient;
-    protected CollectionHelper<Document> collectionHelper;
+    private MongoClient mongoClient;
+    private CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
     private boolean useMultipleMongoses = false;
-    protected ConnectionString connectionString = null;
-    protected final String collectionName;
-    protected MongoDatabase database;
+    private ConnectionString connectionString = null;
+    private String collectionName;
+    private MongoDatabase database;
     private final Map<String, ExecutorService> executorServiceMap = new HashMap<>();
     private final Map<String, Future<Exception>> futureMap = new HashMap<>();
 
@@ -119,15 +119,15 @@ public abstract class AbstractUnifiedTest {
     public AbstractUnifiedTest(final String filename, final String description, final String databaseName, final String collectionName,
                                final BsonArray data, final BsonDocument definition, final boolean skipTest) {
         this.filename = filename;
-        this.description = description;
-        this.databaseName = databaseName;
-        this.collectionName = collectionName;
+        setDescription(description);
+        setDatabaseName(databaseName);
+        setCollectionName(collectionName);
         this.data = data;
         this.definition = definition;
-        this.commandListener = new TestCommandListener();
+        setCommandListener(new TestCommandListener());
         this.connectionPoolListener = new TestConnectionPoolListener();
         this.serverListener = new TestServerListener();
-        this.skipTest = skipTest;
+        setSkipTest(skipTest);
     }
 
     protected abstract MongoClient createMongoClient(MongoClientSettings settings);
@@ -144,7 +144,7 @@ public abstract class AbstractUnifiedTest {
                 !definition.containsKey("skipReason"));
         assumeFalse("Skipping test of count", filename.equals("count.json"));
 
-        collectionHelper = new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName));
+        setCollectionHelper(new CollectionHelper<Document>(new DocumentCodec(), new MongoNamespace(databaseName, collectionName)));
 
         collectionHelper.killAllSessions();
         collectionHelper.create(collectionName, new CreateCollectionOptions(), WriteConcern.MAJORITY);
@@ -164,11 +164,11 @@ public abstract class AbstractUnifiedTest {
 
         final BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
 
-        connectionString = getConnectionString();
+        setConnectionString(getConnectionString());
         useMultipleMongoses = definition.getBoolean("useMultipleMongoses", BsonBoolean.FALSE).getValue();
         if (useMultipleMongoses) {
             assumeTrue(isSharded());
-            connectionString = getMultiMongosConnectionString();
+            setConnectionString(getMultiMongosConnectionString());
             assumeTrue("The system property org.mongodb.test.transaction.uri is not set.", connectionString != null);
         }
 
@@ -234,16 +234,16 @@ public abstract class AbstractUnifiedTest {
         if (streamFactoryFactory != null) {
             builder.streamFactoryFactory(streamFactoryFactory);
         }
-        mongoClient = createMongoClient(builder.build());
+        setMongoClient(createMongoClient(builder.build()));
 
-        database = mongoClient.getDatabase(databaseName);
+        setDatabase(mongoClient.getDatabase(databaseName));
 
         if (useMultipleMongoses) {
             // non-transactional distinct operation to avoid StaleDbVersion error
             runDistinctOnEachNode();
         }
 
-        helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class));
+        setTestHelper(new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class)));
 
         if (serverVersionAtLeast(3, 6) && !isStandalone()) {
             ClientSession sessionZero = createSession("session0");
@@ -361,6 +361,86 @@ public abstract class AbstractUnifiedTest {
         for (ExecutorService cur : executorServiceMap.values()) {
             cur.shutdownNow();
         }
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(final String description) {
+        this.description = description;
+    }
+
+    public String getDatabaseName() {
+        return databaseName;
+    }
+
+    public void setDatabaseName(final String databaseName) {
+        this.databaseName = databaseName;
+    }
+
+    public boolean getSkipTest() {
+        return skipTest;
+    }
+
+    public void setSkipTest(final boolean skipTest) {
+        this.skipTest = skipTest;
+    }
+
+    public JsonPoweredCrudTestHelper getTestHelper() {
+        return helper;
+    }
+
+    public void setTestHelper(final JsonPoweredCrudTestHelper helper) {
+        this.helper = helper;
+    }
+
+    public TestCommandListener getCommandListener() {
+        return commandListener;
+    }
+
+    public void setCommandListener(final TestCommandListener commandListener) {
+        this.commandListener = commandListener;
+    }
+
+    public MongoClient getMongoClient() {
+        return mongoClient;
+    }
+
+    public void setMongoClient(final MongoClient client) {
+        this.mongoClient = client;
+    }
+
+    public CollectionHelper<Document> getCollectionHelper() {
+        return collectionHelper;
+    }
+
+    public void setCollectionHelper(final CollectionHelper<Document> helper) {
+        this.collectionHelper = helper;
+    }
+
+    public ConnectionString getConnectionString() {
+        return connectionString;
+    }
+
+    public void setConnectionString(final ConnectionString connectionString) {
+        this.connectionString = connectionString;
+    }
+
+    public String getCollectionName() {
+        return collectionName;
+    }
+
+    public void setCollectionName(final String collectionName) {
+        this.collectionName = collectionName;
+    }
+
+    public MongoDatabase getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(final MongoDatabase database) {
+        this.database = database;
     }
 
     @Test
