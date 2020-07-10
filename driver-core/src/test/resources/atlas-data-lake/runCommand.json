@@ -1,17 +1,16 @@
 {
-  "collection_name": "driverdata",
   "database_name": "test",
   "tests": [
     {
-      "description": "ListCollections succeeds using runCommand",
+      "description": "ping succeeds using runCommand",
       "operations": [
         {
           "name": "runCommand",
           "object": "database",
-          "command_name": "listCollections",
+          "command_name": "ping",
           "arguments": {
             "command": {
-              "listCollections": 1
+              "ping": 1
             }
           }
         }
@@ -19,121 +18,9 @@
       "expectations": [
         {
           "command_started_event": {
-            "command_name": "listCollections",
+            "command_name": "ping",
             "command": {
-              "listCollections": 1
-            }
-          }
-        }
-      ]
-    },
-    {
-      "description": "count succeeds using runCommand",
-      "operations": [
-        {
-          "name": "runCommand",
-          "object": "collection",
-          "command_name": "count",
-          "arguments": {
-            "command": {
-              "count": "driverdata"
-            }
-          }
-        }
-      ],
-      "expectations": [
-        {
-          "command_started_event": {
-            "command_name": "count",
-            "database_name": "test",
-            "command": {
-              "count": "driverdata"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "description": "find succeeds using runCommand",
-      "operations": [
-        {
-          "name": "runCommand",
-          "object": "collection",
-          "command_name": "find",
-          "arguments": {
-            "command": {
-              "find": "driverdata",
-              "pipeline": [
-                {
-                  "$projection": {
-                    "_id": 0
-                  }
-                },
-                {
-                  "$sort": {
-                    "a": 1
-                  }
-                },
-                {
-                  "$skip": 2
-                },
-                {
-                  "$limit": 2
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "expectations": [
-        {
-          "command_started_event": {
-            "command_name": "find",
-            "database_name": "test",
-            "command": {
-              "find": "driverdata"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "description": "aggregate succeeds using runCommand",
-      "operations": [
-        {
-          "name": "runCommand",
-          "object": "collection",
-          "command_name": "aggregate",
-          "arguments": {
-            "command": {
-              "aggregate": "driverdata",
-              "pipeline": [
-                {
-                  "$group": {
-                    "_id": 1,
-                    "n": {
-                      "$sum": 1
-                    }
-                  }
-                },
-                {
-                  "$sort": {
-                    "a": 1
-                  }
-                }
-              ],
-              "cursor": {}
-            }
-          }
-        }
-      ],
-      "expectations": [
-        {
-          "command_started_event": {
-            "command_name": "aggregate",
-            "database_name": "test",
-            "command": {
-              "aggregate": "driverdata"
+              "ping": 1
             }
           }
         }

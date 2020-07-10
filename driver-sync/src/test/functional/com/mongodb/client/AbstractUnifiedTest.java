@@ -94,23 +94,23 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public abstract class AbstractUnifiedTest {
     private final String filename;
-    private final String description;
-    private final String databaseName;
+    protected final String description;
+    protected final String databaseName;
     private final BsonArray data;
     private final BsonDocument definition;
-    private final boolean skipTest;
-    private JsonPoweredCrudTestHelper helper;
-    private final TestCommandListener commandListener;
+    protected final boolean skipTest;
+    protected JsonPoweredCrudTestHelper helper;
+    protected final TestCommandListener commandListener;
     private final TestConnectionPoolListener connectionPoolListener;
     private final TestServerListener serverListener;
-    private MongoClient mongoClient;
-    private CollectionHelper<Document> collectionHelper;
+    protected MongoClient mongoClient;
+    protected CollectionHelper<Document> collectionHelper;
     private Map<String, ClientSession> sessionsMap;
     private Map<String, BsonDocument> lsidMap;
     private boolean useMultipleMongoses = false;
-    private ConnectionString connectionString = null;
-    private final String collectionName;
-    private MongoDatabase database;
+    protected ConnectionString connectionString = null;
+    protected final String collectionName;
+    protected MongoDatabase database;
     private final Map<String, ExecutorService> executorServiceMap = new HashMap<>();
     private final Map<String, Future<Exception>> futureMap = new HashMap<>();
 

@@ -65,36 +65,14 @@ import static org.junit.Assume.assumeFalse;
 
 // See https://github.com/mongodb/specifications/tree/master/source/transactions/tests
 @RunWith(Parameterized.class)
-public class AtlasDataLakeTest {
-    private final String filename;
-    private final String description;
-    private final String databaseName;
-    private final BsonArray data;
-    private final BsonDocument definition;
-    private final boolean skipTest;
-    private JsonPoweredCrudTestHelper helper;
-    private final TestCommandListener commandListener;
-    private final TestConnectionPoolListener connectionPoolListener;
-    private MongoClient mongoClient;
-    private CollectionHelper<Document> collectionHelper;
-    private ConnectionString connectionString = null;
-    private final String collectionName;
-    private MongoDatabase database;
-
+public class AtlasDataLakeTest extends AbstractUnifiedTest {
     public AtlasDataLakeTest(final String filename, final String description, final String databaseName, final String collectionName,
                              final BsonArray data, final BsonDocument definition, final boolean skipTest) {
-        this.filename = filename;
-        this.description = description;
-        this.databaseName = databaseName;
-        this.collectionName = collectionName;
-        this.data = data;
-        this.definition = definition;
-        this.commandListener = new TestCommandListener();
-        this.connectionPoolListener = new TestConnectionPoolListener();
-        this.skipTest = skipTest;
+        super(filename, description, databaseName, collectionName, data, definition, skipTest);
     }
 
     @Before
+    @Override
     public void setUp() {
         assumeFalse(skipTest);
 
@@ -113,72 +91,6 @@ public class AtlasDataLakeTest {
                 null, mongoClient);
     }
 
-    @After
-    public void cleanUp() {
-        if (mongoClient != null) {
-            mongoClient.close();
-        }
-    }
-
-    @Test
-    public void shouldPassAllOutcomes() {
-        executeOperations(definition.getArray("operations"));
-
-        if (definition.containsKey("expectations")) {
-            List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), databaseName, null);
-            List<CommandEvent> events = commandListener.getCommandStartedEvents();
-
-            assertEventsEquality(expectedEvents, events.subList(0, expectedEvents.size()), null);
-        }
-
-        BsonDocument expectedOutcome = definition.getDocument("outcome", new BsonDocument());
-        if (expectedOutcome.containsKey("collection")) {
-            BsonDocument collectionDocument = expectedOutcome.getDocument("collection");
-            List<BsonDocument> collectionData;
-            if (collectionDocument.containsKey("name")) {
-                collectionData = new CollectionHelper<Document>(new DocumentCodec(),
-                        new MongoNamespace(databaseName, collectionDocument.getString("name").getValue()))
-                        .find(new BsonDocumentCodec());
-            } else {
-                collectionData = collectionHelper.find(new BsonDocumentCodec());
-            }
-            assertEquals(expectedOutcome.getDocument("collection").getArray("data").getValues(), collectionData);
-        }
-    }
-
-    private void executeOperations(final BsonArray operations) {
-        for (BsonValue cur : operations) {
-            final BsonDocument operation = cur.asDocument();
-            String operationName = operation.getString("name").getValue();
-            BsonValue expectedResult = operation.get("result");
-            String receiver = operation.getString("object").getValue();
-
-            try {
-                BsonDocument actualOutcome = helper.getOperationResults(operation, null);
-                if (expectedResult != null) {
-                    BsonValue actualResult = actualOutcome.get("result");
-                    if (actualResult.isDocument()) {
-                        if (((BsonDocument) actualResult).containsKey("recoveryToken")) {
-                            ((BsonDocument) actualResult).remove("recoveryToken");
-                        }
-                    }
-
-                    assertEquals("Expected operation result differs from actual", expectedResult, actualResult);
-                }
-                assertFalse(String.format("Expected error '%s' but none thrown for operation %s",
-                        getErrorContainsField(expectedResult), operationName), hasErrorContainsField(expectedResult));
-                assertFalse(String.format("Expected error code '%s' but none thrown for operation %s",
-                        getErrorCodeNameField(expectedResult), operationName), hasErrorCodeNameField(expectedResult));
-            } catch (RuntimeException e) {
-                if (!assertExceptionState(e, expectedResult, operationName)) {
-                    throw e;
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
     @Parameterized.Parameters(name = "{0}: {1}")
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
         List<Object[]> data = new ArrayList<Object[]>();
@@ -194,103 +106,9 @@ public class AtlasDataLakeTest {
         return data;
     }
 
+    @Override
     protected MongoClient createMongoClient(final MongoClientSettings settings) {
         return MongoClients.create(settings);
-    }
-
-    private boolean assertExceptionState(final RuntimeException e, final BsonValue expectedResult, final String operationName) {
-        boolean passedAssertion = false;
-        if (hasErrorLabelsContainField(expectedResult)) {
-            if (e instanceof MongoException) {
-                MongoException mongoException = (MongoException) e;
-                for (String curErrorLabel : getErrorLabelsContainField(expectedResult)) {
-                    assertTrue(String.format("Expected error label '%s but found labels '%s' for operation %s",
-                            curErrorLabel, mongoException.getErrorLabels(), operationName),
-                            mongoException.hasErrorLabel(curErrorLabel));
-                }
-                passedAssertion = true;
-            }
-        }
-        if (hasErrorLabelsOmitField(expectedResult)) {
-            if (e instanceof MongoException) {
-                MongoException mongoException = (MongoException) e;
-                for (String curErrorLabel : getErrorLabelsOmitField(expectedResult)) {
-                    assertFalse(String.format("Expected error label '%s omitted but found labels '%s' for operation %s",
-                            curErrorLabel, mongoException.getErrorLabels(), operationName),
-                            mongoException.hasErrorLabel(curErrorLabel));
-                }
-                passedAssertion = true;
-            }
-        }
-        if (hasErrorContainsField(expectedResult)) {
-            String expectedError = getErrorContainsField(expectedResult);
-            assertTrue(String.format("Expected '%s' but got '%s' for operation %s", expectedError, e.getMessage(),
-                    operationName), e.getMessage().toLowerCase().contains(expectedError.toLowerCase()));
-            passedAssertion = true;
-        }
-        if (hasErrorCodeNameField(expectedResult)) {
-            String expectedErrorCodeName = getErrorCodeNameField(expectedResult);
-            if (e instanceof MongoCommandException) {
-                assertEquals(expectedErrorCodeName, ((MongoCommandException) e).getErrorCodeName());
-                passedAssertion = true;
-            } else if (e instanceof MongoWriteConcernException) {
-                assertEquals(expectedErrorCodeName, ((MongoWriteConcernException) e).getWriteConcernError().getCodeName());
-                passedAssertion = true;
-            }
-        }
-        return passedAssertion;
-    }
-
-    private String getErrorContainsField(final BsonValue expectedResult) {
-        return getErrorField(expectedResult, "errorContains");
-    }
-
-    private String getErrorCodeNameField(final BsonValue expectedResult) {
-        return getErrorField(expectedResult, "errorCodeName");
-    }
-
-    private String getErrorField(final BsonValue expectedResult, final String key) {
-        if (hasErrorField(expectedResult, key)) {
-            return expectedResult.asDocument().getString(key).getValue();
-        } else {
-            return "";
-        }
-    }
-
-    private boolean hasErrorContainsField(final BsonValue expectedResult) {
-        return hasErrorField(expectedResult, "errorContains");
-    }
-
-    private boolean hasErrorCodeNameField(final BsonValue expectedResult) {
-        return hasErrorField(expectedResult, "errorCodeName");
-    }
-
-    private boolean hasErrorLabelsContainField(final BsonValue expectedResult) {
-        return hasErrorField(expectedResult, "errorLabelsContain");
-    }
-
-    private boolean hasErrorField(final BsonValue expectedResult, final String key) {
-        return expectedResult != null && expectedResult.isDocument() && expectedResult.asDocument().containsKey(key);
-    }
-
-    private List<String> getErrorLabelsContainField(final BsonValue expectedResult) {
-        return getListOfStringsFromBsonArrays(expectedResult.asDocument(), "errorLabelsContain");
-    }
-
-    private List<String> getListOfStringsFromBsonArrays(final BsonDocument expectedResult, final String arrayFieldName) {
-        List<String> errorLabelContainsList = new ArrayList<String>();
-        for (BsonValue cur : expectedResult.asDocument().getArray(arrayFieldName)) {
-            errorLabelContainsList.add(cur.asString().getValue());
-        }
-        return errorLabelContainsList;
-    }
-
-    private boolean hasErrorLabelsOmitField(final BsonValue expectedResult) {
-        return hasErrorField(expectedResult, "errorLabelsOmit");
-    }
-
-    private List<String> getErrorLabelsOmitField(final BsonValue expectedResult) {
-        return getListOfStringsFromBsonArrays(expectedResult.asDocument(), "errorLabelsOmit");
     }
 
     private ConnectionString getADLConnectionString() {

@@ -13,9 +13,9 @@
         {
           "command_started_event": {
             "command_name": "listCollections",
+            "database_name": "test",
             "command": {
-              "listCollections": 1,
-              "$db": "test"
+              "listCollections": 1
             }
           }
         }

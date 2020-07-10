@@ -1103,9 +1103,9 @@ buildvariants:
   tasks:
     - name: ".ocsp"
 
-- matrix_name: "atlas-data-lake-test"
-  matrix_spec: { auth: "noauth", ssl: "ssl", jdk: "jdk11", version: "*", os: "ubuntu" }
-  display_name: "Atlas Data Lake test ${version} ${os}"
+- name: atlas-data-lake-test
+  display_name: "Atlas Data Lake test"
+  run_on: ubuntu1804-test
   tasks:
     - name: "atlas-data-lake-test"
 
